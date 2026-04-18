@@ -16,14 +16,11 @@
  */
 
 import { Box } from "@mui/material";
-import { ReactNode } from "react";
 import Footer from "./Footer";
+import MainContent from "./MainContent";
+import Toolbar from "./Toolbar";
 
-interface LayoutProps {
-  children: ReactNode;
-}
-
-export default function Layout({ children }: LayoutProps) {
+export default function Layout() {
   return (
     <Box
       sx={{
@@ -31,11 +28,21 @@ export default function Layout({ children }: LayoutProps) {
         px: 1,
         height: "100vh",
         overflow: "hidden",
-        gridTemplateRows: "1fr auto",
+        gridTemplateRows: "auto 1fr auto",
       }}
     >
-      <Box component="main" sx={{ overflow: "auto", minHeight: 0 }}>
-        {children}
+      <Box
+        component="nav"
+        sx={{
+          flexShrink: 0,
+          zIndex: 1000,
+          backgroundColor: "background.default",
+        }}
+      >
+        <Toolbar />
+      </Box>
+      <Box component="main" sx={{ overflow: "hidden", minHeight: 0 }}>
+        <MainContent />
       </Box>
       <footer>
         <Footer />

@@ -2,6 +2,25 @@
   "app": {
     "dropHere": ".mkv ファイルまたはフォルダーをここにドロップ"
   },
+  "toolbar": {
+    "settings": "設定",
+    "about": "情報"
+  },
+  "tabs": {
+    "fileList": "ファイル一覧",
+    "settings": "設定",
+    "about": "情報",
+    "close": "閉じる"
+  },
+  "settings": {
+    "title": "設定"
+  },
+  "about": {
+    "title": "情報",
+    "tagline": "mkvextract のバッチ GUI",
+    "author": "作者",
+    "github": "GitHub"
+  },
   "footer": {
     "donate": "開発を支援するために寄付する",
     "copyright": "© Copyright 2026"

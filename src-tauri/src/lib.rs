@@ -18,6 +18,7 @@
 mod config;
 mod constants;
 mod controller;
+mod protocol;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -25,6 +26,11 @@ static WINDOW_READY: AtomicBool = AtomicBool::new(false);
 
 fn convert_error(error: anyhow::Error) -> String {
     error.to_string()
+}
+
+#[tauri::command]
+async fn get_about() -> Result<protocol::About, String> {
+    controller::get_about().await.map_err(convert_error)
 }
 
 #[tauri::command]
@@ -36,7 +42,7 @@ async fn get_mkv_files(paths: Vec<String>) -> Result<Vec<String>, String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![get_mkv_files])
+        .invoke_handler(tauri::generate_handler![get_about, get_mkv_files])
         .setup(|app| {
             use tauri::Manager;
             let window = app.get_webview_window("main").unwrap();

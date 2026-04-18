@@ -2,6 +2,25 @@
   "app": {
     "dropHere": "将 .mkv 文件或文件夹拖到此处"
   },
+  "toolbar": {
+    "settings": "设置",
+    "about": "关于"
+  },
+  "tabs": {
+    "fileList": "文件列表",
+    "settings": "设置",
+    "about": "关于",
+    "close": "关闭"
+  },
+  "settings": {
+    "title": "设置"
+  },
+  "about": {
+    "title": "关于",
+    "tagline": "mkvextract 批量图形界面",
+    "author": "作者",
+    "github": "GitHub"
+  },
   "footer": {
     "donate": "捐赠以支持开发",
     "copyright": "© 版权所有 2026"

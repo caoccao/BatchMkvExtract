@@ -15,10 +15,13 @@
  *   limitations under the License.
  */
 
-import Layout from "./components/Layout";
+import { invoke } from "@tauri-apps/api/core";
+import type { About } from "./protocol";
 
-function App() {
-  return <Layout />;
+export async function getAbout(): Promise<About> {
+  return await invoke<About>("get_about");
 }
 
-export default App;
+export async function getMkvFiles(paths: string[]): Promise<string[]> {
+  return await invoke<string[]>("get_mkv_files", { paths });
+}

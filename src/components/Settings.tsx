@@ -15,10 +15,14 @@
  *   limitations under the License.
  */
 
-import Layout from "./components/Layout";
+import { Box, Typography } from "@mui/material";
+import { useTranslation } from "react-i18next";
 
-function App() {
-  return <Layout />;
+export default function Settings() {
+  const { t } = useTranslation();
+  return (
+    <Box>
+      <Typography variant="h6">{t("settings.title")}</Typography>
+    </Box>
+  );
 }
-
-export default App;

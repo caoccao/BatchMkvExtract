@@ -15,10 +15,6 @@
  *   limitations under the License.
  */
 
-import Layout from "./components/Layout";
-
-function App() {
-  return <Layout />;
+export interface About {
+  appVersion: string;
 }
-
-export default App;

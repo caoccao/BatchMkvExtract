@@ -2,6 +2,25 @@
   "app": {
     "dropHere": "Suelta archivos .mkv o una carpeta aquí"
   },
+  "toolbar": {
+    "settings": "Ajustes",
+    "about": "Acerca de"
+  },
+  "tabs": {
+    "fileList": "Lista de archivos",
+    "settings": "Ajustes",
+    "about": "Acerca de",
+    "close": "Cerrar"
+  },
+  "settings": {
+    "title": "Ajustes"
+  },
+  "about": {
+    "title": "Acerca de",
+    "tagline": "GUI por lotes para mkvextract",
+    "author": "Autor",
+    "github": "GitHub"
+  },
   "footer": {
     "donate": "Donar para apoyar el desarrollo",
     "copyright": "© Copyright 2026"

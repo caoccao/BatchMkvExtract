@@ -18,7 +18,19 @@
 use anyhow::Result;
 use std::path::{Path, PathBuf};
 
+use crate::protocol::About;
+
 const MKV_EXTENSION: &str = "mkv";
+
+pub async fn get_about() -> Result<About> {
+    Ok(About {
+        app_version: get_app_version().to_owned(),
+    })
+}
+
+pub fn get_app_version() -> &'static str {
+    env!("CARGO_PKG_VERSION")
+}
 
 pub async fn get_mkv_files(paths: Vec<String>) -> Result<Vec<String>> {
     let mut result: Vec<String> = Vec::new();

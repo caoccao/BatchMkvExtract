@@ -15,10 +15,10 @@
  *   limitations under the License.
  */
 
-import Layout from "./components/Layout";
+use serde::{Deserialize, Serialize};
 
-function App() {
-  return <Layout />;
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct About {
+    #[serde(rename = "appVersion")]
+    pub app_version: String,
 }
-
-export default App;

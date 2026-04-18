@@ -2,6 +2,25 @@
   "app": {
     "dropHere": "Déposez des fichiers .mkv ou un dossier ici"
   },
+  "toolbar": {
+    "settings": "Paramètres",
+    "about": "À propos"
+  },
+  "tabs": {
+    "fileList": "Liste des fichiers",
+    "settings": "Paramètres",
+    "about": "À propos",
+    "close": "Fermer"
+  },
+  "settings": {
+    "title": "Paramètres"
+  },
+  "about": {
+    "title": "À propos",
+    "tagline": "GUI par lots pour mkvextract",
+    "author": "Auteur",
+    "github": "GitHub"
+  },
   "footer": {
     "donate": "Faire un don pour soutenir le développement",
     "copyright": "© Copyright 2026"

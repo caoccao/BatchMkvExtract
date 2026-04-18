@@ -2,6 +2,25 @@
   "app": {
     "dropHere": "MKV-Dateien oder einen Ordner hier ablegen"
   },
+  "toolbar": {
+    "settings": "Einstellungen",
+    "about": "Info"
+  },
+  "tabs": {
+    "fileList": "Dateiliste",
+    "settings": "Einstellungen",
+    "about": "Info",
+    "close": "Schließen"
+  },
+  "settings": {
+    "title": "Einstellungen"
+  },
+  "about": {
+    "title": "Info",
+    "tagline": "Batch-GUI für mkvextract",
+    "author": "Autor",
+    "github": "GitHub"
+  },
   "footer": {
     "donate": "Spenden zur Unterstützung der Entwicklung",
     "copyright": "© Copyright 2026"

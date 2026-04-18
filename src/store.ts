@@ -16,15 +16,33 @@
  */
 
 import { create } from "zustand";
+import type { About } from "./protocol";
+import { getAbout } from "./service";
+
+export type TabType = "fileList" | "settings" | "about";
 
 interface MkvStore {
   files: string[];
+  activeTab: TabType;
+  showSettings: boolean;
+  showAbout: boolean;
+  about: About | null;
   addFiles: (paths: string[]) => void;
   clearFiles: () => void;
+  setActiveTab: (type: TabType) => void;
+  openSettings: () => void;
+  openAbout: () => void;
+  closeSettings: () => void;
+  closeAbout: () => void;
+  initAbout: () => Promise<void>;
 }
 
 export const useMkvStore = create<MkvStore>((set) => ({
   files: [],
+  activeTab: "fileList",
+  showSettings: false,
+  showAbout: false,
+  about: null,
   addFiles: (paths) =>
     set((state) => {
       const existing = new Set(state.files);
@@ -32,4 +50,25 @@ export const useMkvStore = create<MkvStore>((set) => ({
       return { files: [...state.files, ...toAdd] };
     }),
   clearFiles: () => set({ files: [] }),
+  setActiveTab: (type) => set({ activeTab: type }),
+  openSettings: () => set({ showSettings: true, activeTab: "settings" }),
+  openAbout: () => set({ showAbout: true, activeTab: "about" }),
+  closeSettings: () =>
+    set((state) => ({
+      showSettings: false,
+      activeTab: state.activeTab === "settings" ? "fileList" : state.activeTab,
+    })),
+  closeAbout: () =>
+    set((state) => ({
+      showAbout: false,
+      activeTab: state.activeTab === "about" ? "fileList" : state.activeTab,
+    })),
+  initAbout: async () => {
+    try {
+      const about = await getAbout();
+      set({ about });
+    } catch (err) {
+      console.error("Failed to load about info", err);
+    }
+  },
 }));

@@ -2,6 +2,25 @@
   "app": {
     "dropHere": "Drop .mkv files or a folder here"
   },
+  "toolbar": {
+    "settings": "Settings",
+    "about": "About"
+  },
+  "tabs": {
+    "fileList": "File List",
+    "settings": "Settings",
+    "about": "About",
+    "close": "Close"
+  },
+  "settings": {
+    "title": "Settings"
+  },
+  "about": {
+    "title": "About",
+    "tagline": "Batch GUI for mkvextract",
+    "author": "Author",
+    "github": "GitHub"
+  },
   "footer": {
     "donate": "Donate to Support the Development",
     "copyright": "© Copyright 2026"
