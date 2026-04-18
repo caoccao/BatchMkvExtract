@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2024-2026. caoccao.com Sam Cao
+ *   Copyright (c) 2026. caoccao.com Sam Cao
  *   All rights reserved.
 
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,15 +17,26 @@
 
 mod config;
 mod constants;
+mod controller;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
 static WINDOW_READY: AtomicBool = AtomicBool::new(false);
 
+fn convert_error(error: anyhow::Error) -> String {
+    error.to_string()
+}
+
+#[tauri::command]
+async fn get_mkv_files(paths: Vec<String>) -> Result<Vec<String>, String> {
+    controller::get_mkv_files(paths).await.map_err(convert_error)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .invoke_handler(tauri::generate_handler![get_mkv_files])
         .setup(|app| {
             use tauri::Manager;
             let window = app.get_webview_window("main").unwrap();

@@ -1,0 +1,9 @@
+{
+  "app": {
+    "dropHere": "Déposez des fichiers .mkv ou un dossier ici"
+  },
+  "footer": {
+    "donate": "Faire un don pour soutenir le développement",
+    "copyright": "© Copyright 2026"
+  }
+}

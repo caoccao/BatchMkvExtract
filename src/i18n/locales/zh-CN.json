@@ -1,0 +1,9 @@
+{
+  "app": {
+    "dropHere": "将 .mkv 文件或文件夹拖到此处"
+  },
+  "footer": {
+    "donate": "捐赠以支持开发",
+    "copyright": "© 版权所有 2026"
+  }
+}

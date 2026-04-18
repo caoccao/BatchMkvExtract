@@ -15,19 +15,31 @@
  *   limitations under the License.
  */
 
-import React from "react";
-import ReactDOM from "react-dom/client";
-import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
-import "./i18n";
-import App from "./App";
+import { Box } from "@mui/material";
+import { ReactNode } from "react";
+import Footer from "./Footer";
 
-const theme = createTheme();
+interface LayoutProps {
+  children: ReactNode;
+}
 
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-  <React.StrictMode>
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <App />
-    </ThemeProvider>
-  </React.StrictMode>,
-);
+export default function Layout({ children }: LayoutProps) {
+  return (
+    <Box
+      sx={{
+        display: "grid",
+        px: 1,
+        height: "100vh",
+        overflow: "hidden",
+        gridTemplateRows: "1fr auto",
+      }}
+    >
+      <Box component="main" sx={{ overflow: "auto", minHeight: 0 }}>
+        {children}
+      </Box>
+      <footer>
+        <Footer />
+      </footer>
+    </Box>
+  );
+}

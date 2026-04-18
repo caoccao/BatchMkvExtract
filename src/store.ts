@@ -15,19 +15,21 @@
  *   limitations under the License.
  */
 
-import React from "react";
-import ReactDOM from "react-dom/client";
-import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
-import "./i18n";
-import App from "./App";
+import { create } from "zustand";
 
-const theme = createTheme();
+interface MkvStore {
+  files: string[];
+  addFiles: (paths: string[]) => void;
+  clearFiles: () => void;
+}
 
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-  <React.StrictMode>
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <App />
-    </ThemeProvider>
-  </React.StrictMode>,
-);
+export const useMkvStore = create<MkvStore>((set) => ({
+  files: [],
+  addFiles: (paths) =>
+    set((state) => {
+      const existing = new Set(state.files);
+      const toAdd = paths.filter((p) => !existing.has(p));
+      return { files: [...state.files, ...toAdd] };
+    }),
+  clearFiles: () => set({ files: [] }),
+}));
