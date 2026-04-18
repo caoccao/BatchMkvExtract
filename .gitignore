@@ -30,6 +30,7 @@ build
 *.njsproj
 *.sln
 *.sw?
+.claude
 
 # OS
 .DS_Store
