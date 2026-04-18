@@ -40,6 +40,10 @@ export async function getMkvFiles(paths: string[]): Promise<string[]> {
   return await invoke<string[]>("get_mkv_files", { paths });
 }
 
+export async function getLaunchArgs(): Promise<string[]> {
+  return await invoke<string[]>("get_launch_args");
+}
+
 export async function isMkvextractFound(
   path: string,
 ): Promise<MkvextractStatus> {

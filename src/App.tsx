@@ -26,6 +26,7 @@ import {
 import Layout from "./components/Layout";
 import { changeLanguage } from "./i18n";
 import * as Protocol from "./protocol";
+import { getLaunchArgs, getMkvFiles } from "./service";
 import { useMkvStore } from "./store";
 
 function getPaletteByTheme(theme: Protocol.Theme, mode: "light" | "dark") {
@@ -86,6 +87,24 @@ function App() {
   useEffect(() => {
     initConfig();
   }, [initConfig]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const args = await getLaunchArgs();
+        if (cancelled || args.length === 0) return;
+        const mkvFiles = await getMkvFiles(args);
+        if (cancelled || mkvFiles.length === 0) return;
+        useMkvStore.getState().addFiles(mkvFiles);
+      } catch (err) {
+        console.error("Failed to process launch args", err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     changeLanguage(language);

@@ -46,6 +46,11 @@ async fn get_mkv_files(paths: Vec<String>) -> Result<Vec<String>, String> {
 }
 
 #[tauri::command]
+fn get_launch_args() -> Vec<String> {
+    std::env::args().skip(1).collect()
+}
+
+#[tauri::command]
 async fn get_mkv_tracks(file: String) -> Result<Vec<protocol::MkvTrack>, String> {
     mkvtoolnix::get_mkv_tracks(file)
         .await
@@ -98,6 +103,7 @@ pub fn run() {
             get_about,
             get_config,
             get_extract_status,
+            get_launch_args,
             get_mkv_files,
             get_mkv_tracks,
             is_mkvextract_found,
