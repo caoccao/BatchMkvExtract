@@ -15,8 +15,9 @@
  *   limitations under the License.
  */
 
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { Box, ButtonGroup, IconButton, Tooltip } from "@mui/material";
+import ContentCutIcon from "@mui/icons-material/ContentCut";
 import DeleteIcon from "@mui/icons-material/Delete";
 import InfoIcon from "@mui/icons-material/Info";
 import SettingsIcon from "@mui/icons-material/Settings";
@@ -32,8 +33,24 @@ export default function Toolbar() {
   const clearFiles = useMkvStore((s) => s.clearFiles);
 
   const hasFiles = files.length > 0;
+  const fileHasSelection = useMkvStore((s) => s.fileHasSelection);
+  const canExtractAll = files.some((f) => fileHasSelection[f]);
+
+  const runExtractAll = useCallback(() => {
+    const state = useMkvStore.getState();
+    for (const file of state.files) {
+      if (!state.fileHasSelection[file]) continue;
+      const handler = state.fileExtractHandlers[file];
+      handler?.();
+    }
+  }, []);
 
   useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "F3") {
+        event.preventDefault();
+      }
+    };
     const handleKeyUp = (event: KeyboardEvent) => {
       if (
         event.ctrlKey &&
@@ -45,11 +62,27 @@ export default function Toolbar() {
         if (useMkvStore.getState().files.length > 0) {
           clearFiles();
         }
+      } else if (
+        !event.ctrlKey &&
+        !event.altKey &&
+        !event.shiftKey &&
+        event.key === "F3"
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        const state = useMkvStore.getState();
+        if (state.files.some((f) => state.fileHasSelection[f])) {
+          runExtractAll();
+        }
       }
     };
+    document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("keyup", handleKeyUp);
-    return () => document.removeEventListener("keyup", handleKeyUp);
-  }, [clearFiles]);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [clearFiles, runExtractAll]);
 
   const buttonSx = {
     width: 28,
@@ -65,6 +98,17 @@ export default function Toolbar() {
   return (
     <Box sx={{ mx: 1, my: 0, display: "flex", gap: 1 }}>
       <ButtonGroup variant="outlined" size="small">
+        <Tooltip title={t("toolbar.extractAll")}>
+          <span>
+            <IconButton
+              sx={buttonSx}
+              disabled={!canExtractAll}
+              onClick={runExtractAll}
+            >
+              <ContentCutIcon fontSize="small" />
+            </IconButton>
+          </span>
+        </Tooltip>
         <Tooltip title={t("toolbar.clear")}>
           <span>
             <IconButton

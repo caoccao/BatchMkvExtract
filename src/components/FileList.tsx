@@ -30,7 +30,7 @@ export default function FileList() {
   const { t } = useTranslation();
   const files = useMkvStore((s) => s.files);
   const addFiles = useMkvStore((s) => s.addFiles);
-  const setExtractionEntries = useMkvStore((s) => s.setExtractionEntries);
+  const applyExtractSnapshot = useMkvStore((s) => s.applyExtractSnapshot);
 
   useEffect(() => {
     let cancelled = false;
@@ -38,7 +38,7 @@ export default function FileList() {
       try {
         const snap = await getExtractStatus();
         if (!cancelled) {
-          setExtractionEntries(snap.entries);
+          applyExtractSnapshot(snap.entries);
         }
       } catch (err) {
         if (!cancelled) {
@@ -52,7 +52,7 @@ export default function FileList() {
       cancelled = true;
       clearInterval(id);
     };
-  }, [setExtractionEntries]);
+  }, [applyExtractSnapshot]);
 
   useEffect(() => {
     const unlistenPromise = getCurrentWebviewWindow().onDragDropEvent(

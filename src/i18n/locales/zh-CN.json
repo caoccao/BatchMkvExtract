@@ -29,15 +29,34 @@
     }
   },
   "toolbar": {
+    "extractAll": "全部提取 (F3)",
     "clear": "清空 (Ctrl + Q)",
     "settings": "设置",
     "about": "关于"
   },
   "tabs": {
     "fileList": "文件列表",
+    "queue": "队列",
     "settings": "设置",
     "about": "关于",
     "close": "关闭"
+  },
+  "queue": {
+    "defaultDrive": "队列",
+    "clearCompleted": "清除已完成",
+    "header": {
+      "filePath": "文件路径",
+      "status": "状态",
+      "start": "开始",
+      "end": "结束",
+      "elapsed": "已用时间",
+      "eta": "预计剩余"
+    },
+    "status": {
+      "queued": "排队中",
+      "extracting": "提取中",
+      "completed": "已完成"
+    }
   },
   "settings": {
     "title": "设置",

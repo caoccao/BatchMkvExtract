@@ -29,15 +29,34 @@
     }
   },
   "toolbar": {
+    "extractAll": "Extraer todo (F3)",
     "clear": "Limpiar (Ctrl + Q)",
     "settings": "Ajustes",
     "about": "Acerca de"
   },
   "tabs": {
     "fileList": "Lista de archivos",
+    "queue": "Cola",
     "settings": "Ajustes",
     "about": "Acerca de",
     "close": "Cerrar"
+  },
+  "queue": {
+    "defaultDrive": "Cola",
+    "clearCompleted": "Eliminar completados",
+    "header": {
+      "filePath": "Ruta del archivo",
+      "status": "Estado",
+      "start": "Inicio",
+      "end": "Fin",
+      "elapsed": "Transcurrido",
+      "eta": "Restante"
+    },
+    "status": {
+      "queued": "En cola",
+      "extracting": "Extrayendo",
+      "completed": "Completado"
+    }
   },
   "settings": {
     "title": "Ajustes",

@@ -263,7 +263,13 @@ export function MkvFileCard({ path }: MkvFileCardProps) {
   const mkvToolNixPath = useMkvStore(
     (s) => s.config?.mkv?.mkvToolNixPath ?? "",
   );
-  const entry = useMkvStore((s) => s.extractionByFile[path]);
+  const entry = useMkvStore((s) => s.queueItems[path]);
+  const addToQueue = useMkvStore((s) => s.addToQueue);
+  const registerExtractHandler = useMkvStore((s) => s.registerExtractHandler);
+  const unregisterExtractHandler = useMkvStore(
+    (s) => s.unregisterExtractHandler,
+  );
+  const setFileHasSelection = useMkvStore((s) => s.setFileHasSelection);
 
   const isExtracting = entry?.status === "extracting";
   const isQueued = entry?.status === "queued";
@@ -364,6 +370,7 @@ export function MkvFileCard({ path }: MkvFileCardProps) {
       const outputDir = await dirname(path);
       const args = await buildExtractArgs(path, outputDir, selectedTracks);
       await enqueueExtract(path, args);
+      addToQueue(path);
     } catch (err) {
       setSnackbar({ message: String(err), severity: "error" });
     }
@@ -377,10 +384,21 @@ export function MkvFileCard({ path }: MkvFileCardProps) {
     }
   };
 
-  const progressValue = isExtracting ? entry?.progress ?? 0 : 100;
-  const progressBarColor = isExtracting ? "success.main" : "grey.500";
+  useEffect(() => {
+    registerExtractHandler(path, handleExtract);
+    return () => {
+      unregisterExtractHandler(path);
+    };
+  }, [path, handleExtract, registerExtractHandler, unregisterExtractHandler]);
 
-  const titleContent = isActive ? (
+  useEffect(() => {
+    setFileHasSelection(path, hasSelection && !isActive);
+    return () => {
+      setFileHasSelection(path, false);
+    };
+  }, [path, hasSelection, isActive, setFileHasSelection]);
+
+  const titleContent = isExtracting ? (
     <Box
       sx={{
         position: "relative",
@@ -393,7 +411,7 @@ export function MkvFileCard({ path }: MkvFileCardProps) {
     >
       <LinearProgress
         variant="determinate"
-        value={progressValue}
+        value={entry?.progress ?? 0}
         sx={{
           position: "absolute",
           top: 0,
@@ -404,8 +422,7 @@ export function MkvFileCard({ path }: MkvFileCardProps) {
           height: "100%",
           bgcolor: "action.hover",
           "& .MuiLinearProgress-bar": {
-            bgcolor: progressBarColor,
-            transition: isExtracting ? undefined : "none",
+            bgcolor: "success.main",
           },
         }}
       />
@@ -470,7 +487,13 @@ export function MkvFileCard({ path }: MkvFileCardProps) {
   );
 
   return (
-    <Card variant="outlined" sx={{ mt: 1 }}>
+    <Card
+      variant="outlined"
+      sx={{
+        mt: 1,
+        bgcolor: isQueued ? "action.hover" : undefined,
+      }}
+    >
       <CardHeader
         title={titleContent}
         action={actionContent}

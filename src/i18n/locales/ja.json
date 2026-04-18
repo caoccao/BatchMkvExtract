@@ -29,15 +29,34 @@
     }
   },
   "toolbar": {
+    "extractAll": "すべて抽出 (F3)",
     "clear": "クリア (Ctrl + Q)",
     "settings": "設定",
     "about": "情報"
   },
   "tabs": {
     "fileList": "ファイル一覧",
+    "queue": "キュー",
     "settings": "設定",
     "about": "情報",
     "close": "閉じる"
+  },
+  "queue": {
+    "defaultDrive": "キュー",
+    "clearCompleted": "完了を消去",
+    "header": {
+      "filePath": "ファイルパス",
+      "status": "状態",
+      "start": "開始",
+      "end": "終了",
+      "elapsed": "経過時間",
+      "eta": "残り時間"
+    },
+    "status": {
+      "queued": "待機中",
+      "extracting": "抽出中",
+      "completed": "完了"
+    }
   },
   "settings": {
     "title": "設定",

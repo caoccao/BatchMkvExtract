@@ -29,15 +29,34 @@
     }
   },
   "toolbar": {
+    "extractAll": "Extract All (F3)",
     "clear": "Clear (Ctrl + Q)",
     "settings": "Settings",
     "about": "About"
   },
   "tabs": {
     "fileList": "File List",
+    "queue": "Queue",
     "settings": "Settings",
     "about": "About",
     "close": "Close"
+  },
+  "queue": {
+    "defaultDrive": "Queue",
+    "clearCompleted": "Clear Completed",
+    "header": {
+      "filePath": "File Path",
+      "status": "Status",
+      "start": "Start",
+      "end": "End",
+      "elapsed": "Elapsed",
+      "eta": "ETA"
+    },
+    "status": {
+      "queued": "Queued",
+      "extracting": "Extracting",
+      "completed": "Completed"
+    }
   },
   "settings": {
     "title": "Settings",

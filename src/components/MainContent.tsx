@@ -15,12 +15,14 @@
  *   limitations under the License.
  */
 
+import { useEffect } from "react";
 import { Box, IconButton, Tab, Tabs, Tooltip } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { useTranslation } from "react-i18next";
 import { TabType, useMkvStore } from "../store";
 import About from "./About";
 import FileList from "./FileList";
+import Queue from "./Queue";
 import Settings from "./Settings";
 
 export default function MainContent() {
@@ -28,13 +30,23 @@ export default function MainContent() {
   const activeTab = useMkvStore((s) => s.activeTab);
   const showSettings = useMkvStore((s) => s.showSettings);
   const showAbout = useMkvStore((s) => s.showAbout);
+  const queueOrder = useMkvStore((s) => s.queueOrder);
   const setActiveTab = useMkvStore((s) => s.setActiveTab);
   const closeSettings = useMkvStore((s) => s.closeSettings);
   const closeAbout = useMkvStore((s) => s.closeAbout);
 
+  const hasQueue = queueOrder.length > 0;
+
   const tabs: TabType[] = ["fileList"];
+  if (hasQueue) tabs.push("queue");
   if (showSettings) tabs.push("settings");
   if (showAbout) tabs.push("about");
+
+  useEffect(() => {
+    if (activeTab === "queue" && !hasQueue) {
+      setActiveTab("fileList");
+    }
+  }, [activeTab, hasQueue, setActiveTab]);
 
   const activeIndex = Math.max(0, tabs.indexOf(activeTab));
 
@@ -42,6 +54,8 @@ export default function MainContent() {
     switch (type) {
       case "fileList":
         return t("tabs.fileList");
+      case "queue":
+        return t("tabs.queue");
       case "settings":
         return t("tabs.settings");
       case "about":
@@ -138,6 +152,7 @@ export default function MainContent() {
             }}
           >
             {type === "fileList" && <FileList />}
+            {type === "queue" && <Queue />}
             {type === "settings" && <Settings />}
             {type === "about" && <About />}
           </Box>

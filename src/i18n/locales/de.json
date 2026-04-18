@@ -29,15 +29,34 @@
     }
   },
   "toolbar": {
+    "extractAll": "Alle extrahieren (F3)",
     "clear": "Leeren (Strg + Q)",
     "settings": "Einstellungen",
     "about": "Info"
   },
   "tabs": {
     "fileList": "Dateiliste",
+    "queue": "Warteschlange",
     "settings": "Einstellungen",
     "about": "Info",
     "close": "Schließen"
+  },
+  "queue": {
+    "defaultDrive": "Warteschlange",
+    "clearCompleted": "Abgeschlossene löschen",
+    "header": {
+      "filePath": "Dateipfad",
+      "status": "Status",
+      "start": "Start",
+      "end": "Ende",
+      "elapsed": "Verstrichen",
+      "eta": "Verbleibend"
+    },
+    "status": {
+      "queued": "Wartend",
+      "extracting": "Extrahiere",
+      "completed": "Fertig"
+    }
   },
   "settings": {
     "title": "Einstellungen",
