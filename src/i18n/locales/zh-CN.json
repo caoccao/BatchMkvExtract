@@ -2,6 +2,9 @@
   "app": {
     "dropHere": "将 .mkv 文件或文件夹拖到此处"
   },
+  "list": {
+    "delete": "删除"
+  },
   "toolbar": {
     "settings": "设置",
     "about": "关于"

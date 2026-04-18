@@ -15,32 +15,49 @@
  *   limitations under the License.
  */
 
-import { Card, CardContent, Typography } from "@mui/material";
+import {
+  Box,
+  Card,
+  CardHeader,
+  IconButton,
+  Tooltip,
+  Typography,
+} from "@mui/material";
+import DeleteIcon from "@mui/icons-material/Delete";
+import { useTranslation } from "react-i18next";
+import { useMkvStore } from "../store";
 
 interface MkvFileCardProps {
   path: string;
 }
 
-function getFileName(path: string): string {
-  const parts = path.split(/[\\/]/);
-  return parts[parts.length - 1] || path;
-}
-
 export function MkvFileCard({ path }: MkvFileCardProps) {
+  const { t } = useTranslation();
+  const removeFile = useMkvStore((s) => s.removeFile);
+
   return (
-    <Card sx={{ width: "100%", mb: 1 }}>
-      <CardContent>
-        <Typography variant="subtitle1" noWrap>
-          {getFileName(path)}
-        </Typography>
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          sx={{ wordBreak: "break-all" }}
-        >
-          {path}
-        </Typography>
-      </CardContent>
+    <Card variant="outlined" sx={{ mt: 1 }}>
+      <CardHeader
+        title={
+          <Typography variant="body2" sx={{ wordBreak: "break-all" }}>
+            {path}
+          </Typography>
+        }
+        action={
+          <Box sx={{ display: "flex", gap: 0.5 }}>
+            <Tooltip title={t("list.delete")}>
+              <IconButton
+                size="small"
+                color="error"
+                onClick={() => removeFile(path)}
+              >
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        }
+        sx={{ pb: 1 }}
+      />
     </Card>
   );
 }

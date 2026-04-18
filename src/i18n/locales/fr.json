@@ -2,6 +2,9 @@
   "app": {
     "dropHere": "Déposez des fichiers .mkv ou un dossier ici"
   },
+  "list": {
+    "delete": "Supprimer"
+  },
   "toolbar": {
     "settings": "Paramètres",
     "about": "À propos"

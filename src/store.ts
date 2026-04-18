@@ -29,6 +29,7 @@ interface MkvStore {
   about: About | null;
   config: Config | null;
   addFiles: (paths: string[]) => void;
+  removeFile: (path: string) => void;
   clearFiles: () => void;
   setActiveTab: (type: TabType) => void;
   openSettings: () => void;
@@ -53,6 +54,8 @@ export const useMkvStore = create<MkvStore>((set, get) => ({
       const toAdd = paths.filter((p) => !existing.has(p));
       return { files: [...state.files, ...toAdd] };
     }),
+  removeFile: (path) =>
+    set((state) => ({ files: state.files.filter((f) => f !== path) })),
   clearFiles: () => set({ files: [] }),
   setActiveTab: (type) => set({ activeTab: type }),
   openSettings: () => set({ showSettings: true, activeTab: "settings" }),

@@ -2,6 +2,9 @@
   "app": {
     "dropHere": "MKV-Dateien oder einen Ordner hier ablegen"
   },
+  "list": {
+    "delete": "Löschen"
+  },
   "toolbar": {
     "settings": "Einstellungen",
     "about": "Info"
