@@ -16,6 +16,7 @@
     "@mui/icons-material": "^9.0.0",
     "@mui/material": "^9.0.0",
     "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-dialog": "^2.7.0",
     "@tauri-apps/plugin-opener": "^2",
     "i18next": "^26.0.5",
     "i18next-browser-languagedetector": "^8.2.1",

@@ -22,3 +22,10 @@ pub struct About {
     #[serde(rename = "appVersion")]
     pub app_version: String,
 }
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct MkvextractStatus {
+    pub found: bool,
+    #[serde(rename = "mkvToolNixPath")]
+    pub mkv_toolnix_path: String,
+}

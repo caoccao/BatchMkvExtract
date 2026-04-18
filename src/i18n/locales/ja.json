@@ -20,7 +20,12 @@
     "lightMode": "ライト",
     "darkMode": "ダーク",
     "theme": "テーマ",
-    "language": "言語"
+    "language": "言語",
+    "mkv": "MKV",
+    "mkvToolNixPath": "MKVToolNix のパス",
+    "browse": "参照",
+    "mkvextractFound": "MKVToolNix のパスに mkvextract が見つかりました。",
+    "mkvextractNotFound": "MKVToolNix のパスに mkvextract が見つかりません。"
   },
   "about": {
     "title": "情報",

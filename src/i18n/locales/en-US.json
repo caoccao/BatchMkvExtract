@@ -20,7 +20,12 @@
     "lightMode": "Light",
     "darkMode": "Dark",
     "theme": "Theme",
-    "language": "Language"
+    "language": "Language",
+    "mkv": "MKV",
+    "mkvToolNixPath": "MKVToolNix Path",
+    "browse": "Browse",
+    "mkvextractFound": "mkvextract found under MKVToolNix path.",
+    "mkvextractNotFound": "mkvextract not found under MKVToolNix path."
   },
   "about": {
     "title": "About",

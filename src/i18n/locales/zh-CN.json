@@ -20,7 +20,12 @@
     "lightMode": "浅色",
     "darkMode": "深色",
     "theme": "主题",
-    "language": "语言"
+    "language": "语言",
+    "mkv": "MKV",
+    "mkvToolNixPath": "MKVToolNix 路径",
+    "browse": "浏览",
+    "mkvextractFound": "已在 MKVToolNix 路径下找到 mkvextract。",
+    "mkvextractNotFound": "在 MKVToolNix 路径下未找到 mkvextract。"
   },
   "about": {
     "title": "关于",

@@ -77,11 +77,21 @@ export interface ConfigWindow {
   size: ConfigWindowSize;
 }
 
+export interface ConfigMkv {
+  mkvToolNixPath: string;
+}
+
 export interface Config {
   displayMode: DisplayMode;
   theme: Theme;
   language: Language;
+  mkv: ConfigMkv;
   window: ConfigWindow;
+}
+
+export interface MkvextractStatus {
+  found: boolean;
+  mkvToolNixPath: string;
 }
 
 export function getDisplayModes(): DisplayMode[] {

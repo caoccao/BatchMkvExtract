@@ -18,6 +18,7 @@
 mod config;
 mod constants;
 mod controller;
+mod mkvtoolnix;
 mod protocol;
 
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -44,6 +45,13 @@ async fn get_mkv_files(paths: Vec<String>) -> Result<Vec<String>, String> {
 }
 
 #[tauri::command]
+async fn is_mkvextract_found(path: String) -> Result<protocol::MkvextractStatus, String> {
+    mkvtoolnix::is_mkvextract_found(path)
+        .await
+        .map_err(convert_error)
+}
+
+#[tauri::command]
 async fn set_config(config: config::Config) -> Result<config::Config, String> {
     controller::set_config(config).await.map_err(convert_error)
 }
@@ -51,11 +59,13 @@ async fn set_config(config: config::Config) -> Result<config::Config, String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             get_about,
             get_config,
             get_mkv_files,
+            is_mkvextract_found,
             set_config
         ])
         .setup(|app| {

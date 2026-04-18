@@ -15,23 +15,29 @@
  *   limitations under the License.
  */
 
+import { useEffect, useRef, useState } from "react";
 import {
   Box,
+  Button,
   FormControl,
   MenuItem,
   Paper,
   Select,
   Stack,
+  TextField,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
 } from "@mui/material";
 import BrightnessAutoIcon from "@mui/icons-material/BrightnessAuto";
+import ContentCutIcon from "@mui/icons-material/ContentCut";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import PaletteIcon from "@mui/icons-material/Palette";
+import { open } from "@tauri-apps/plugin-dialog";
 import { useTranslation } from "react-i18next";
 import * as Protocol from "../protocol";
+import { isMkvextractFound } from "../service";
 import { useMkvStore } from "../store";
 
 function SectionHeader({
@@ -80,6 +86,73 @@ export default function Settings() {
   const { t } = useTranslation();
   const config = useMkvStore((s) => s.config);
   const updateConfig = useMkvStore((s) => s.updateConfig);
+
+  const [mkvToolNixPath, setMkvToolNixPath] = useState("");
+  const [mkvextractFound, setMkvextractFound] = useState(false);
+  const checkDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  const initializedRef = useRef(false);
+
+  useEffect(() => {
+    if (config && !initializedRef.current) {
+      initializedRef.current = true;
+      setMkvToolNixPath(config.mkv?.mkvToolNixPath ?? "");
+    }
+  }, [config]);
+
+  useEffect(() => {
+    if (!initializedRef.current) return;
+    if (checkDebounceRef.current) {
+      clearTimeout(checkDebounceRef.current);
+    }
+    let cancelled = false;
+    checkDebounceRef.current = setTimeout(async () => {
+      try {
+        const status = await isMkvextractFound(mkvToolNixPath.trim());
+        if (cancelled) return;
+        setMkvextractFound(status.found);
+        if (
+          status.found &&
+          status.mkvToolNixPath &&
+          status.mkvToolNixPath !== mkvToolNixPath
+        ) {
+          setMkvToolNixPath(status.mkvToolNixPath);
+          if (config && config.mkv?.mkvToolNixPath !== status.mkvToolNixPath) {
+            updateConfig({
+              mkv: { mkvToolNixPath: status.mkvToolNixPath },
+            });
+          }
+        }
+      } catch {
+        if (!cancelled) setMkvextractFound(false);
+      }
+    }, 250);
+    return () => {
+      cancelled = true;
+      if (checkDebounceRef.current) {
+        clearTimeout(checkDebounceRef.current);
+      }
+    };
+  }, [mkvToolNixPath, config, updateConfig]);
+
+  const handleBrowseMkvToolNixPath = async () => {
+    const directory = await open({
+      directory: true,
+      defaultPath: mkvToolNixPath.trim() || undefined,
+    });
+    if (typeof directory === "string" && directory.length > 0) {
+      setMkvToolNixPath(directory);
+      updateConfig({ mkv: { mkvToolNixPath: directory } });
+    }
+  };
+
+  const handlePathBlur = () => {
+    const trimmed = mkvToolNixPath.trim();
+    if (config && trimmed !== (config.mkv?.mkvToolNixPath ?? "")) {
+      updateConfig({ mkv: { mkvToolNixPath: trimmed } });
+    }
+  };
 
   if (!config) {
     return null;
@@ -167,6 +240,47 @@ export default function Settings() {
               </Select>
             </FormControl>
           </SettingRow>
+        </Paper>
+
+        <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+          <SectionHeader
+            icon={<ContentCutIcon fontSize="small" />}
+            title={t("settings.mkv")}
+          />
+          <Box sx={{ py: 1 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              {t("settings.mkvToolNixPath")}
+            </Typography>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <TextField
+                value={mkvToolNixPath}
+                onChange={(e) => setMkvToolNixPath(e.target.value)}
+                onBlur={handlePathBlur}
+                size="small"
+                fullWidth
+              />
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleBrowseMkvToolNixPath}
+                sx={{ minWidth: 90, height: 36, textTransform: "none" }}
+              >
+                {t("settings.browse")}
+              </Button>
+            </Box>
+            <Typography
+              variant="caption"
+              sx={{
+                mt: 0.75,
+                display: "block",
+                color: mkvextractFound ? "success.main" : "error.main",
+              }}
+            >
+              {mkvextractFound
+                ? t("settings.mkvextractFound")
+                : t("settings.mkvextractNotFound")}
+            </Typography>
+          </Box>
         </Paper>
       </Stack>
     </Box>
