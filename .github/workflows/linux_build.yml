@@ -1,0 +1,84 @@
+name: Linux Build
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore:
+      - .github/**
+      - "!.github/workflows/linux_build.yml"
+      - "**.md"
+      - "docs/**"
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - .github/**
+      - "!.github/workflows/linux_build.yml"
+      - "**.md"
+      - "docs/**"
+
+env:
+  BATCH_MKV_EXTRACT_VERSION: 0.1.0
+
+jobs:
+  build_package:
+    name: Build for Linux x86_64
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Set git to use LF
+      run: |
+        git config --global core.autocrlf false
+        git config --global core.eol lf
+
+    - name: Checkout the code
+      uses: actions/checkout@v6
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version: 24
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v5
+      with:
+        version: 10
+
+    - name: Setup Rust
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        toolchain: stable
+
+    - name: Upgrade Ubuntu
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libsoup-3.0-dev libjavascriptcoregtk-4.1-dev libwebkit2gtk-4.1-dev librsvg2-dev
+
+    - name: Build BatchMkvExtract
+      run: |
+        pnpm install
+        cd src-tauri
+        cargo test -r
+        cd ..
+        pnpm tauri build
+
+    - name: Upload the deb
+      uses: actions/upload-artifact@v7
+      with:
+        name: BatchMkvExtract-linux-x86_64-${{ env.BATCH_MKV_EXTRACT_VERSION }}-deb
+        path: |
+          src-tauri/target/release/bundle/deb/*.deb
+
+    - name: Upload the rpm
+      uses: actions/upload-artifact@v7
+      with:
+        name: BatchMkvExtract-linux-x86_64-${{ env.BATCH_MKV_EXTRACT_VERSION }}-rpm
+        path: |
+          src-tauri/target/release/bundle/rpm/*.rpm
+
+    - name: Upload the AppImage
+      uses: actions/upload-artifact@v7
+      with:
+        name: BatchMkvExtract-linux-x86_64-${{ env.BATCH_MKV_EXTRACT_VERSION }}-AppImage
+        path: |
+          src-tauri/target/release/bundle/appimage/*.AppImage

@@ -1,0 +1,67 @@
+name: Windows Build
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore:
+      - .github/**
+      - "!.github/workflows/windows_build.yml"
+      - "**.md"
+      - "docs/**"
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - .github/**
+      - "!.github/workflows/windows_build.yml"
+      - "**.md"
+      - "docs/**"
+
+env:
+  BATCH_MKV_EXTRACT_VERSION: 0.1.0
+
+jobs:
+  build_package:
+    name: Build for Windows x86_64
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout the code
+      uses: actions/checkout@v6
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version: 24
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v5
+      with:
+        version: 10
+
+    - name: Setup Rust
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        toolchain: stable
+
+    - name: Build BatchMkvExtract
+      run: |
+        pnpm install
+        cd src-tauri
+        cargo test -r
+        cd ..
+        pnpm tauri build
+
+    - name: Upload the msi
+      uses: actions/upload-artifact@v7
+      with:
+        name: BatchMkvExtract-windows-x86_64-${{ env.BATCH_MKV_EXTRACT_VERSION }}-msi
+        path: |
+          src-tauri/target/release/bundle/msi/*.msi
+
+    - name: Upload the nsis
+      uses: actions/upload-artifact@v7
+      with:
+        name: BatchMkvExtract-windows-x86_64-${{ env.BATCH_MKV_EXTRACT_VERSION }}-nsis
+        path: |
+          src-tauri/target/release/bundle/nsis/*.exe

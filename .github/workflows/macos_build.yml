@@ -1,0 +1,75 @@
+name: MacOS Build
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore:
+      - .github/**
+      - "!.github/workflows/macos_build.yml"
+      - "**.md"
+      - "docs/**"
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - .github/**
+      - "!.github/workflows/macos_build.yml"
+      - "**.md"
+      - "docs/**"
+
+env:
+  BATCH_MKV_EXTRACT_VERSION: 0.1.0
+
+jobs:
+  build_package:
+    strategy:
+      matrix:
+        include:
+          - image: macos-15-intel
+            os: macos
+            arch: x86_64
+          - image: macos-15
+            os: macos
+            arch: arm64
+
+    name: Build for ${{ matrix.os }} ${{ matrix.arch }}
+    runs-on: ${{ matrix.image }}
+
+    steps:
+    - name: Set git to use LF
+      run: |
+        git config --global core.autocrlf false
+        git config --global core.eol lf
+
+    - name: Checkout the code
+      uses: actions/checkout@v6
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version: 24
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v5
+      with:
+        version: 10
+
+    - name: Setup Rust
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        toolchain: stable
+
+    - name: Build BatchMkvExtract
+      run: |
+        pnpm install
+        cd src-tauri
+        cargo test -r
+        cd ..
+        pnpm tauri build
+
+    - name: Upload the Artifact
+      uses: actions/upload-artifact@v7
+      with:
+        name: BatchMkvExtract-${{ matrix.os }}-${{ matrix.arch }}-${{ env.BATCH_MKV_EXTRACT_VERSION }}
+        path: |
+          src-tauri/target/release/bundle/dmg/*.dmg
