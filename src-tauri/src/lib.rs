@@ -111,6 +111,9 @@ pub fn run() {
                 ));
             }
 
+            let _ = window.show();
+            let _ = window.set_focus();
+
             WINDOW_READY.store(true, Ordering::SeqCst);
             Ok(())
         })
