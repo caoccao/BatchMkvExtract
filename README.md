@@ -1,7 +1,18 @@
-# Tauri + React + Typescript
+# BatchMkvExtract
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+[![Linux Build](https://github.com/caoccao/BatchMkvExtract/actions/workflows/linux_build.yml/badge.svg)](https://github.com/caoccao/BatchMkvExtract/actions/workflows/linux_build.yml) [![MacOS Build](https://github.com/caoccao/BatchMkvExtract/actions/workflows/macos_build.yml/badge.svg)](https://github.com/caoccao/BatchMkvExtract/actions/workflows/macos_build.yml) [![Windows Build](https://github.com/caoccao/BatchMkvExtract/actions/workflows/windows_build.yml/badge.svg)](https://github.com/caoccao/BatchMkvExtract/actions/workflows/windows_build.yml)
 
-## Recommended IDE Setup
+BatchMkvExtract is a desktop GUI that drives [mkvextract](https://mkvtoolnix.download/doc/mkvextract.html) from [MKVToolNix](https://mkvtoolnix.download/) across many `.mkv` files at once, so you can pull tracks, chapters, and attachments out of a whole batch without hand-writing commands.
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+## Features
+
+* Cross-platform (Windows, Linux, MacOS)
+* TODO
+
+## Documentation
+
+* [Development](docs/development.md)
+
+## License
+
+[APACHE LICENSE, VERSION 2.0](LICENSE)
