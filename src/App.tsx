@@ -24,6 +24,7 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { ProgressBarStatus } from "@tauri-apps/api/window";
 import Layout from "./components/Layout";
 import { changeLanguage } from "./i18n";
 import * as Protocol from "./protocol";
@@ -105,20 +106,39 @@ function App() {
     const total = items.length;
     let done = 0;
     let hasActive = false;
+    let progressSum = 0;
     for (const item of items) {
-      if (
-        item.status === QueueItemStatus.Waiting ||
-        item.status === QueueItemStatus.Extracting
-      ) {
+      if (item.status === QueueItemStatus.Waiting) {
         hasActive = true;
+      } else if (item.status === QueueItemStatus.Extracting) {
+        hasActive = true;
+        progressSum += item.progress;
       } else {
         done += 1;
+        progressSum += 100;
       }
     }
+    const win = getCurrentWebviewWindow();
     const title = hasActive ? `${base} - ${done}/${total}` : base;
-    getCurrentWebviewWindow()
+    win
       .setTitle(title)
       .catch((err) => console.error("Failed to set window title", err));
+    if (hasActive && total > 0) {
+      const overall = Math.max(
+        0,
+        Math.min(100, Math.floor(progressSum / total)),
+      );
+      win
+        .setProgressBar({
+          status: ProgressBarStatus.Normal,
+          progress: overall,
+        })
+        .catch((err) => console.error("Failed to set progress bar", err));
+    } else {
+      win
+        .setProgressBar({ status: ProgressBarStatus.None })
+        .catch((err) => console.error("Failed to set progress bar", err));
+    }
   }, [about, queueItems]);
 
   useEffect(() => {
