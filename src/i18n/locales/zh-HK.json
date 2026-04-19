@@ -30,6 +30,7 @@
   },
   "toolbar": {
     "extractAll": "全部擷取 (F3)",
+    "cancelAll": "全部取消 (F4)",
     "clear": "清空 (Ctrl + Q)",
     "groupByFile": "分組模式 (F8)",
     "profile": "設定檔 (F9)",
@@ -50,6 +51,8 @@
   },
   "queue": {
     "defaultDrive": "佇列",
+    "cancelAll": "全部取消",
+    "resumeAll": "全部恢復",
     "clearCompleted": "清除已完成",
     "header": {
       "filePath": "檔案路徑",
@@ -107,5 +110,11 @@
   "notification": {
     "completedIn": "{{elapsed}} 內完成",
     "unknownError": "未知錯誤"
+  },
+  "confirm": {
+    "exitTitle": "結束",
+    "exitMessage": "目前有擷取作業進行中。確定要結束嗎?",
+    "yes": "係",
+    "no": "唔係"
   }
 }

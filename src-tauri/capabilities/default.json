@@ -6,6 +6,8 @@
   "permissions": [
     "clipboard-manager:allow-write-text",
     "core:default",
+    "core:window:allow-destroy",
+    "core:window:allow-set-title",
     "dialog:default",
     "opener:default"
   ]

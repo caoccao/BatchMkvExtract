@@ -410,7 +410,6 @@ export function GroupCard({ files }: GroupCardProps) {
             {files.map((file) => {
               const entry = queueItems[file];
               const isExtracting = entry?.status === QueueItemStatus.Extracting;
-              const isWaiting = entry?.status === QueueItemStatus.Waiting;
               const startedAt = entry?.extractionStartedAt ?? null;
               const elapsedMs =
                 isExtracting && startedAt !== null ? now - startedAt : 0;
@@ -505,24 +504,6 @@ export function GroupCard({ files }: GroupCardProps) {
                         {elapsedStr} / {etaStr}
                       </Typography>
                     </>
-                  ) : isWaiting ? (
-                    <Box
-                      sx={{
-                        display: "flex",
-                        justifyContent: "flex-end",
-                        width: "100%",
-                      }}
-                    >
-                      <Tooltip title={t("extract.cancel")}>
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={() => handleCancel(file)}
-                        >
-                          <CancelIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
                   ) : null}
                 </ListItem>
               );

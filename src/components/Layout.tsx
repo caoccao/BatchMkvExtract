@@ -16,6 +16,7 @@
  */
 
 import { Box } from "@mui/material";
+import { CloseGuard } from "./CloseGuard";
 import Footer from "./Footer";
 import MainContent from "./MainContent";
 import { NotificationToast } from "./NotificationToast";
@@ -49,6 +50,7 @@ export default function Layout() {
         <Footer />
       </footer>
       <NotificationToast />
+      <CloseGuard />
     </Box>
   );
 }

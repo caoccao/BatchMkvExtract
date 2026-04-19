@@ -30,6 +30,7 @@
   },
   "toolbar": {
     "extractAll": "全部提取 (F3)",
+    "cancelAll": "全部取消 (F4)",
     "clear": "清空 (Ctrl + Q)",
     "groupByFile": "分组模式 (F8)",
     "profile": "配置文件 (F9)",
@@ -50,6 +51,8 @@
   },
   "queue": {
     "defaultDrive": "队列",
+    "cancelAll": "全部取消",
+    "resumeAll": "全部恢复",
     "clearCompleted": "清除已完成",
     "header": {
       "filePath": "文件路径",
@@ -107,5 +110,11 @@
   "notification": {
     "completedIn": "{{elapsed}} 内完成",
     "unknownError": "未知错误"
+  },
+  "confirm": {
+    "exitTitle": "退出",
+    "exitMessage": "当前有正在进行的提取任务。确定要退出吗?",
+    "yes": "是",
+    "no": "否"
   }
 }

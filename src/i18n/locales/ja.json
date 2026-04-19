@@ -30,6 +30,7 @@
   },
   "toolbar": {
     "extractAll": "すべて抽出 (F3)",
+    "cancelAll": "すべてキャンセル (F4)",
     "clear": "クリア (Ctrl + Q)",
     "groupByFile": "グループモード (F8)",
     "profile": "プロファイル (F9)",
@@ -50,6 +51,8 @@
   },
   "queue": {
     "defaultDrive": "キュー",
+    "cancelAll": "すべてキャンセル",
+    "resumeAll": "すべて再開",
     "clearCompleted": "完了を消去",
     "header": {
       "filePath": "ファイルパス",
@@ -107,5 +110,11 @@
   "notification": {
     "completedIn": "{{elapsed}} で完了しました",
     "unknownError": "不明なエラー"
+  },
+  "confirm": {
+    "exitTitle": "終了",
+    "exitMessage": "抽出処理が実行中です。終了してもよろしいですか?",
+    "yes": "はい",
+    "no": "いいえ"
   }
 }

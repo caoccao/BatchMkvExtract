@@ -30,6 +30,7 @@
   },
   "toolbar": {
     "extractAll": "Extraer todo (F3)",
+    "cancelAll": "Cancelar todo (F4)",
     "clear": "Limpiar (Ctrl + Q)",
     "groupByFile": "Modo de grupo (F8)",
     "profile": "Perfil (F9)",
@@ -50,6 +51,8 @@
   },
   "queue": {
     "defaultDrive": "Cola",
+    "cancelAll": "Cancelar todo",
+    "resumeAll": "Reanudar todo",
     "clearCompleted": "Eliminar completados",
     "header": {
       "filePath": "Ruta del archivo",
@@ -107,5 +110,11 @@
   "notification": {
     "completedIn": "Completado en {{elapsed}}",
     "unknownError": "Error desconocido"
+  },
+  "confirm": {
+    "exitTitle": "Salir",
+    "exitMessage": "Hay extracciones en curso. ¿Seguro que quieres salir?",
+    "yes": "Sí",
+    "no": "No"
   }
 }

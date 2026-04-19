@@ -32,11 +32,13 @@ import {
 } from "@mui/material";
 import CancelIcon from "@mui/icons-material/Cancel";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
+import ReplayIcon from "@mui/icons-material/Replay";
+import { dirname } from "@tauri-apps/api/path";
 import { useTranslation } from "react-i18next";
-import { formatHMS } from "../extract-utils";
+import { buildExtractArgs, formatHMS } from "../extract-utils";
 import type { QueueItem } from "../store";
 import { QueueItemStatus, useMkvStore } from "../store";
-import { cancelExtract } from "../service";
+import { cancelExtract, enqueueExtract } from "../service";
 
 const TICK_INTERVAL_MS = 200;
 
@@ -137,21 +139,117 @@ export default function Queue() {
             i.status === QueueItemStatus.Cancelled ||
             i.status === QueueItemStatus.Failed,
         );
+        const hasActiveInDrive = items.some(
+          (i) =>
+            i.status === QueueItemStatus.Waiting ||
+            i.status === QueueItemStatus.Extracting,
+        );
+        const hasResumable = items.some(
+          (i) =>
+            i.status === QueueItemStatus.Cancelled ||
+            i.status === QueueItemStatus.Failed,
+        );
+        const handleCancelAllInDrive = async () => {
+          const activeFiles = items
+            .filter(
+              (i) =>
+                i.status === QueueItemStatus.Waiting ||
+                i.status === QueueItemStatus.Extracting,
+            )
+            .map((i) => i.file);
+          await Promise.all(
+            activeFiles.map(async (file) => {
+              markCancelRequested(file);
+              try {
+                await cancelExtract(file);
+              } catch (err) {
+                console.error("Cancel failed for", file, err);
+              }
+            }),
+          );
+        };
+        const handleResumeAllInDrive = async () => {
+          const state = useMkvStore.getState();
+          const cfg = state.config;
+          const profile = cfg
+            ? cfg.profiles.find((p) => p.name === cfg.activeProfile) ??
+              cfg.profiles[0] ??
+              null
+            : null;
+          if (!profile) {
+            return;
+          }
+          for (const item of items) {
+            if (item.status !== QueueItemStatus.Cancelled &&
+                item.status !== QueueItemStatus.Failed) {
+              continue;
+            }
+            const file = item.file;
+            const tracks = state.fileTracks[file] ?? [];
+            const ids = new Set(state.fileSelectedIds[file] ?? []);
+            if (tracks.length === 0 || ids.size === 0) {
+              continue;
+            }
+            const selectedTracks = tracks.filter((tr) => ids.has(tr.id));
+            if (selectedTracks.length === 0) {
+              continue;
+            }
+            try {
+              const outputDir = await dirname(file);
+              const args = await buildExtractArgs(
+                file,
+                outputDir,
+                selectedTracks,
+                profile,
+              );
+              await enqueueExtract(file, args);
+              state.addToQueue(file);
+            } catch (err) {
+              console.error("Resume failed for", file, err);
+            }
+          }
+        };
         return (
         <Card variant="outlined" key={drive}>
           <CardHeader
             action={
-              <Tooltip title={t("queue.clearCompleted")}>
-                <span>
-                  <IconButton
-                    size="small"
-                    disabled={!hasCompleted}
-                    onClick={() => clearCompletedInDrive(drive)}
-                  >
-                    <DeleteSweepIcon fontSize="small" />
-                  </IconButton>
-                </span>
-              </Tooltip>
+              <>
+                <Tooltip title={t("queue.resumeAll")}>
+                  <span>
+                    <IconButton
+                      size="small"
+                      color="success"
+                      disabled={!hasResumable}
+                      onClick={handleResumeAllInDrive}
+                    >
+                      <ReplayIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                <Tooltip title={t("queue.cancelAll")}>
+                  <span>
+                    <IconButton
+                      size="small"
+                      color="error"
+                      disabled={!hasActiveInDrive}
+                      onClick={handleCancelAllInDrive}
+                    >
+                      <CancelIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                <Tooltip title={t("queue.clearCompleted")}>
+                  <span>
+                    <IconButton
+                      size="small"
+                      disabled={!hasCompleted}
+                      onClick={() => clearCompletedInDrive(drive)}
+                    >
+                      <DeleteSweepIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              </>
             }
             sx={{ pb: 0 }}
           />

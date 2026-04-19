@@ -26,6 +26,7 @@ import {
   MenuItem,
   Tooltip,
 } from "@mui/material";
+import CancelIcon from "@mui/icons-material/Cancel";
 import CheckIcon from "@mui/icons-material/Check";
 import ContentCutIcon from "@mui/icons-material/ContentCut";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -37,7 +38,7 @@ import { dirname } from "@tauri-apps/api/path";
 import { useTranslation } from "react-i18next";
 import { buildExtractArgs } from "../extract-utils";
 import { QueueItemStatus } from "../protocol";
-import { enqueueExtract } from "../service";
+import { cancelExtract, enqueueExtract } from "../service";
 import { useMkvStore } from "../store";
 
 export default function Toolbar() {
@@ -73,6 +74,27 @@ export default function Toolbar() {
     if (profileButtonRef.current) {
       setProfileAnchor(profileButtonRef.current);
     }
+  }, []);
+
+  const runCancelAll = useCallback(async () => {
+    const state = useMkvStore.getState();
+    const activeFiles = Object.values(state.queueItems)
+      .filter(
+        (item) =>
+          item.status === QueueItemStatus.Waiting ||
+          item.status === QueueItemStatus.Extracting,
+      )
+      .map((item) => item.file);
+    await Promise.all(
+      activeFiles.map(async (file) => {
+        state.markCancelRequested(file);
+        try {
+          await cancelExtract(file);
+        } catch (err) {
+          console.error("Cancel failed for", file, err);
+        }
+      }),
+    );
   }, []);
 
   const runExtractAll = useCallback(async () => {
@@ -123,6 +145,7 @@ export default function Toolbar() {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (
         event.key === "F3" ||
+        event.key === "F4" ||
         event.key === "F8" ||
         event.key === "F9" ||
         event.key === "F10"
@@ -165,6 +188,24 @@ export default function Toolbar() {
         !event.ctrlKey &&
         !event.altKey &&
         !event.shiftKey &&
+        event.key === "F4"
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        const hasActive = Object.values(
+          useMkvStore.getState().queueItems,
+        ).some(
+          (item) =>
+            item.status === QueueItemStatus.Waiting ||
+            item.status === QueueItemStatus.Extracting,
+        );
+        if (hasActive) {
+          runCancelAll();
+        }
+      } else if (
+        !event.ctrlKey &&
+        !event.altKey &&
+        !event.shiftKey &&
         event.key === "F8"
       ) {
         event.preventDefault();
@@ -199,6 +240,7 @@ export default function Toolbar() {
   }, [
     clearFiles,
     runExtractAll,
+    runCancelAll,
     openProfileMenu,
     openSettings,
     setGroupByFile,
@@ -226,6 +268,18 @@ export default function Toolbar() {
               onClick={runExtractAll}
             >
               <ContentCutIcon fontSize="small" />
+            </IconButton>
+          </span>
+        </Tooltip>
+        <Tooltip title={t("toolbar.cancelAll")}>
+          <span>
+            <IconButton
+              sx={buttonSx}
+              color="error"
+              disabled={!hasActiveJobs}
+              onClick={runCancelAll}
+            >
+              <CancelIcon fontSize="small" />
             </IconButton>
           </span>
         </Tooltip>

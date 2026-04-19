@@ -30,6 +30,7 @@
   },
   "toolbar": {
     "extractAll": "Alle extrahieren (F3)",
+    "cancelAll": "Alle abbrechen (F4)",
     "clear": "Leeren (Strg + Q)",
     "groupByFile": "Gruppenmodus (F8)",
     "profile": "Profil (F9)",
@@ -50,6 +51,8 @@
   },
   "queue": {
     "defaultDrive": "Warteschlange",
+    "cancelAll": "Alle abbrechen",
+    "resumeAll": "Alle fortsetzen",
     "clearCompleted": "Abgeschlossene löschen",
     "header": {
       "filePath": "Dateipfad",
@@ -107,5 +110,11 @@
   "notification": {
     "completedIn": "Abgeschlossen in {{elapsed}}",
     "unknownError": "Unbekannter Fehler"
+  },
+  "confirm": {
+    "exitTitle": "Beenden",
+    "exitMessage": "Es laufen noch Extraktionen. Möchten Sie wirklich beenden?",
+    "yes": "Ja",
+    "no": "Nein"
   }
 }

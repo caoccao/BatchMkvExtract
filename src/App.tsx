@@ -23,9 +23,11 @@ import {
   createTheme,
   useMediaQuery,
 } from "@mui/material";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import Layout from "./components/Layout";
 import { changeLanguage } from "./i18n";
 import * as Protocol from "./protocol";
+import { QueueItemStatus } from "./protocol";
 import { getLaunchArgs, getMkvFiles } from "./service";
 import { useMkvStore } from "./store";
 
@@ -79,6 +81,9 @@ function getPaletteByTheme(theme: Protocol.Theme, mode: "light" | "dark") {
 function App() {
   const config = useMkvStore((s) => s.config);
   const initConfig = useMkvStore((s) => s.initConfig);
+  const about = useMkvStore((s) => s.about);
+  const initAbout = useMkvStore((s) => s.initAbout);
+  const queueItems = useMkvStore((s) => s.queueItems);
 
   const displayMode = config?.displayMode ?? Protocol.DisplayMode.Auto;
   const selectedTheme = config?.theme ?? Protocol.Theme.Ocean;
@@ -87,6 +92,34 @@ function App() {
   useEffect(() => {
     initConfig();
   }, [initConfig]);
+
+  useEffect(() => {
+    initAbout();
+  }, [initAbout]);
+
+  useEffect(() => {
+    const base = about?.appVersion
+      ? `BatchMkvExtract v${about.appVersion}`
+      : "BatchMkvExtract";
+    const items = Object.values(queueItems);
+    const total = items.length;
+    let done = 0;
+    let hasActive = false;
+    for (const item of items) {
+      if (
+        item.status === QueueItemStatus.Waiting ||
+        item.status === QueueItemStatus.Extracting
+      ) {
+        hasActive = true;
+      } else {
+        done += 1;
+      }
+    }
+    const title = hasActive ? `${base} - ${done}/${total}` : base;
+    getCurrentWebviewWindow()
+      .setTitle(title)
+      .catch((err) => console.error("Failed to set window title", err));
+  }, [about, queueItems]);
 
   useEffect(() => {
     let cancelled = false;
