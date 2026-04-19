@@ -111,6 +111,7 @@
     "chapters": "章節",
     "attachments": "附件",
     "autoSelectOnDrop": "加入檔案時自動選取",
+    "autoSelectOnDropForLanguages": "加入檔案時按語言自動選取",
     "defaultGroupMode": "預設分組模式",
     "templatePlaceholdersHint": "佔位符: {file_name}, {track_id}, {track_number}, {language}, {codec_name}, {track_name}",
     "resetTemplates": "還原預設值"

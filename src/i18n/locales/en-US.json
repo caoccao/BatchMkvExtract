@@ -111,6 +111,7 @@
     "chapters": "Chapters",
     "attachments": "Attachments",
     "autoSelectOnDrop": "Auto-select on file add",
+    "autoSelectOnDropForLanguages": "Auto-select on file add for languages",
     "defaultGroupMode": "Default group mode",
     "templatePlaceholdersHint": "Placeholders: {file_name}, {track_id}, {track_number}, {language}, {codec_name}, {track_name}",
     "resetTemplates": "Reset to Defaults"

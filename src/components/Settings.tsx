@@ -478,30 +478,35 @@ export default function Settings() {
                       typeKey: "video" as const,
                       templateKey: "videoTemplate" as const,
                       selectKey: "selectVideo" as const,
+                      languagesKey: "videoLanguages" as const,
                       label: t("settings.video"),
                     },
                     {
                       typeKey: "audio" as const,
                       templateKey: "audioTemplate" as const,
                       selectKey: "selectAudio" as const,
+                      languagesKey: "audioLanguages" as const,
                       label: t("settings.audio"),
                     },
                     {
                       typeKey: "subtitles" as const,
                       templateKey: "subtitleTemplate" as const,
                       selectKey: "selectSubtitle" as const,
+                      languagesKey: "subtitleLanguages" as const,
                       label: t("settings.subtitles"),
                     },
                     {
                       typeKey: "chapters" as const,
                       templateKey: "chaptersTemplate" as const,
                       selectKey: "selectChapters" as const,
+                      languagesKey: null,
                       label: t("settings.chapters"),
                     },
                     {
                       typeKey: "attachments" as const,
                       templateKey: "attachmentsTemplate" as const,
                       selectKey: "selectAttachments" as const,
+                      languagesKey: null,
                       label: t("settings.attachments"),
                     },
                   ] as const
@@ -525,25 +530,48 @@ export default function Settings() {
                       }
                       sx={{ mt: 0.5 }}
                     />
-                    <FormControlLabel
-                      sx={{ mt: 0.5 }}
-                      control={
-                        <Checkbox
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        mt: 0.5,
+                      }}
+                    >
+                      <FormControlLabel
+                        sx={{ mr: 0 }}
+                        control={
+                          <Checkbox
+                            size="small"
+                            checked={activeProfile[row.selectKey]}
+                            onChange={(e) =>
+                              updateActiveProfile({
+                                [row.selectKey]: e.target.checked,
+                              })
+                            }
+                          />
+                        }
+                        label={
+                          <Typography variant="caption">
+                            {row.languagesKey
+                              ? t("settings.autoSelectOnDropForLanguages")
+                              : t("settings.autoSelectOnDrop")}
+                          </Typography>
+                        }
+                      />
+                      {row.languagesKey && (
+                        <TextField
                           size="small"
-                          checked={activeProfile[row.selectKey]}
+                          value={activeProfile[row.languagesKey] ?? ""}
                           onChange={(e) =>
                             updateActiveProfile({
-                              [row.selectKey]: e.target.checked,
+                              [row.languagesKey]: e.target.value,
                             })
                           }
+                          sx={{ flex: 1 }}
                         />
-                      }
-                      label={
-                        <Typography variant="caption">
-                          {t("settings.autoSelectOnDrop")}
-                        </Typography>
-                      }
-                    />
+                      )}
+                    </Box>
                   </Box>
                 ))}
               </Stack>

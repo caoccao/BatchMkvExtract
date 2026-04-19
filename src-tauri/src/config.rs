@@ -142,6 +142,15 @@ pub struct ConfigProfile {
     pub select_chapters: bool,
     #[serde(rename = "selectAttachments", default)]
     pub select_attachments: bool,
+    #[serde(rename = "videoLanguages", default)]
+    pub video_languages: String,
+    #[serde(rename = "audioLanguages", default)]
+    pub audio_languages: String,
+    #[serde(
+        rename = "subtitleLanguages",
+        default = "ConfigProfile::default_subtitle_languages"
+    )]
+    pub subtitle_languages: String,
     #[serde(
         rename = "defaultGroupMode",
         default = "ConfigProfile::default_default_group_mode"
@@ -166,6 +175,12 @@ impl ConfigProfile {
         true
     }
 
+    pub const DEFAULT_SUBTITLE_LANGUAGES: &'static str = "eng, chi, spa, ger, fre, jpn";
+
+    fn default_subtitle_languages() -> String {
+        Self::DEFAULT_SUBTITLE_LANGUAGES.to_owned()
+    }
+
     fn default_default_group_mode() -> bool {
         true
     }
@@ -185,6 +200,9 @@ impl Default for ConfigProfile {
             select_subtitle: true,
             select_chapters: false,
             select_attachments: false,
+            video_languages: String::new(),
+            audio_languages: String::new(),
+            subtitle_languages: Self::default_subtitle_languages(),
             default_group_mode: true,
         }
     }

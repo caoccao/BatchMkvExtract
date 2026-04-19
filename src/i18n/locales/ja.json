@@ -111,6 +111,7 @@
     "chapters": "チャプター",
     "attachments": "添付ファイル",
     "autoSelectOnDrop": "追加時に自動で選択",
+    "autoSelectOnDropForLanguages": "追加時に言語で自動選択",
     "defaultGroupMode": "既定のグループモード",
     "templatePlaceholdersHint": "プレースホルダー: {file_name}, {track_id}, {track_number}, {language}, {codec_name}, {track_name}",
     "resetTemplates": "デフォルトに戻す"

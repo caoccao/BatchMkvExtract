@@ -122,24 +122,53 @@ export function pickTemplateForTrackType(
   }
 }
 
-export function shouldSelectTrackType(
-  profile: ConfigProfile,
-  trackType: string,
+function parseLanguageFilter(filter: string): Set<string> | null {
+  const items = filter
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+  return items.length === 0 ? null : new Set(items);
+}
+
+function matchesLanguage(
+  filter: Set<string> | null,
+  language: string,
 ): boolean {
-  switch (trackType) {
-    case "video":
-      return profile.selectVideo;
-    case "audio":
-      return profile.selectAudio;
-    case "subtitles":
-      return profile.selectSubtitle;
-    case "chapters":
-      return profile.selectChapters;
-    case "attachment":
-      return profile.selectAttachments;
-    default:
-      return false;
+  if (filter === null) {
+    return true;
   }
+  return filter.has(language.toLowerCase());
+}
+
+export function makeTrackSelector(
+  profile: ConfigProfile,
+): (track: MkvTrack) => boolean {
+  const videoLangs = parseLanguageFilter(profile.videoLanguages);
+  const audioLangs = parseLanguageFilter(profile.audioLanguages);
+  const subtitleLangs = parseLanguageFilter(profile.subtitleLanguages);
+  return (track: MkvTrack) => {
+    switch (track.type) {
+      case "video":
+        return (
+          profile.selectVideo && matchesLanguage(videoLangs, track.language)
+        );
+      case "audio":
+        return (
+          profile.selectAudio && matchesLanguage(audioLangs, track.language)
+        );
+      case "subtitles":
+        return (
+          profile.selectSubtitle &&
+          matchesLanguage(subtitleLangs, track.language)
+        );
+      case "chapters":
+        return profile.selectChapters;
+      case "attachment":
+        return profile.selectAttachments;
+      default:
+        return false;
+    }
+  };
 }
 
 function attachmentExtension(codec: string): string {

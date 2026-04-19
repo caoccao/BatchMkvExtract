@@ -50,8 +50,8 @@ import {
   buildCommandString,
   buildExtractArgs,
   formatHMS,
+  makeTrackSelector,
   resolveOutputDir,
-  shouldSelectTrackType,
   trackKey,
 } from "../extract-utils";
 import { QueueItemStatus } from "../protocol";
@@ -133,8 +133,9 @@ export function MkvFileCard({ path }: MkvFileCardProps) {
       return;
     }
     const auto: string[] = [];
+    const selectTrack = makeTrackSelector(activeProfile);
     for (const track of tracks) {
-      if (shouldSelectTrackType(activeProfile, track.type)) {
+      if (selectTrack(track)) {
         auto.push(trackKey(track));
       }
     }

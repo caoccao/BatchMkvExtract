@@ -114,6 +114,9 @@ export interface ConfigProfile {
   selectSubtitle: boolean;
   selectChapters: boolean;
   selectAttachments: boolean;
+  videoLanguages: string;
+  audioLanguages: string;
+  subtitleLanguages: string;
   defaultGroupMode: boolean;
 }
 
@@ -131,6 +134,7 @@ export interface Config {
 export const DEFAULT_PROFILE_NAME = "Default";
 export const DEFAULT_TEMPLATE = "{file_name}.{track_id}.{language}";
 export const DEFAULT_TEMPLATE_NO_LANGUAGE = "{file_name}.{track_id}";
+export const DEFAULT_SUBTITLE_LANGUAGES = "eng, chi, spa, ger, fre, jpn";
 
 export function createDefaultProfile(name = DEFAULT_PROFILE_NAME): ConfigProfile {
   const isDefault = name === DEFAULT_PROFILE_NAME;
@@ -146,6 +150,9 @@ export function createDefaultProfile(name = DEFAULT_PROFILE_NAME): ConfigProfile
     selectSubtitle: isDefault,
     selectChapters: false,
     selectAttachments: false,
+    videoLanguages: "",
+    audioLanguages: "",
+    subtitleLanguages: DEFAULT_SUBTITLE_LANGUAGES,
     defaultGroupMode: isDefault,
   };
 }

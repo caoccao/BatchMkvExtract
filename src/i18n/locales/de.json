@@ -111,6 +111,7 @@
     "chapters": "Kapitel",
     "attachments": "Anhänge",
     "autoSelectOnDrop": "Beim Hinzufügen automatisch auswählen",
+    "autoSelectOnDropForLanguages": "Beim Hinzufügen automatisch auswählen für Sprachen",
     "defaultGroupMode": "Standard-Gruppenmodus",
     "templatePlaceholdersHint": "Platzhalter: {file_name}, {track_id}, {track_number}, {language}, {codec_name}, {track_name}",
     "resetTemplates": "Auf Standard zurücksetzen"

@@ -50,8 +50,8 @@ import {
   formatHMS,
   getFileName,
   getParentDir,
+  makeTrackSelector,
   resolveOutputDir,
-  shouldSelectTrackType,
   trackKey,
 } from "../extract-utils";
 import { QueueItemStatus } from "../protocol";
@@ -161,8 +161,9 @@ export function GroupCard({ files }: GroupCardProps) {
       groupIds = fileSelectedIdsMap[initFile] ?? [];
     } else if (tracks.length > 0) {
       groupIds = [];
+      const selectTrack = makeTrackSelector(activeProfile);
       for (const track of tracks) {
-        if (shouldSelectTrackType(activeProfile, track.type)) {
+        if (selectTrack(track)) {
           groupIds.push(trackKey(track));
         }
       }
