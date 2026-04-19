@@ -419,7 +419,7 @@ export function GroupCard({ files }: GroupCardProps) {
       </Box>
       <Box
         ref={splitContainerRef}
-        sx={{ display: "flex", minHeight: 200, position: "relative" }}
+        sx={{ display: "flex", position: "relative" }}
       >
         <Box
           sx={{
