@@ -167,6 +167,7 @@ export default function Settings() {
           return;
         }
         setBetterMediaInfoDetection({ found: result.found });
+        useMkvStore.getState().setBetterMediaInfoAvailable(result.found);
         if (
           result.found &&
           result.path &&

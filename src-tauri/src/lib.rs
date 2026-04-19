@@ -107,6 +107,13 @@ async fn detect_better_media_info(
         .map_err(convert_error)
 }
 
+#[tauri::command]
+async fn launch_better_media_info(paths: Vec<String>) -> Result<(), String> {
+    controller::launch_better_media_info(paths)
+        .await
+        .map_err(convert_error)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let runtime = tokio::runtime::Builder::new_multi_thread()
@@ -133,6 +140,7 @@ pub fn run() {
             get_mkv_files,
             get_mkv_tracks,
             is_mkvtoolnix_found,
+            launch_better_media_info,
             set_config
         ])
         .setup(|app| {

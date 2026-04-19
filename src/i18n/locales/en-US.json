@@ -13,6 +13,7 @@
     "browse": "Browse",
     "setOutputPath": "Set Output Path",
     "outputPath": "Output Path",
+    "openInBetterMediaInfo": "Open in BetterMediaInfo",
     "outputPathNotWritable": "The output path is not writable. Please choose another path.",
     "commandCopied": "Command copied to clipboard.",
     "extractionComplete": "Extraction complete.",

@@ -13,6 +13,7 @@
     "browse": "瀏覽",
     "setOutputPath": "設定輸出路徑",
     "outputPath": "輸出路徑",
+    "openInBetterMediaInfo": "喺 BetterMediaInfo 開啟",
     "outputPathNotWritable": "輸出路徑無法寫入。請選擇其他路徑。",
     "commandCopied": "指令已複製到剪貼簿。",
     "extractionComplete": "擷取完成。",

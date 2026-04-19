@@ -42,6 +42,7 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import ContentCutIcon from "@mui/icons-material/ContentCut";
 import DeleteIcon from "@mui/icons-material/Delete";
 import FolderOpenIcon from "@mui/icons-material/FolderOpen";
+import betterMediaInfoIcon from "../assets/bettermediainfo.png";
 import { dirname } from "@tauri-apps/api/path";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useTranslation } from "react-i18next";
@@ -59,6 +60,7 @@ import {
   ensureOutputPath,
   enqueueExtract,
   getMkvTracks,
+  launchBetterMediaInfo,
 } from "../service";
 import { useMkvStore } from "../store";
 import { CardSummary } from "./CardSummary";
@@ -88,6 +90,9 @@ export function MkvFileCard({ path }: MkvFileCardProps) {
   const storedSelectedIds = useMkvStore((s) => s.fileSelectedIds[path]);
   const outputDirOverride = useMkvStore((s) => s.fileOutputDirs[path]);
   const trackCounts = useMkvStore((s) => s.fileTrackCounts[path]);
+  const betterMediaInfoAvailable = useMkvStore(
+    (s) => s.betterMediaInfoAvailable,
+  );
   const activeProfile = useMkvStore((s) => {
     const cfg = s.config;
     if (!cfg) {
@@ -316,6 +321,14 @@ export function MkvFileCard({ path }: MkvFileCardProps) {
     setOutputDialogOpen(true);
   };
 
+  const handleOpenInBetterMediaInfo = async () => {
+    try {
+      await launchBetterMediaInfo([path]);
+    } catch (err) {
+      setSnackbar({ message: String(err), severity: "error" });
+    }
+  };
+
   const handleOutputConfirm = (value: string) => {
     if (value.length === 0) {
       clearFileOutputDir(path);
@@ -367,6 +380,20 @@ export function MkvFileCard({ path }: MkvFileCardProps) {
           </IconButton>
         </span>
       </Tooltip>
+      {betterMediaInfoAvailable && (
+        <Tooltip title={t("extract.openInBetterMediaInfo")}>
+          <span>
+            <IconButton size="small" onClick={handleOpenInBetterMediaInfo}>
+              <Box
+                component="img"
+                src={betterMediaInfoIcon}
+                alt="BetterMediaInfo"
+                sx={{ width: 20, height: 20 }}
+              />
+            </IconButton>
+          </span>
+        </Tooltip>
+      )}
       <Tooltip title={t("extract.copyCommand")}>
         <span>
           <IconButton

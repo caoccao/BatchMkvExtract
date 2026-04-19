@@ -13,6 +13,7 @@
     "browse": "Durchsuchen",
     "setOutputPath": "Ausgabepfad festlegen",
     "outputPath": "Ausgabepfad",
+    "openInBetterMediaInfo": "In BetterMediaInfo öffnen",
     "outputPathNotWritable": "Der Ausgabepfad ist nicht beschreibbar. Bitte wähle einen anderen Pfad.",
     "commandCopied": "Befehl in die Zwischenablage kopiert.",
     "extractionComplete": "Extraktion abgeschlossen.",

@@ -41,6 +41,7 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import ContentCutIcon from "@mui/icons-material/ContentCut";
 import DeleteIcon from "@mui/icons-material/Delete";
 import FolderOpenIcon from "@mui/icons-material/FolderOpen";
+import betterMediaInfoIcon from "../assets/bettermediainfo.png";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useTranslation } from "react-i18next";
 import {
@@ -58,6 +59,7 @@ import {
   cancelExtract,
   ensureOutputPath,
   enqueueExtract,
+  launchBetterMediaInfo,
 } from "../service";
 import { useMkvStore } from "../store";
 import { CardSummary } from "./CardSummary";
@@ -129,6 +131,9 @@ export function GroupCard({ files }: GroupCardProps) {
   const fileSelectedIdsMap = useMkvStore((s) => s.fileSelectedIds);
   const fileOutputDirs = useMkvStore((s) => s.fileOutputDirs);
   const fileTrackCounts = useMkvStore((s) => s.fileTrackCounts);
+  const betterMediaInfoAvailable = useMkvStore(
+    (s) => s.betterMediaInfoAvailable,
+  );
   const setGroupOutputDir = useMkvStore((s) => s.setGroupOutputDir);
   const clearGroupOutputDir = useMkvStore((s) => s.clearGroupOutputDir);
   const queueItems = useMkvStore((s) => s.queueItems);
@@ -206,6 +211,14 @@ export function GroupCard({ files }: GroupCardProps) {
   const handleOpenOutputDialog = () => {
     setOutputDialogInitial(groupOutputDir ?? parentDir);
     setOutputDialogOpen(true);
+  };
+
+  const handleOpenInBetterMediaInfo = async () => {
+    try {
+      await launchBetterMediaInfo(files);
+    } catch (err) {
+      setSnackbar({ message: String(err), severity: "error" });
+    }
   };
 
   const handleOutputConfirm = (value: string) => {
@@ -379,6 +392,20 @@ export function GroupCard({ files }: GroupCardProps) {
             </IconButton>
           </span>
         </Tooltip>
+        {betterMediaInfoAvailable && (
+          <Tooltip title={t("extract.openInBetterMediaInfo")}>
+            <span>
+              <IconButton size="small" onClick={handleOpenInBetterMediaInfo}>
+                <Box
+                  component="img"
+                  src={betterMediaInfoIcon}
+                  alt="BetterMediaInfo"
+                  sx={{ width: 20, height: 20 }}
+                />
+              </IconButton>
+            </span>
+          </Tooltip>
+        )}
         <Tooltip title={t("group.copyAllCommands")}>
           <span>
             <IconButton

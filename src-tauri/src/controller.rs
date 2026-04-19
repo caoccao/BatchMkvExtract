@@ -168,6 +168,26 @@ fn common_better_media_info_dirs() -> Vec<PathBuf> {
     dirs
 }
 
+pub async fn launch_better_media_info(paths: Vec<String>) -> Result<()> {
+    let cfg = config::get_config();
+    let configured = cfg.external_tools.better_media_info_path.trim().to_owned();
+    if configured.is_empty() {
+        anyhow::bail!("BetterMediaInfo path is not set");
+    }
+    let exe = Path::new(&configured).join(better_media_info_exe_name());
+    if !exe.is_file() {
+        anyhow::bail!(
+            "BetterMediaInfo executable not found at {}",
+            exe.display()
+        );
+    }
+    let mut cmd = std::process::Command::new(&exe);
+    cmd.args(&paths);
+    cmd.spawn()
+        .map_err(|e| anyhow::anyhow!("Failed to launch BetterMediaInfo: {}", e))?;
+    Ok(())
+}
+
 pub async fn detect_better_media_info(user_path: String) -> Result<BetterMediaInfoStatus> {
     let trimmed = user_path.trim();
     if !trimmed.is_empty() {

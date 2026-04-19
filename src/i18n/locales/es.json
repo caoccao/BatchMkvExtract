@@ -13,6 +13,7 @@
     "browse": "Examinar",
     "setOutputPath": "Establecer ruta de salida",
     "outputPath": "Ruta de salida",
+    "openInBetterMediaInfo": "Abrir en BetterMediaInfo",
     "outputPathNotWritable": "La ruta de salida no se puede escribir. Elige otra ruta.",
     "commandCopied": "Comando copiado al portapapeles.",
     "extractionComplete": "Extracción completada.",

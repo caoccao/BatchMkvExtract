@@ -85,3 +85,7 @@ export async function detectBetterMediaInfo(
     path,
   });
 }
+
+export async function launchBetterMediaInfo(paths: string[]): Promise<void> {
+  return await invoke<void>("launch_better_media_info", { paths });
+}

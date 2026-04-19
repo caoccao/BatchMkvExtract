@@ -13,6 +13,7 @@
     "browse": "参照",
     "setOutputPath": "出力先を設定",
     "outputPath": "出力先",
+    "openInBetterMediaInfo": "BetterMediaInfo で開く",
     "outputPathNotWritable": "出力先に書き込めません。別のパスを選択してください。",
     "commandCopied": "コマンドをクリップボードにコピーしました。",
     "extractionComplete": "抽出が完了しました。",

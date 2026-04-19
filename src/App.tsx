@@ -29,7 +29,7 @@ import Layout from "./components/Layout";
 import { changeLanguage } from "./i18n";
 import * as Protocol from "./protocol";
 import { QueueItemStatus } from "./protocol";
-import { getLaunchArgs, getMkvFiles } from "./service";
+import { detectBetterMediaInfo, getLaunchArgs, getMkvFiles } from "./service";
 import { useMkvStore } from "./store";
 
 function getPaletteByTheme(theme: Protocol.Theme, mode: "light" | "dark") {
@@ -166,6 +166,26 @@ function App() {
   useEffect(() => {
     changeLanguage(language);
   }, [language]);
+
+  const bmiPath = config?.externalTools?.betterMediaInfoPath ?? "";
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const result = await detectBetterMediaInfo(bmiPath);
+        if (!cancelled) {
+          useMkvStore.getState().setBetterMediaInfoAvailable(result.found);
+        }
+      } catch {
+        if (!cancelled) {
+          useMkvStore.getState().setBetterMediaInfoAvailable(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [bmiPath]);
 
   const prefersDarkMode = useMediaQuery("(prefers-color-scheme: dark)");
 

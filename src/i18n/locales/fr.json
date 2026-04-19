@@ -13,6 +13,7 @@
     "browse": "Parcourir",
     "setOutputPath": "Définir le chemin de sortie",
     "outputPath": "Chemin de sortie",
+    "openInBetterMediaInfo": "Ouvrir dans BetterMediaInfo",
     "outputPathNotWritable": "Le chemin de sortie n'est pas accessible en écriture. Choisissez un autre chemin.",
     "commandCopied": "Commande copiée dans le presse-papiers.",
     "extractionComplete": "Extraction terminée.",
