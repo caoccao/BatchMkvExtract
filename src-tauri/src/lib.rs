@@ -22,7 +22,10 @@ mod extract;
 mod mkvtoolnix;
 mod protocol;
 
+use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
+
+use protocol::{UpdateCheckResult, UpdateCheckState};
 
 static WINDOW_READY: AtomicBool = AtomicBool::new(false);
 
@@ -118,6 +121,20 @@ async fn launch_better_media_info(paths: Vec<String>) -> Result<(), String> {
         .map_err(convert_error)
 }
 
+#[tauri::command]
+fn get_update_result(
+    state: tauri::State<'_, UpdateCheckState>,
+) -> Option<UpdateCheckResult> {
+    state.result.lock().unwrap().clone()
+}
+
+#[tauri::command]
+fn skip_version(version: String) -> Result<(), String> {
+    let mut cfg = config::get_config();
+    cfg.update.ignore_version = version;
+    config::set_config(cfg).map_err(convert_error)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let runtime = tokio::runtime::Builder::new_multi_thread()
@@ -128,6 +145,9 @@ pub fn run() {
     tauri::async_runtime::set(runtime.handle().clone());
 
     tauri::Builder::default()
+        .manage(UpdateCheckState {
+            result: Arc::new(Mutex::new(None)),
+        })
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
@@ -143,9 +163,11 @@ pub fn run() {
             get_launch_args,
             get_mkv_files,
             get_mkv_tracks,
+            get_update_result,
             is_mkvtoolnix_found,
             launch_better_media_info,
-            set_config
+            set_config,
+            skip_version
         ])
         .setup(|app| {
             use tauri::Manager;
@@ -169,6 +191,79 @@ pub fn run() {
 
             let _ = window.show();
             let _ = window.set_focus();
+
+            let update_state = app.state::<UpdateCheckState>();
+            let result_arc = update_state.result.clone();
+            let update_cfg = config::get_config();
+            let interval_seconds: i64 = match update_cfg.update.check_interval {
+                config::UpdateCheckInterval::Daily => 86_400,
+                config::UpdateCheckInterval::Weekly => 604_800,
+                config::UpdateCheckInterval::Monthly => 2_592_000,
+            };
+            let now_seconds = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs() as i64)
+                .unwrap_or(0);
+            if update_cfg.update.last_checked == 0
+                || now_seconds - update_cfg.update.last_checked > interval_seconds
+            {
+                std::thread::spawn(move || {
+                    let check_result = std::panic::catch_unwind(controller::check_for_updates)
+                        .unwrap_or_else(|_| {
+                            log::error!("Update check panicked");
+                            Err(anyhow::anyhow!("Update check panicked"))
+                        });
+                    match check_result {
+                        Ok(result) => {
+                            let mut updated_config = config::get_config();
+                            updated_config.update.last_checked = std::time::SystemTime::now()
+                                .duration_since(std::time::UNIX_EPOCH)
+                                .map(|d| d.as_secs() as i64)
+                                .unwrap_or(0);
+                            if let Some(ref version) = result.latest_version {
+                                updated_config.update.last_version = version.clone();
+                            }
+                            let _ = config::set_config(updated_config.clone());
+                            let final_result = if result.has_update
+                                && result.latest_version.as_deref()
+                                    == Some(updated_config.update.ignore_version.as_str())
+                                && !updated_config.update.ignore_version.is_empty()
+                            {
+                                UpdateCheckResult {
+                                    has_update: false,
+                                    latest_version: None,
+                                }
+                            } else {
+                                result
+                            };
+                            *result_arc.lock().unwrap() = Some(final_result);
+                        }
+                        Err(e) => {
+                            log::warn!("Update check failed: {}", e);
+                            *result_arc.lock().unwrap() = Some(UpdateCheckResult {
+                                has_update: false,
+                                latest_version: None,
+                            });
+                        }
+                    }
+                });
+            } else if !update_cfg.update.last_version.is_empty()
+                && controller::is_newer_version(
+                    &update_cfg.update.last_version,
+                    controller::get_app_version(),
+                )
+                && update_cfg.update.last_version != update_cfg.update.ignore_version
+            {
+                *result_arc.lock().unwrap() = Some(UpdateCheckResult {
+                    has_update: true,
+                    latest_version: Some(update_cfg.update.last_version.clone()),
+                });
+            } else {
+                *result_arc.lock().unwrap() = Some(UpdateCheckResult {
+                    has_update: false,
+                    latest_version: None,
+                });
+            }
 
             WINDOW_READY.store(true, Ordering::SeqCst);
             Ok(())

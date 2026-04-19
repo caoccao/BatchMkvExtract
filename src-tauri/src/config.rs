@@ -42,6 +42,8 @@ pub struct Config {
     pub active_profile: String,
     #[serde(default)]
     pub window: ConfigWindow,
+    #[serde(default)]
+    pub update: ConfigUpdate,
 }
 
 impl Config {
@@ -64,7 +66,44 @@ impl Default for Config {
             profiles: Self::default_profiles(),
             active_profile: Self::default_active_profile(),
             window: Default::default(),
+            update: Default::default(),
         }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ConfigUpdate {
+    #[serde(rename = "checkInterval", default)]
+    pub check_interval: UpdateCheckInterval,
+    #[serde(rename = "lastChecked", default)]
+    pub last_checked: i64,
+    #[serde(rename = "lastVersion", default)]
+    pub last_version: String,
+    #[serde(rename = "ignoreVersion", default)]
+    pub ignore_version: String,
+}
+
+impl Default for ConfigUpdate {
+    fn default() -> Self {
+        Self {
+            check_interval: Default::default(),
+            last_checked: 0,
+            last_version: String::new(),
+            ignore_version: String::new(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub enum UpdateCheckInterval {
+    Daily,
+    Weekly,
+    Monthly,
+}
+
+impl Default for UpdateCheckInterval {
+    fn default() -> Self {
+        Self::Weekly
     }
 }
 

@@ -39,6 +39,7 @@ import DarkModeIcon from "@mui/icons-material/DarkMode";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import PaletteIcon from "@mui/icons-material/Palette";
 import PersonIcon from "@mui/icons-material/Person";
+import UpdateIcon from "@mui/icons-material/Update";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useTranslation } from "react-i18next";
 import * as Protocol from "../protocol";
@@ -660,6 +661,47 @@ export default function Settings() {
                   : t("settings.betterMediaInfoNotFound")}
               </Typography>
             ) : null}
+          </Box>
+        </Paper>
+
+        <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+          <SectionHeader
+            icon={<UpdateIcon fontSize="small" />}
+            title={t("settings.update")}
+          />
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, py: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              {t("settings.checkNewVersion")}
+            </Typography>
+            <FormControl size="small" sx={{ minWidth: 150 }}>
+              <Select
+                value={
+                  config.update?.checkInterval ??
+                  Protocol.UpdateCheckInterval.Weekly
+                }
+                onChange={(e) => {
+                  const next = e.target.value as Protocol.UpdateCheckInterval;
+                  updateConfig({
+                    update: {
+                      checkInterval: next,
+                      lastChecked: config.update?.lastChecked ?? 0,
+                      lastVersion: config.update?.lastVersion ?? "",
+                      ignoreVersion: config.update?.ignoreVersion ?? "",
+                    },
+                  });
+                }}
+              >
+                <MenuItem value={Protocol.UpdateCheckInterval.Daily}>
+                  {t("settings.daily")}
+                </MenuItem>
+                <MenuItem value={Protocol.UpdateCheckInterval.Weekly}>
+                  {t("settings.weekly")}
+                </MenuItem>
+                <MenuItem value={Protocol.UpdateCheckInterval.Monthly}>
+                  {t("settings.monthly")}
+                </MenuItem>
+              </Select>
+            </FormControl>
           </Box>
         </Paper>
       </Stack>

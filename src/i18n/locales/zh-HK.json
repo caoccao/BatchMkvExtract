@@ -93,8 +93,13 @@
     "detect": "偵測",
     "mkvToolNixFound": "已在 MKVToolNix 路徑下找到 mkvmerge 及 mkvextract。",
     "mkvToolNixNotFound": "在 MKVToolNix 路徑下未找到 mkvmerge 或 mkvextract。",
-    "betterMediaInfoFound": "已偵測到 BetterMediaInfo。你而家可以喺 app 度用 BetterMediaInfo 功能。",
+    "betterMediaInfoFound": "搵到 BetterMediaInfo",
     "betterMediaInfoNotFound": "偵測唔到 BetterMediaInfo。請檢查路徑再試。",
+    "update": "更新",
+    "checkNewVersion": "檢查新版本",
+    "daily": "每日",
+    "weekly": "每週",
+    "monthly": "每月",
     "profiles": "設定檔",
     "activeProfile": "目前設定檔",
     "newProfileName": "新設定檔名稱",
@@ -135,5 +140,9 @@
     "summary": {
       "toPath": "輸出至 {{path}}"
     }
+  },
+  "update": {
+    "newVersionAvailable": "新版本 {{version}} 已發佈。",
+    "skipThisVersion": "跳過此版本"
   }
 }

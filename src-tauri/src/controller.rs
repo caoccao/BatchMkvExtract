@@ -19,8 +19,9 @@ use anyhow::Result;
 use std::path::{Path, PathBuf};
 
 use crate::config;
+use crate::constants::APP_NAME;
 use crate::mkvtoolnix::is_mkv;
-use crate::protocol::{About, BetterMediaInfoStatus};
+use crate::protocol::{About, BetterMediaInfoStatus, UpdateCheckResult};
 
 pub async fn get_about() -> Result<About> {
     Ok(About {
@@ -39,6 +40,52 @@ pub async fn set_config(config: config::Config) -> Result<config::Config> {
 
 pub fn get_app_version() -> &'static str {
     env!("CARGO_PKG_VERSION")
+}
+
+pub fn is_newer_version(latest: &str, current: &str) -> bool {
+    let latest = latest.trim_start_matches('v');
+    let current = current.trim_start_matches('v');
+    let latest_parts: Vec<u32> = latest.split('.').filter_map(|s| s.parse().ok()).collect();
+    let current_parts: Vec<u32> = current.split('.').filter_map(|s| s.parse().ok()).collect();
+    let len = latest_parts.len().max(current_parts.len());
+    for i in 0..len {
+        let l = latest_parts.get(i).copied().unwrap_or(0);
+        let c = current_parts.get(i).copied().unwrap_or(0);
+        if l > c {
+            return true;
+        }
+        if l < c {
+            return false;
+        }
+    }
+    false
+}
+
+pub fn check_for_updates() -> Result<UpdateCheckResult> {
+    let app_version = get_app_version();
+    log::info!("Checking for updates. Current version: {}", app_version);
+    let resp = ureq::get("https://api.github.com/repos/caoccao/BatchMkvExtract/releases")
+        .set("User-Agent", APP_NAME)
+        .call()
+        .map_err(|e| anyhow::anyhow!("Failed to fetch releases: {}", e))?;
+    let json: serde_json::Value = resp
+        .into_json()
+        .map_err(|e| anyhow::anyhow!("Failed to parse releases: {}", e))?;
+    if let Some(first) = json.as_array().and_then(|arr| arr.first()) {
+        let tag = first["tag_name"].as_str().unwrap_or("");
+        log::info!("Latest release tag: {}", tag);
+        if is_newer_version(tag, app_version) {
+            let version = tag.trim_start_matches('v').to_owned();
+            return Ok(UpdateCheckResult {
+                has_update: true,
+                latest_version: Some(version),
+            });
+        }
+    }
+    Ok(UpdateCheckResult {
+        has_update: false,
+        latest_version: None,
+    })
 }
 
 pub async fn get_mkv_files(paths: Vec<String>) -> Result<Vec<String>> {

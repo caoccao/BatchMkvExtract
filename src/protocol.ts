@@ -77,6 +77,26 @@ export interface ConfigWindow {
   size: ConfigWindowSize;
 }
 
+export const UpdateCheckInterval = {
+  Daily: "Daily",
+  Weekly: "Weekly",
+  Monthly: "Monthly",
+} as const;
+export type UpdateCheckInterval =
+  (typeof UpdateCheckInterval)[keyof typeof UpdateCheckInterval];
+
+export interface ConfigUpdate {
+  checkInterval: UpdateCheckInterval;
+  lastChecked: number;
+  lastVersion: string;
+  ignoreVersion: string;
+}
+
+export interface UpdateCheckResult {
+  hasUpdate: boolean;
+  latestVersion: string | null;
+}
+
 export interface ConfigExternalTools {
   mkvToolNixPath: string;
   betterMediaInfoPath: string;
@@ -105,6 +125,7 @@ export interface Config {
   profiles: ConfigProfile[];
   activeProfile: string;
   window: ConfigWindow;
+  update: ConfigUpdate;
 }
 
 export const DEFAULT_PROFILE_NAME = "Default";

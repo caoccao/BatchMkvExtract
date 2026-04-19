@@ -16,6 +16,7 @@
  */
 
 use serde::{Deserialize, Serialize};
+use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct About {
@@ -67,4 +68,16 @@ pub struct ExtractionFinishedEvent {
     pub file: String,
     pub outcome: String,
     pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct UpdateCheckResult {
+    #[serde(rename = "hasUpdate")]
+    pub has_update: bool,
+    #[serde(rename = "latestVersion")]
+    pub latest_version: Option<String>,
+}
+
+pub struct UpdateCheckState {
+    pub result: Arc<Mutex<Option<UpdateCheckResult>>>,
 }

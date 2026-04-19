@@ -93,8 +93,13 @@
     "detect": "Detectar",
     "mkvToolNixFound": "mkvmerge y mkvextract encontrados en la ruta de MKVToolNix.",
     "mkvToolNixNotFound": "mkvmerge o mkvextract no encontrado en la ruta de MKVToolNix.",
-    "betterMediaInfoFound": "BetterMediaInfo se ha detectado. Ya puedes usar las funciones de BetterMediaInfo en la app.",
+    "betterMediaInfoFound": "BetterMediaInfo encontrado",
     "betterMediaInfoNotFound": "BetterMediaInfo no se ha detectado. Revisa la ruta e inténtalo de nuevo.",
+    "update": "Actualización",
+    "checkNewVersion": "Buscar nueva versión",
+    "daily": "Diario",
+    "weekly": "Semanal",
+    "monthly": "Mensual",
     "profiles": "Perfiles",
     "activeProfile": "Perfil activo",
     "newProfileName": "Nombre del nuevo perfil",
@@ -135,5 +140,9 @@
     "summary": {
       "toPath": "A {{path}}"
     }
+  },
+  "update": {
+    "newVersionAvailable": "Una nueva versión {{version}} está disponible.",
+    "skipThisVersion": "Omitir esta versión"
   }
 }

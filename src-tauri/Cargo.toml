@@ -28,4 +28,5 @@ anyhow = "1"
 log = "0.4"
 tokio = { version = "1", features = ["rt-multi-thread"] }
 sysinfo = { version = "0.32", default-features = false, features = ["system"] }
+ureq = { version = "2", features = ["json"] }
 

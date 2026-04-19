@@ -23,6 +23,7 @@ import type {
   ExtractSnapshot,
   MkvToolNixStatus,
   MkvTrack,
+  UpdateCheckResult,
 } from "./protocol";
 
 export async function getAbout(): Promise<About> {
@@ -94,4 +95,12 @@ export async function detectBetterMediaInfo(
 
 export async function launchBetterMediaInfo(paths: string[]): Promise<void> {
   return await invoke<void>("launch_better_media_info", { paths });
+}
+
+export async function getUpdateResult(): Promise<UpdateCheckResult | null> {
+  return await invoke<UpdateCheckResult | null>("get_update_result");
+}
+
+export async function skipVersion(version: string): Promise<void> {
+  return await invoke<void>("skip_version", { version });
 }
