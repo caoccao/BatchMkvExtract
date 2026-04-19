@@ -9,6 +9,11 @@
     "copyCommand": "Copy Command",
     "extract": "Extract",
     "cancel": "Cancel",
+    "ok": "OK",
+    "browse": "Browse",
+    "setOutputPath": "Set Output Path",
+    "outputPath": "Output Path",
+    "outputPathNotWritable": "The output path is not writable. Please choose another path.",
     "commandCopied": "Command copied to clipboard.",
     "extractionComplete": "Extraction complete.",
     "noTracks": "No tracks found.",
@@ -109,7 +114,8 @@
   },
   "notification": {
     "completedIn": "Completed in {{elapsed}}",
-    "unknownError": "Unknown error"
+    "unknownError": "Unknown error",
+    "failedCreateOutput": "Failed to create {{path}}. Please check it out and try again."
   },
   "confirm": {
     "exitTitle": "Exit",

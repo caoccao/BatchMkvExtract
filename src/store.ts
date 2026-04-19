@@ -81,6 +81,7 @@ interface MkvStore {
   fileTracks: Record<string, MkvTrack[]>;
   fileTrackCounts: Record<string, TrackCounts>;
   fileSelectedIds: Record<string, number[]>;
+  fileOutputDirs: Record<string, string>;
   groupByFile: boolean;
   notification: Notification | null;
   addFiles: (paths: string[]) => void;
@@ -113,6 +114,10 @@ interface MkvStore {
   setFileTrackCounts: (file: string, counts: TrackCounts) => void;
   setFileSelectedIds: (file: string, ids: number[]) => void;
   setGroupSelectedIds: (files: string[], ids: number[]) => void;
+  setFileOutputDir: (file: string, dir: string) => void;
+  clearFileOutputDir: (file: string) => void;
+  setGroupOutputDir: (files: string[], dir: string) => void;
+  clearGroupOutputDir: (files: string[]) => void;
   setGroupByFile: (value: boolean) => void;
   showNotification: (kind: NotificationKind, file: string, detail: string) => void;
   dismissNotification: () => void;
@@ -130,6 +135,7 @@ export const useMkvStore = create<MkvStore>((set, get) => ({
   fileTracks: {},
   fileTrackCounts: {},
   fileSelectedIds: {},
+  fileOutputDirs: {},
   groupByFile: false,
   notification: null,
   addFiles: (paths) =>
@@ -146,11 +152,14 @@ export const useMkvStore = create<MkvStore>((set, get) => ({
       delete nextCounts[path];
       const nextSelected = { ...state.fileSelectedIds };
       delete nextSelected[path];
+      const nextOutputDirs = { ...state.fileOutputDirs };
+      delete nextOutputDirs[path];
       return {
         files: state.files.filter((f) => f !== path),
         fileTracks: nextTracks,
         fileTrackCounts: nextCounts,
         fileSelectedIds: nextSelected,
+        fileOutputDirs: nextOutputDirs,
       };
     }),
   clearFiles: () =>
@@ -159,6 +168,7 @@ export const useMkvStore = create<MkvStore>((set, get) => ({
       fileTracks: {},
       fileTrackCounts: {},
       fileSelectedIds: {},
+      fileOutputDirs: {},
     }),
   setActiveTab: (type) => set({ activeTab: type }),
   openSettings: () => set({ showSettings: true, activeTab: "settings" }),
@@ -471,6 +481,32 @@ export const useMkvStore = create<MkvStore>((set, get) => ({
         next[f] = ids;
       }
       return { fileSelectedIds: next };
+    }),
+  setFileOutputDir: (file, dir) =>
+    set((state) => ({
+      fileOutputDirs: { ...state.fileOutputDirs, [file]: dir },
+    })),
+  clearFileOutputDir: (file) =>
+    set((state) => {
+      const next = { ...state.fileOutputDirs };
+      delete next[file];
+      return { fileOutputDirs: next };
+    }),
+  setGroupOutputDir: (files, dir) =>
+    set((state) => {
+      const next = { ...state.fileOutputDirs };
+      for (const f of files) {
+        next[f] = dir;
+      }
+      return { fileOutputDirs: next };
+    }),
+  clearGroupOutputDir: (files) =>
+    set((state) => {
+      const next = { ...state.fileOutputDirs };
+      for (const f of files) {
+        delete next[f];
+      }
+      return { fileOutputDirs: next };
     }),
   setGroupByFile: (value) => set({ groupByFile: value }),
   showNotification: (kind, file, detail) =>

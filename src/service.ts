@@ -68,3 +68,11 @@ export async function cancelExtract(file: string): Promise<void> {
 export async function getExtractStatus(): Promise<ExtractSnapshot> {
   return await invoke<ExtractSnapshot>("get_extract_status");
 }
+
+export async function checkOutputPathWritable(path: string): Promise<boolean> {
+  return await invoke<boolean>("check_output_path_writable", { path });
+}
+
+export async function ensureOutputPath(path: string): Promise<void> {
+  return await invoke<void>("ensure_output_path", { path });
+}

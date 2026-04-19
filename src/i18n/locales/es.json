@@ -9,6 +9,11 @@
     "copyCommand": "Copiar comando",
     "extract": "Extraer",
     "cancel": "Cancelar",
+    "ok": "Aceptar",
+    "browse": "Examinar",
+    "setOutputPath": "Establecer ruta de salida",
+    "outputPath": "Ruta de salida",
+    "outputPathNotWritable": "La ruta de salida no se puede escribir. Elige otra ruta.",
     "commandCopied": "Comando copiado al portapapeles.",
     "extractionComplete": "Extracción completada.",
     "noTracks": "No se encontraron pistas.",
@@ -109,7 +114,8 @@
   },
   "notification": {
     "completedIn": "Completado en {{elapsed}}",
-    "unknownError": "Error desconocido"
+    "unknownError": "Error desconocido",
+    "failedCreateOutput": "No se pudo crear {{path}}. Revísalo e inténtalo de nuevo."
   },
   "confirm": {
     "exitTitle": "Salir",

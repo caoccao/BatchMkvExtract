@@ -9,6 +9,11 @@
     "copyCommand": "复制命令",
     "extract": "提取",
     "cancel": "取消",
+    "ok": "确定",
+    "browse": "浏览",
+    "setOutputPath": "设置输出路径",
+    "outputPath": "输出路径",
+    "outputPathNotWritable": "输出路径不可写。请选择其他路径。",
     "commandCopied": "命令已复制到剪贴板。",
     "extractionComplete": "提取完成。",
     "noTracks": "未找到轨道。",
@@ -109,7 +114,8 @@
   },
   "notification": {
     "completedIn": "{{elapsed}} 内完成",
-    "unknownError": "未知错误"
+    "unknownError": "未知错误",
+    "failedCreateOutput": "创建 {{path}} 失败。请检查后重试。"
   },
   "confirm": {
     "exitTitle": "退出",

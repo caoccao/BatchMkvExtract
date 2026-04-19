@@ -9,6 +9,11 @@
     "copyCommand": "Befehl kopieren",
     "extract": "Extrahieren",
     "cancel": "Abbrechen",
+    "ok": "OK",
+    "browse": "Durchsuchen",
+    "setOutputPath": "Ausgabepfad festlegen",
+    "outputPath": "Ausgabepfad",
+    "outputPathNotWritable": "Der Ausgabepfad ist nicht beschreibbar. Bitte wähle einen anderen Pfad.",
     "commandCopied": "Befehl in die Zwischenablage kopiert.",
     "extractionComplete": "Extraktion abgeschlossen.",
     "noTracks": "Keine Spuren gefunden.",
@@ -109,7 +114,8 @@
   },
   "notification": {
     "completedIn": "Abgeschlossen in {{elapsed}}",
-    "unknownError": "Unbekannter Fehler"
+    "unknownError": "Unbekannter Fehler",
+    "failedCreateOutput": "Konnte {{path}} nicht erstellen. Bitte prüfen und erneut versuchen."
   },
   "confirm": {
     "exitTitle": "Beenden",

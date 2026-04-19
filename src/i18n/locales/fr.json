@@ -9,6 +9,11 @@
     "copyCommand": "Copier la commande",
     "extract": "Extraire",
     "cancel": "Annuler",
+    "ok": "OK",
+    "browse": "Parcourir",
+    "setOutputPath": "Définir le chemin de sortie",
+    "outputPath": "Chemin de sortie",
+    "outputPathNotWritable": "Le chemin de sortie n'est pas accessible en écriture. Choisissez un autre chemin.",
     "commandCopied": "Commande copiée dans le presse-papiers.",
     "extractionComplete": "Extraction terminée.",
     "noTracks": "Aucune piste trouvée.",
@@ -109,7 +114,8 @@
   },
   "notification": {
     "completedIn": "Terminé en {{elapsed}}",
-    "unknownError": "Erreur inconnue"
+    "unknownError": "Erreur inconnue",
+    "failedCreateOutput": "Échec de la création de {{path}}. Vérifiez et réessayez."
   },
   "confirm": {
     "exitTitle": "Quitter",

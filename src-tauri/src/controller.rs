@@ -19,9 +19,8 @@ use anyhow::Result;
 use std::path::{Path, PathBuf};
 
 use crate::config;
+use crate::mkvtoolnix::is_mkv;
 use crate::protocol::About;
-
-const MKV_EXTENSION: &str = "mkv";
 
 pub async fn get_about() -> Result<About> {
     Ok(About {
@@ -69,9 +68,39 @@ pub async fn get_mkv_files(paths: Vec<String>) -> Result<Vec<String>> {
     Ok(result)
 }
 
-fn is_mkv(path: &Path) -> bool {
-    path.extension()
-        .and_then(|e| e.to_str())
-        .map(|e| e.eq_ignore_ascii_case(MKV_EXTENSION))
-        .unwrap_or(false)
+pub async fn check_output_path_writable(path: String) -> Result<bool> {
+    let mut current = PathBuf::from(&path);
+    loop {
+        if current.exists() {
+            break;
+        }
+        let Some(parent) = current.parent() else {
+            return Ok(false);
+        };
+        current = parent.to_path_buf();
+    }
+    if !current.is_dir() {
+        return Ok(false);
+    }
+    let test_name = format!(".batchmkvextract_writecheck_{}", std::process::id());
+    let test_path = current.join(&test_name);
+    match std::fs::File::create(&test_path) {
+        Ok(_) => {
+            let _ = std::fs::remove_file(&test_path);
+            Ok(true)
+        }
+        Err(_) => Ok(false),
+    }
+}
+
+pub async fn ensure_output_path(path: String) -> Result<()> {
+    let p = Path::new(&path);
+    if p.exists() {
+        if !p.is_dir() {
+            anyhow::bail!("{path} exists but is not a directory");
+        }
+        return Ok(());
+    }
+    std::fs::create_dir_all(p).map_err(anyhow::Error::msg)?;
+    Ok(())
 }

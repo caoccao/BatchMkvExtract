@@ -9,6 +9,11 @@
     "copyCommand": "コマンドをコピー",
     "extract": "抽出",
     "cancel": "キャンセル",
+    "ok": "OK",
+    "browse": "参照",
+    "setOutputPath": "出力先を設定",
+    "outputPath": "出力先",
+    "outputPathNotWritable": "出力先に書き込めません。別のパスを選択してください。",
     "commandCopied": "コマンドをクリップボードにコピーしました。",
     "extractionComplete": "抽出が完了しました。",
     "noTracks": "トラックが見つかりません。",
@@ -109,7 +114,8 @@
   },
   "notification": {
     "completedIn": "{{elapsed}} で完了しました",
-    "unknownError": "不明なエラー"
+    "unknownError": "不明なエラー",
+    "failedCreateOutput": "{{path}} の作成に失敗しました。確認してもう一度お試しください。"
   },
   "confirm": {
     "exitTitle": "終了",

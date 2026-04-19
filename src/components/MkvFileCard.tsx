@@ -25,15 +25,21 @@ import {
   CardHeader,
   Checkbox,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   IconButton,
   LinearProgress,
   Snackbar,
+  Stack,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
+  TextField,
   Tooltip,
   Typography,
 } from "@mui/material";
@@ -42,6 +48,7 @@ import ClosedCaptionIcon from "@mui/icons-material/ClosedCaption";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import ContentCutIcon from "@mui/icons-material/ContentCut";
 import DeleteIcon from "@mui/icons-material/Delete";
+import FolderOpenIcon from "@mui/icons-material/FolderOpen";
 import HelpOutlineOutlinedIcon from "@mui/icons-material/HelpOutlineOutlined";
 import ImageIcon from "@mui/icons-material/Image";
 import MusicNoteIcon from "@mui/icons-material/MusicNote";
@@ -49,6 +56,7 @@ import SmartButtonIcon from "@mui/icons-material/SmartButton";
 import VideocamIcon from "@mui/icons-material/Videocam";
 import { dirname } from "@tauri-apps/api/path";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { open } from "@tauri-apps/plugin-dialog";
 import { useTranslation } from "react-i18next";
 import {
   buildCommandString,
@@ -57,7 +65,13 @@ import {
   shouldSelectTrackType,
 } from "../extract-utils";
 import { QueueItemStatus } from "../protocol";
-import { cancelExtract, enqueueExtract, getMkvTracks } from "../service";
+import {
+  cancelExtract,
+  checkOutputPathWritable,
+  ensureOutputPath,
+  enqueueExtract,
+  getMkvTracks,
+} from "../service";
 import { useMkvStore } from "../store";
 import { FileStatusIcon } from "./FileStatusIcon";
 
@@ -119,8 +133,11 @@ export function MkvFileCard({ path }: MkvFileCardProps) {
   const setFileTracks = useMkvStore((s) => s.setFileTracks);
   const setFileTrackCounts = useMkvStore((s) => s.setFileTrackCounts);
   const setFileSelectedIds = useMkvStore((s) => s.setFileSelectedIds);
+  const setFileOutputDir = useMkvStore((s) => s.setFileOutputDir);
+  const clearFileOutputDir = useMkvStore((s) => s.clearFileOutputDir);
   const cachedTracks = useMkvStore((s) => s.fileTracks[path]);
   const storedSelectedIds = useMkvStore((s) => s.fileSelectedIds[path]);
+  const outputDirOverride = useMkvStore((s) => s.fileOutputDirs[path]);
   const activeProfile = useMkvStore((s) => {
     const cfg = s.config;
     if (!cfg) {
@@ -150,6 +167,11 @@ export function MkvFileCard({ path }: MkvFileCardProps) {
     message: string;
     severity: "success" | "error";
   } | null>(null);
+  const [outputDialogOpen, setOutputDialogOpen] = useState(false);
+  const [outputDialogValue, setOutputDialogValue] = useState("");
+  const [outputDialogError, setOutputDialogError] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     if (storedSelectedIds !== undefined) {
@@ -245,11 +267,18 @@ export function MkvFileCard({ path }: MkvFileCardProps) {
     setFileSelectedIds(path, next);
   };
 
+  const resolveOutputDir = async (): Promise<string> => {
+    if (outputDirOverride && outputDirOverride.length > 0) {
+      return outputDirOverride;
+    }
+    return await dirname(path);
+  };
+
   const buildCurrentCommand = async (): Promise<string | null> => {
     if (!hasSelection || !activeProfile) {
       return null;
     }
-    const outputDir = await dirname(path);
+    const outputDir = await resolveOutputDir();
     return await buildCommandString(
       path,
       outputDir,
@@ -280,7 +309,19 @@ export function MkvFileCard({ path }: MkvFileCardProps) {
       return;
     }
     try {
-      const outputDir = await dirname(path);
+      const outputDir = await resolveOutputDir();
+      try {
+        await ensureOutputPath(outputDir);
+      } catch {
+        useMkvStore
+          .getState()
+          .showNotification(
+            "error",
+            path,
+            t("notification.failedCreateOutput", { path: outputDir }),
+          );
+        return;
+      }
       const args = await buildExtractArgs(
         path,
         outputDir,
@@ -301,6 +342,56 @@ export function MkvFileCard({ path }: MkvFileCardProps) {
     } catch (err) {
       setSnackbar({ message: String(err), severity: "error" });
     }
+  };
+
+  const handleOpenOutputDialog = async () => {
+    setOutputDialogError(null);
+    if (outputDirOverride && outputDirOverride.length > 0) {
+      setOutputDialogValue(outputDirOverride);
+    } else {
+      try {
+        setOutputDialogValue(await dirname(path));
+      } catch {
+        setOutputDialogValue("");
+      }
+    }
+    setOutputDialogOpen(true);
+  };
+
+  const handleBrowseOutputDir = async () => {
+    try {
+      const directory = await open({
+        directory: true,
+        defaultPath: outputDialogValue.trim() || undefined,
+      });
+      if (typeof directory === "string" && directory.length > 0) {
+        setOutputDialogValue(directory);
+        setOutputDialogError(null);
+      }
+    } catch (err) {
+      setSnackbar({ message: String(err), severity: "error" });
+    }
+  };
+
+  const handleConfirmOutputDir = async () => {
+    const trimmed = outputDialogValue.trim();
+    if (trimmed.length === 0) {
+      clearFileOutputDir(path);
+      setOutputDialogOpen(false);
+      return;
+    }
+    try {
+      const ok = await checkOutputPathWritable(trimmed);
+      if (!ok) {
+        setOutputDialogError(t("extract.outputPathNotWritable"));
+        return;
+      }
+    } catch (err) {
+      setOutputDialogError(String(err));
+      return;
+    }
+    setFileOutputDir(path, trimmed);
+    setOutputDialogOpen(false);
   };
 
   const handleDelete = async () => {
@@ -335,6 +426,17 @@ export function MkvFileCard({ path }: MkvFileCardProps) {
 
   const actionContent = (
     <Box sx={{ display: "flex", gap: 0.5 }}>
+      <Tooltip title={t("extract.setOutputPath")}>
+        <span>
+          <IconButton
+            size="small"
+            disabled={isActive}
+            onClick={handleOpenOutputDialog}
+          >
+            <FolderOpenIcon fontSize="small" />
+          </IconButton>
+        </span>
+      </Tooltip>
       <Tooltip title={t("extract.copyCommand")}>
         <span>
           <IconButton
@@ -391,6 +493,16 @@ export function MkvFileCard({ path }: MkvFileCardProps) {
     >
       <CardHeader
         title={titleContent}
+        subheader={
+          outputDirOverride ? (
+            <Typography
+              variant="caption"
+              sx={{ color: "text.secondary", wordBreak: "break-all" }}
+            >
+              {t("extract.outputPath")}: {outputDirOverride}
+            </Typography>
+          ) : undefined
+        }
         action={actionContent}
         sx={{
           pb: isActive ? 0 : 1,
@@ -526,6 +638,49 @@ export function MkvFileCard({ path }: MkvFileCardProps) {
           {snackbar?.message}
         </Alert>
       </Snackbar>
+      <Dialog
+        open={outputDialogOpen}
+        onClose={() => setOutputDialogOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>{t("extract.setOutputPath")}</DialogTitle>
+        <DialogContent>
+          <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+            <TextField
+              fullWidth
+              size="small"
+              label={t("extract.outputPath")}
+              value={outputDialogValue}
+              onChange={(e) => {
+                setOutputDialogValue(e.target.value);
+                setOutputDialogError(null);
+              }}
+            />
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={handleBrowseOutputDir}
+              sx={{ whiteSpace: "nowrap" }}
+            >
+              {t("extract.browse")}
+            </Button>
+          </Stack>
+          {outputDialogError ? (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {outputDialogError}
+            </Alert>
+          ) : null}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOutputDialogOpen(false)}>
+            {t("extract.cancel")}
+          </Button>
+          <Button onClick={handleConfirmOutputDir} variant="contained">
+            {t("extract.ok")}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   );
 }

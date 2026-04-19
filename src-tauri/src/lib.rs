@@ -84,6 +84,20 @@ async fn set_config(config: config::Config) -> Result<config::Config, String> {
     controller::set_config(config).await.map_err(convert_error)
 }
 
+#[tauri::command]
+async fn check_output_path_writable(path: String) -> Result<bool, String> {
+    controller::check_output_path_writable(path)
+        .await
+        .map_err(convert_error)
+}
+
+#[tauri::command]
+async fn ensure_output_path(path: String) -> Result<(), String> {
+    controller::ensure_output_path(path)
+        .await
+        .map_err(convert_error)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let runtime = tokio::runtime::Builder::new_multi_thread()
@@ -99,6 +113,8 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             cancel_extract,
+            check_output_path_writable,
+            ensure_output_path,
             enqueue_extract,
             get_about,
             get_config,

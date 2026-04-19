@@ -9,6 +9,11 @@
     "copyCommand": "複製指令",
     "extract": "擷取",
     "cancel": "取消",
+    "ok": "確定",
+    "browse": "瀏覽",
+    "setOutputPath": "設定輸出路徑",
+    "outputPath": "輸出路徑",
+    "outputPathNotWritable": "輸出路徑無法寫入。請選擇其他路徑。",
     "commandCopied": "指令已複製到剪貼簿。",
     "extractionComplete": "擷取完成。",
     "noTracks": "找不到軌道。",
@@ -109,7 +114,8 @@
   },
   "notification": {
     "completedIn": "{{elapsed}} 內完成",
-    "unknownError": "未知錯誤"
+    "unknownError": "未知錯誤",
+    "failedCreateOutput": "無法建立 {{path}}。請檢查後再試。"
   },
   "confirm": {
     "exitTitle": "結束",

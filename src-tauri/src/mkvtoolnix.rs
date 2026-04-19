@@ -26,6 +26,15 @@ use std::path::{Path, PathBuf};
 use crate::config;
 use crate::protocol::{MkvTrack, MkvextractStatus};
 
+const MKV_EXTENSION: &str = "mkv";
+
+pub fn is_mkv(path: &Path) -> bool {
+    path.extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.eq_ignore_ascii_case(MKV_EXTENSION))
+        .unwrap_or(false)
+}
+
 pub(crate) fn parse_mkvextract_progress(line: &str) -> Option<u32> {
     let trimmed = line.trim();
     if trimmed.starts_with("Progress:") {

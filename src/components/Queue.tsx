@@ -38,7 +38,7 @@ import { useTranslation } from "react-i18next";
 import { buildExtractArgs, formatHMS } from "../extract-utils";
 import type { QueueItem } from "../store";
 import { QueueItemStatus, useMkvStore } from "../store";
-import { cancelExtract, enqueueExtract } from "../service";
+import { cancelExtract, ensureOutputPath, enqueueExtract } from "../service";
 
 const TICK_INTERVAL_MS = 200;
 
@@ -195,7 +195,21 @@ export default function Queue() {
               continue;
             }
             try {
-              const outputDir = await dirname(file);
+              const override = state.fileOutputDirs[file];
+              const outputDir =
+                override && override.length > 0
+                  ? override
+                  : await dirname(file);
+              try {
+                await ensureOutputPath(outputDir);
+              } catch {
+                state.showNotification(
+                  "error",
+                  file,
+                  t("notification.failedCreateOutput", { path: outputDir }),
+                );
+                continue;
+              }
               const args = await buildExtractArgs(
                 file,
                 outputDir,

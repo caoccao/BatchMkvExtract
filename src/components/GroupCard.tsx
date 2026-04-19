@@ -21,18 +21,24 @@ import {
   Box,
   Button,
   Checkbox,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   IconButton,
   LinearProgress,
   List,
   ListItem,
   Paper,
   Snackbar,
+  Stack,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
+  TextField,
   Tooltip,
   Typography,
 } from "@mui/material";
@@ -41,6 +47,7 @@ import ClosedCaptionIcon from "@mui/icons-material/ClosedCaption";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import ContentCutIcon from "@mui/icons-material/ContentCut";
 import DeleteIcon from "@mui/icons-material/Delete";
+import FolderOpenIcon from "@mui/icons-material/FolderOpen";
 import HelpOutlineOutlinedIcon from "@mui/icons-material/HelpOutlineOutlined";
 import ImageIcon from "@mui/icons-material/Image";
 import MusicNoteIcon from "@mui/icons-material/MusicNote";
@@ -48,6 +55,7 @@ import SmartButtonIcon from "@mui/icons-material/SmartButton";
 import VideocamIcon from "@mui/icons-material/Videocam";
 import { dirname } from "@tauri-apps/api/path";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { open } from "@tauri-apps/plugin-dialog";
 import { useTranslation } from "react-i18next";
 import {
   buildCommandString,
@@ -58,7 +66,12 @@ import {
   shouldSelectTrackType,
 } from "../extract-utils";
 import { QueueItemStatus } from "../protocol";
-import { cancelExtract, enqueueExtract } from "../service";
+import {
+  cancelExtract,
+  checkOutputPathWritable,
+  ensureOutputPath,
+  enqueueExtract,
+} from "../service";
 import { useMkvStore } from "../store";
 import { FileStatusIcon } from "./FileStatusIcon";
 
@@ -116,6 +129,11 @@ export function GroupCard({ files }: GroupCardProps) {
   } | null>(null);
   const [leftWidth, setLeftWidth] = useState(240);
   const [now, setNow] = useState(() => Date.now());
+  const [outputDialogOpen, setOutputDialogOpen] = useState(false);
+  const [outputDialogValue, setOutputDialogValue] = useState("");
+  const [outputDialogError, setOutputDialogError] = useState<string | null>(
+    null,
+  );
   const splitContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -164,6 +182,9 @@ export function GroupCard({ files }: GroupCardProps) {
   });
   const fileTracksMap = useMkvStore((s) => s.fileTracks);
   const fileSelectedIdsMap = useMkvStore((s) => s.fileSelectedIds);
+  const fileOutputDirs = useMkvStore((s) => s.fileOutputDirs);
+  const setGroupOutputDir = useMkvStore((s) => s.setGroupOutputDir);
+  const clearGroupOutputDir = useMkvStore((s) => s.clearGroupOutputDir);
   const queueItems = useMkvStore((s) => s.queueItems);
   const addToQueue = useMkvStore((s) => s.addToQueue);
   const markCancelRequested = useMkvStore((s) => s.markCancelRequested);
@@ -220,6 +241,68 @@ export function GroupCard({ files }: GroupCardProps) {
 
   const parentDir = firstFile ? getParentDir(firstFile) : "";
 
+  const groupOutputDir = useMemo(() => {
+    if (files.length === 0) {
+      return undefined;
+    }
+    const first = fileOutputDirs[files[0]];
+    if (!first || first.length === 0) {
+      return undefined;
+    }
+    for (let i = 1; i < files.length; i += 1) {
+      if (fileOutputDirs[files[i]] !== first) {
+        return undefined;
+      }
+    }
+    return first;
+  }, [files, fileOutputDirs]);
+
+  const handleOpenOutputDialog = () => {
+    setOutputDialogError(null);
+    if (groupOutputDir) {
+      setOutputDialogValue(groupOutputDir);
+    } else {
+      setOutputDialogValue(parentDir);
+    }
+    setOutputDialogOpen(true);
+  };
+
+  const handleBrowseOutputDir = async () => {
+    try {
+      const directory = await open({
+        directory: true,
+        defaultPath: outputDialogValue.trim() || undefined,
+      });
+      if (typeof directory === "string" && directory.length > 0) {
+        setOutputDialogValue(directory);
+        setOutputDialogError(null);
+      }
+    } catch (err) {
+      setSnackbar({ message: String(err), severity: "error" });
+    }
+  };
+
+  const handleConfirmOutputDir = async () => {
+    const trimmed = outputDialogValue.trim();
+    if (trimmed.length === 0) {
+      clearGroupOutputDir(files);
+      setOutputDialogOpen(false);
+      return;
+    }
+    try {
+      const ok = await checkOutputPathWritable(trimmed);
+      if (!ok) {
+        setOutputDialogError(t("extract.outputPathNotWritable"));
+        return;
+      }
+    } catch (err) {
+      setOutputDialogError(String(err));
+      return;
+    }
+    setGroupOutputDir(files, trimmed);
+    setOutputDialogOpen(false);
+  };
+
   const toggleAll = (checked: boolean) => {
     setGroupSelectedIds(files, checked ? tracks.map((t) => t.id) : []);
   };
@@ -248,7 +331,9 @@ export function GroupCard({ files }: GroupCardProps) {
         if (selectedTracks.length === 0) {
           continue;
         }
-        const outputDir = await dirname(file);
+        const override = fileOutputDirs[file];
+        const outputDir =
+          override && override.length > 0 ? override : await dirname(file);
         const command = await buildCommandString(
           file,
           outputDir,
@@ -288,7 +373,21 @@ export function GroupCard({ files }: GroupCardProps) {
         continue;
       }
       try {
-        const outputDir = await dirname(file);
+        const override = fileOutputDirs[file];
+        const outputDir =
+          override && override.length > 0 ? override : await dirname(file);
+        try {
+          await ensureOutputPath(outputDir);
+        } catch {
+          useMkvStore
+            .getState()
+            .showNotification(
+              "error",
+              file,
+              t("notification.failedCreateOutput", { path: outputDir }),
+            );
+          continue;
+        }
         const args = await buildExtractArgs(
           file,
           outputDir,
@@ -345,18 +444,37 @@ export function GroupCard({ files }: GroupCardProps) {
           mb: 1,
         }}
       >
-        <Typography
-          variant="body2"
-          sx={{
-            flex: 1,
-            minWidth: 0,
-            ml: 2,
-            wordBreak: "break-all",
-            color: "text.secondary",
-          }}
-        >
-          {parentDir}
-        </Typography>
+        <Box sx={{ flex: 1, minWidth: 0, ml: 2 }}>
+          <Typography
+            variant="body2"
+            sx={{ wordBreak: "break-all", color: "text.secondary" }}
+          >
+            {parentDir}
+          </Typography>
+          {groupOutputDir ? (
+            <Typography
+              variant="caption"
+              sx={{
+                display: "block",
+                wordBreak: "break-all",
+                color: "text.secondary",
+              }}
+            >
+              {t("extract.outputPath")}: {groupOutputDir}
+            </Typography>
+          ) : null}
+        </Box>
+        <Tooltip title={t("extract.setOutputPath")}>
+          <span>
+            <IconButton
+              size="small"
+              disabled={hasActiveInGroup}
+              onClick={handleOpenOutputDialog}
+            >
+              <FolderOpenIcon fontSize="small" />
+            </IconButton>
+          </span>
+        </Tooltip>
         <Tooltip title={t("group.copyAllCommands")}>
           <span>
             <IconButton
@@ -597,6 +715,49 @@ export function GroupCard({ files }: GroupCardProps) {
           {snackbar?.message}
         </Alert>
       </Snackbar>
+      <Dialog
+        open={outputDialogOpen}
+        onClose={() => setOutputDialogOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>{t("extract.setOutputPath")}</DialogTitle>
+        <DialogContent>
+          <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+            <TextField
+              fullWidth
+              size="small"
+              label={t("extract.outputPath")}
+              value={outputDialogValue}
+              onChange={(e) => {
+                setOutputDialogValue(e.target.value);
+                setOutputDialogError(null);
+              }}
+            />
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={handleBrowseOutputDir}
+              sx={{ whiteSpace: "nowrap" }}
+            >
+              {t("extract.browse")}
+            </Button>
+          </Stack>
+          {outputDialogError ? (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {outputDialogError}
+            </Alert>
+          ) : null}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOutputDialogOpen(false)}>
+            {t("extract.cancel")}
+          </Button>
+          <Button onClick={handleConfirmOutputDir} variant="contained">
+            {t("extract.ok")}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 }
