@@ -176,6 +176,9 @@ export function GroupCard({ files }: GroupCardProps) {
       status === QueueItemStatus.Extracting
     );
   });
+  const hasWaitingInGroup = files.some(
+    (f) => queueItems[f]?.status === QueueItemStatus.Waiting,
+  );
   const canExtractAll = hasSelection && !hasActiveInGroup;
   const canCopyAll = hasSelection;
   const canClearAll = files.length > 0 && !hasActiveInGroup;
@@ -317,7 +320,12 @@ export function GroupCard({ files }: GroupCardProps) {
   return (
     <Paper
       variant="outlined"
-      sx={{ mt: 1, p: 1, borderColor: "primary.main" }}
+      sx={{
+        mt: 1,
+        p: 1,
+        borderColor: "primary.main",
+        bgcolor: hasWaitingInGroup ? "action.hover" : undefined,
+      }}
     >
       <Box
         sx={{
