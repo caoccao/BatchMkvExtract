@@ -95,14 +95,6 @@ fn get_tool_path(path: &Path, tool: &str) -> PathBuf {
     path.join(tool)
 }
 
-fn apply_platform_command_options(cmd: &mut std::process::Command) {
-    #[cfg(target_os = "windows")]
-    {
-        use std::os::windows::process::CommandExt;
-        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
-    }
-}
-
 fn resolve_mkvtoolnix_tool_path(tool: &str) -> Result<PathBuf> {
     let cfg = config::get_config();
     let resolution = resolve_mkvtoolnix(&cfg.external_tools.mkv_toolnix_path, tool);
@@ -112,8 +104,13 @@ fn resolve_mkvtoolnix_tool_path(tool: &str) -> Result<PathBuf> {
 
 fn create_mkvtoolnix_command(tool: &str) -> Result<(PathBuf, std::process::Command)> {
     let tool_path = resolve_mkvtoolnix_tool_path(tool)?;
+    #[cfg_attr(not(target_os = "windows"), allow(unused_mut))]
     let mut cmd = std::process::Command::new(&tool_path);
-    apply_platform_command_options(&mut cmd);
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    }
     Ok((tool_path, cmd))
 }
 
