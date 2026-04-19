@@ -96,3 +96,4 @@ Eight locales (`de`, `en-US`, `es`, `fr`, `ja`, `zh-CN`, `zh-HK`, `zh-TW`). When
 - Status labels in the UI use **PascalCase enum values** (`Waiting`, `Extracting`, …). i18n keys that back them are lowercase (`queue.status.waiting`, …); the `statusLabel` helper in `Queue.tsx` bridges with `.toLowerCase()`.
 - macOS `Stack` alignment must use `sx={{ alignItems: "center" }}`, not the `alignItems` prop — MUI v9 dropped the prop.
 - When cards register their `handleExtract` into `fileExtractHandlers`, the signature is `() => Promise<void>`. The toolbar's Extract All awaits each handler sequentially so backend per-drive queue order matches the on-screen file order.
+- All `if-else` must have braces.

@@ -29,11 +29,15 @@ import {
 import CheckIcon from "@mui/icons-material/Check";
 import ContentCutIcon from "@mui/icons-material/ContentCut";
 import DeleteIcon from "@mui/icons-material/Delete";
+import FolderCopyIcon from "@mui/icons-material/FolderCopy";
 import InfoIcon from "@mui/icons-material/Info";
 import PersonIcon from "@mui/icons-material/Person";
 import SettingsIcon from "@mui/icons-material/Settings";
+import { dirname } from "@tauri-apps/api/path";
 import { useTranslation } from "react-i18next";
+import { buildExtractArgs } from "../extract-utils";
 import { QueueItemStatus } from "../protocol";
+import { enqueueExtract } from "../service";
 import { useMkvStore } from "../store";
 
 export default function Toolbar() {
@@ -45,8 +49,10 @@ export default function Toolbar() {
   const clearFiles = useMkvStore((s) => s.clearFiles);
 
   const hasFiles = files.length > 0;
-  const fileHasSelection = useMkvStore((s) => s.fileHasSelection);
-  const canExtractAll = files.some((f) => fileHasSelection[f]);
+  const fileSelectedIdsMap = useMkvStore((s) => s.fileSelectedIds);
+  const canExtractAll = files.some(
+    (f) => (fileSelectedIdsMap[f]?.length ?? 0) > 0,
+  );
   const queueItems = useMkvStore((s) => s.queueItems);
   const hasActiveJobs = Object.values(queueItems).some(
     (item) =>
@@ -54,6 +60,8 @@ export default function Toolbar() {
       item.status === QueueItemStatus.Extracting,
   );
   const canClear = hasFiles && !hasActiveJobs;
+  const groupByFile = useMkvStore((s) => s.groupByFile);
+  const setGroupByFile = useMkvStore((s) => s.setGroupByFile);
   const config = useMkvStore((s) => s.config);
   const setActiveProfile = useMkvStore((s) => s.setActiveProfile);
   const [profileAnchor, setProfileAnchor] = useState<null | HTMLElement>(null);
@@ -69,11 +77,44 @@ export default function Toolbar() {
 
   const runExtractAll = useCallback(async () => {
     const state = useMkvStore.getState();
+    const cfg = state.config;
+    const profile = cfg
+      ? cfg.profiles.find((p) => p.name === cfg.activeProfile) ??
+        cfg.profiles[0] ??
+        null
+      : null;
+    if (!profile) {
+      return;
+    }
     for (const file of state.files) {
-      if (!state.fileHasSelection[file]) continue;
-      const handler = state.fileExtractHandlers[file];
-      if (handler) {
-        await handler();
+      const tracks = state.fileTracks[file] ?? [];
+      const ids = new Set(state.fileSelectedIds[file] ?? []);
+      if (ids.size === 0 || tracks.length === 0) {
+        continue;
+      }
+      const status = state.queueItems[file]?.status;
+      if (
+        status === QueueItemStatus.Waiting ||
+        status === QueueItemStatus.Extracting
+      ) {
+        continue;
+      }
+      const selectedTracks = tracks.filter((track) => ids.has(track.id));
+      if (selectedTracks.length === 0) {
+        continue;
+      }
+      try {
+        const outputDir = await dirname(file);
+        const args = await buildExtractArgs(
+          file,
+          outputDir,
+          selectedTracks,
+          profile,
+        );
+        await enqueueExtract(file, args);
+        state.addToQueue(file);
+      } catch (err) {
+        console.error("Extract All failed for", file, err);
       }
     }
   }, []);
@@ -82,6 +123,7 @@ export default function Toolbar() {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (
         event.key === "F3" ||
+        event.key === "F8" ||
         event.key === "F9" ||
         event.key === "F10"
       ) {
@@ -114,9 +156,20 @@ export default function Toolbar() {
         event.preventDefault();
         event.stopPropagation();
         const state = useMkvStore.getState();
-        if (state.files.some((f) => state.fileHasSelection[f])) {
+        if (
+          state.files.some((f) => (state.fileSelectedIds[f]?.length ?? 0) > 0)
+        ) {
           runExtractAll();
         }
+      } else if (
+        !event.ctrlKey &&
+        !event.altKey &&
+        !event.shiftKey &&
+        event.key === "F8"
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        setGroupByFile(!useMkvStore.getState().groupByFile);
       } else if (
         !event.ctrlKey &&
         !event.altKey &&
@@ -143,7 +196,13 @@ export default function Toolbar() {
       document.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("keyup", handleKeyUp);
     };
-  }, [clearFiles, runExtractAll, openProfileMenu, openSettings]);
+  }, [
+    clearFiles,
+    runExtractAll,
+    openProfileMenu,
+    openSettings,
+    setGroupByFile,
+  ]);
 
   const buttonSx = {
     width: 28,
@@ -180,6 +239,14 @@ export default function Toolbar() {
               <DeleteIcon fontSize="small" />
             </IconButton>
           </span>
+        </Tooltip>
+        <Tooltip title={t("toolbar.groupByFile")}>
+          <IconButton
+            sx={groupByFile ? activeButtonSx : buttonSx}
+            onClick={() => setGroupByFile(!groupByFile)}
+          >
+            <FolderCopyIcon fontSize="small" />
+          </IconButton>
         </Tooltip>
       </ButtonGroup>
 

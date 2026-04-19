@@ -38,9 +38,15 @@ export default function MainContent() {
   const hasQueue = queueOrder.length > 0;
 
   const tabs: TabType[] = ["fileList"];
-  if (hasQueue) tabs.push("queue");
-  if (showSettings) tabs.push("settings");
-  if (showAbout) tabs.push("about");
+  if (hasQueue) {
+    tabs.push("queue");
+  }
+  if (showSettings) {
+    tabs.push("settings");
+  }
+  if (showAbout) {
+    tabs.push("about");
+  }
 
   useEffect(() => {
     if (activeTab === "queue" && !hasQueue) {
@@ -64,8 +70,12 @@ export default function MainContent() {
   };
 
   const closeHandlerOf = (type: TabType) => {
-    if (type === "settings") return closeSettings;
-    if (type === "about") return closeAbout;
+    if (type === "settings") {
+      return closeSettings;
+    }
+    if (type === "about") {
+      return closeAbout;
+    }
     return null;
   };
 

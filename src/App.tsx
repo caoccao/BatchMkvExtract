@@ -93,9 +93,13 @@ function App() {
     (async () => {
       try {
         const args = await getLaunchArgs();
-        if (cancelled || args.length === 0) return;
+        if (cancelled || args.length === 0) {
+          return;
+        }
         const mkvFiles = await getMkvFiles(args);
-        if (cancelled || mkvFiles.length === 0) return;
+        if (cancelled || mkvFiles.length === 0) {
+          return;
+        }
         useMkvStore.getState().addFiles(mkvFiles);
       } catch (err) {
         console.error("Failed to process launch args", err);

@@ -31,9 +31,15 @@
   "toolbar": {
     "extractAll": "Tout extraire (F3)",
     "clear": "Effacer (Ctrl + Q)",
+    "groupByFile": "Mode groupe (F8)",
     "profile": "Profil (F9)",
     "settings": "Paramètres (F10)",
     "about": "À propos"
+  },
+  "group": {
+    "copyAllCommands": "Copier toutes les commandes",
+    "extractAll": "Tout extraire",
+    "clearAll": "Tout supprimer"
   },
   "tabs": {
     "fileList": "Liste des fichiers",

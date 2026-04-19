@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Box,
@@ -47,16 +47,15 @@ import ImageIcon from "@mui/icons-material/Image";
 import MusicNoteIcon from "@mui/icons-material/MusicNote";
 import SmartButtonIcon from "@mui/icons-material/SmartButton";
 import VideocamIcon from "@mui/icons-material/Videocam";
-import { basename, dirname, extname, join, sep as getSep } from "@tauri-apps/api/path";
+import { dirname } from "@tauri-apps/api/path";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useTranslation } from "react-i18next";
 import {
+  buildCommandString,
+  buildExtractArgs,
   formatHMS,
-  pickTemplateForTrackType,
-  renderTemplate,
   shouldSelectTrackType,
 } from "../extract-utils";
-import type { ConfigProfile, MkvTrack } from "../protocol";
 import { QueueItemStatus } from "../protocol";
 import { cancelExtract, enqueueExtract, getMkvTracks } from "../service";
 import { useMkvStore } from "../store";
@@ -107,175 +106,6 @@ function TrackTypeIcon({ type }: { type: string }) {
   }
 }
 
-function getTrackExtension(codecId: string, trackType: string): string {
-  if (codecId.startsWith("V_")) {
-    switch (codecId) {
-      case "V_MPEGH/ISO/HEVC":
-        return "h265";
-      case "V_MPEG4/ISO/AVC":
-        return "h264";
-      case "V_MPEG1":
-      case "V_MPEG2":
-        return "mpg";
-      case "V_MPEG4/ISO/SP":
-      case "V_MPEG4/ISO/ASP":
-      case "V_MPEG4/ISO/AP":
-      case "V_MPEG4/MS/V3":
-        return "mpeg4";
-      case "V_MS/VFW/FOURCC":
-        return "avi";
-      case "V_VP8":
-      case "V_VP9":
-      case "V_AV1":
-        return "ivf";
-      case "V_THEORA":
-        return "ogg";
-      case "V_PRORES":
-        return "prores";
-      case "V_FFV1":
-        return "ffv1";
-    }
-    if (codecId.startsWith("V_REAL/")) return "rm";
-    return "bin";
-  }
-  if (codecId.startsWith("A_")) {
-    switch (codecId) {
-      case "A_AC3":
-      case "A_AC3/BSID9":
-      case "A_AC3/BSID10":
-        return "ac3";
-      case "A_EAC3":
-        return "eac3";
-      case "A_TRUEHD":
-        return "thd";
-      case "A_MLP":
-        return "mlp";
-      case "A_MPEG/L1":
-        return "mp1";
-      case "A_MPEG/L2":
-        return "mp2";
-      case "A_MPEG/L3":
-        return "mp3";
-      case "A_FLAC":
-        return "flac";
-      case "A_VORBIS":
-        return "ogg";
-      case "A_OPUS":
-        return "opus";
-      case "A_WAVPACK4":
-        return "wv";
-      case "A_TTA1":
-        return "tta";
-      case "A_ALAC":
-        return "caf";
-      default:
-        if (codecId.startsWith("A_PCM/")) return "wav";
-        if (codecId.startsWith("A_AAC")) return "aac";
-        if (codecId.startsWith("A_DTS")) return "dts";
-        if (codecId.startsWith("A_REAL/")) return "rm";
-        return "bin";
-    }
-  }
-  if (codecId.startsWith("S_")) {
-    switch (codecId) {
-      case "S_TEXT/UTF8":
-      case "S_TEXT/ASCII":
-        return "srt";
-      case "S_TEXT/ASS":
-      case "S_ASS":
-        return "ass";
-      case "S_TEXT/SSA":
-      case "S_SSA":
-        return "ssa";
-      case "S_TEXT/WEBVTT":
-        return "vtt";
-      case "S_TEXT/USF":
-        return "usf";
-      case "S_VOBSUB":
-        return "sub";
-      case "S_HDMV/PGS":
-        return "sup";
-      case "S_HDMV/TEXTST":
-        return "textst";
-      case "S_KATE":
-        return "ogg";
-      default:
-        return "bin";
-    }
-  }
-  switch (trackType) {
-    case "video":
-    case "audio":
-      return "bin";
-    case "subtitles":
-      return "srt";
-    default:
-      return "bin";
-  }
-}
-
-async function getFileNameWithoutExt(filePath: string): Promise<string> {
-  const ext = await extname(filePath);
-  return await basename(filePath, ext ? `.${ext}` : undefined);
-}
-
-function buildOutputFileName(
-  fileNameWithoutExt: string,
-  track: MkvTrack,
-  profile: ConfigProfile,
-): string {
-  const template = pickTemplateForTrackType(profile, track.type);
-  const base = renderTemplate(template, {
-    fileName: fileNameWithoutExt,
-    trackId: track.id,
-    trackNumber: track.number,
-    language: track.language,
-    codecName: track.codec,
-    trackName: track.trackName,
-  });
-  const ext = getTrackExtension(track.codecId, track.type);
-  return `${base}.${ext}`;
-}
-
-async function buildExtractArgs(
-  file: string,
-  outputDir: string,
-  tracks: MkvTrack[],
-  profile: ConfigProfile,
-): Promise<string[]> {
-  const fileNameWithoutExt = await getFileNameWithoutExt(file);
-  const results: string[] = [];
-  for (const track of tracks) {
-    const outFile = await join(
-      outputDir,
-      buildOutputFileName(fileNameWithoutExt, track, profile),
-    );
-    results.push(`${track.id}:${outFile}`);
-  }
-  return results;
-}
-
-async function buildCommandString(
-  file: string,
-  outputDir: string,
-  mkvToolNixPath: string,
-  tracks: MkvTrack[],
-  profile: ConfigProfile,
-): Promise<string> {
-  const sep = getSep();
-  const mkvextractPath = `${mkvToolNixPath}${sep}mkvextract`;
-  const fileNameWithoutExt = await getFileNameWithoutExt(file);
-  const args: string[] = [];
-  for (const track of tracks) {
-    const outFile = await join(
-      outputDir,
-      buildOutputFileName(fileNameWithoutExt, track, profile),
-    );
-    args.push(`${track.id}:"${outFile}"`);
-  }
-  return `"${mkvextractPath}" "${file}" tracks ${args.join(" ")}`;
-}
-
 export function MkvFileCard({ path }: MkvFileCardProps) {
   const { t } = useTranslation();
   const removeFile = useMkvStore((s) => s.removeFile);
@@ -285,14 +115,16 @@ export function MkvFileCard({ path }: MkvFileCardProps) {
   const entry = useMkvStore((s) => s.queueItems[path]);
   const addToQueue = useMkvStore((s) => s.addToQueue);
   const markCancelRequested = useMkvStore((s) => s.markCancelRequested);
-  const registerExtractHandler = useMkvStore((s) => s.registerExtractHandler);
-  const unregisterExtractHandler = useMkvStore(
-    (s) => s.unregisterExtractHandler,
-  );
-  const setFileHasSelection = useMkvStore((s) => s.setFileHasSelection);
+  const setFileTracks = useMkvStore((s) => s.setFileTracks);
+  const setFileTrackCounts = useMkvStore((s) => s.setFileTrackCounts);
+  const setFileSelectedIds = useMkvStore((s) => s.setFileSelectedIds);
+  const cachedTracks = useMkvStore((s) => s.fileTracks[path]);
+  const storedSelectedIds = useMkvStore((s) => s.fileSelectedIds[path]);
   const activeProfile = useMkvStore((s) => {
     const cfg = s.config;
-    if (!cfg) return null;
+    if (!cfg) {
+      return null;
+    }
     return (
       cfg.profiles.find((p) => p.name === cfg.activeProfile) ??
       cfg.profiles[0] ??
@@ -304,43 +136,70 @@ export function MkvFileCard({ path }: MkvFileCardProps) {
   const isQueued = entry?.status === QueueItemStatus.Waiting;
   const isActive = isExtracting || isQueued;
 
-  const [tracks, setTracks] = useState<MkvTrack[]>([]);
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(
+    () => cachedTracks === undefined,
+  );
   const [error, setError] = useState<string | null>(null);
+  const tracks = cachedTracks ?? [];
+  const selectedIds = useMemo(
+    () => new Set<number>(storedSelectedIds ?? []),
+    [storedSelectedIds],
+  );
   const [snackbar, setSnackbar] = useState<{
     message: string;
     severity: "success" | "error";
   } | null>(null);
-  const autoSelectedRef = useRef(false);
 
   useEffect(() => {
-    if (autoSelectedRef.current) return;
-    if (tracks.length === 0 || !activeProfile) return;
-    autoSelectedRef.current = true;
-    const auto = new Set<number>();
+    if (storedSelectedIds !== undefined) {
+      return;
+    }
+    if (tracks.length === 0 || !activeProfile) {
+      return;
+    }
+    const auto: number[] = [];
     for (const track of tracks) {
       if (shouldSelectTrackType(activeProfile, track.type)) {
-        auto.add(track.id);
+        auto.push(track.id);
       }
     }
-    if (auto.size > 0) {
-      setSelectedIds(auto);
-    }
-  }, [tracks, activeProfile]);
+    setFileSelectedIds(path, auto);
+  }, [path, tracks, activeProfile, storedSelectedIds, setFileSelectedIds]);
 
   useEffect(() => {
+    if (useMkvStore.getState().fileTracks[path] !== undefined) {
+      setLoading(false);
+      setError(null);
+      return;
+    }
     let cancelled = false;
     setLoading(true);
     setError(null);
     getMkvTracks(path)
       .then((result) => {
-        if (cancelled) return;
-        setTracks(result);
+        if (cancelled) {
+          return;
+        }
+        setFileTracks(path, result);
         setLoading(false);
+        let video = 0;
+        let audio = 0;
+        let subtitles = 0;
+        for (const track of result) {
+          if (track.type === "video") {
+            video += 1;
+          } else if (track.type === "audio") {
+            audio += 1;
+          } else if (track.type === "subtitles") {
+            subtitles += 1;
+          }
+        }
+        setFileTrackCounts(path, { video, audio, subtitles });
       })
       .catch((err) => {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         const msg = String(err);
         if (msg.includes("MKVMERGE_NOT_AVAILABLE:")) {
           setError(
@@ -368,38 +227,43 @@ export function MkvFileCard({ path }: MkvFileCardProps) {
     return () => {
       cancelled = true;
     };
-  }, [path, t]);
+  }, [path, t, setFileTracks, setFileTrackCounts]);
 
   const selectedTracks = tracks.filter((track) => selectedIds.has(track.id));
   const hasSelection = selectedTracks.length > 0;
 
   const toggleAll = (checked: boolean) => {
-    setSelectedIds(checked ? new Set(tracks.map((t) => t.id)) : new Set());
+    setFileSelectedIds(path, checked ? tracks.map((t) => t.id) : []);
   };
 
   const toggleOne = (id: number, checked: boolean) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (checked) {
-        next.add(id);
-      } else {
-        next.delete(id);
-      }
-      return next;
-    });
+    const current = storedSelectedIds ?? [];
+    const next = checked
+      ? [...current, id]
+      : current.filter((v) => v !== id);
+    setFileSelectedIds(path, next);
+  };
+
+  const buildCurrentCommand = async (): Promise<string | null> => {
+    if (!hasSelection || !activeProfile) {
+      return null;
+    }
+    const outputDir = await dirname(path);
+    return await buildCommandString(
+      path,
+      outputDir,
+      mkvToolNixPath,
+      selectedTracks,
+      activeProfile,
+    );
   };
 
   const handleCopyCommand = async () => {
-    if (!hasSelection || !activeProfile) return;
     try {
-      const outputDir = await dirname(path);
-      const command = await buildCommandString(
-        path,
-        outputDir,
-        mkvToolNixPath,
-        selectedTracks,
-        activeProfile,
-      );
+      const command = await buildCurrentCommand();
+      if (!command) {
+        return;
+      }
       await writeText(command);
       setSnackbar({
         message: t("extract.commandCopied"),
@@ -411,7 +275,9 @@ export function MkvFileCard({ path }: MkvFileCardProps) {
   };
 
   const handleExtract = async () => {
-    if (!hasSelection || isActive || !activeProfile) return;
+    if (!hasSelection || isActive || !activeProfile) {
+      return;
+    }
     try {
       const outputDir = await dirname(path);
       const args = await buildExtractArgs(
@@ -456,19 +322,6 @@ export function MkvFileCard({ path }: MkvFileCardProps) {
     removeFile(path);
   };
 
-  useEffect(() => {
-    registerExtractHandler(path, handleExtract);
-    return () => {
-      unregisterExtractHandler(path);
-    };
-  }, [path, handleExtract, registerExtractHandler, unregisterExtractHandler]);
-
-  useEffect(() => {
-    setFileHasSelection(path, hasSelection && !isActive);
-    return () => {
-      setFileHasSelection(path, false);
-    };
-  }, [path, hasSelection, isActive, setFileHasSelection]);
 
   const titleContent = (
     <Typography variant="body2" sx={{ wordBreak: "break-all" }}>

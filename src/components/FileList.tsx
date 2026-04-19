@@ -15,16 +15,22 @@
  *   limitations under the License.
  */
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Box, Typography } from "@mui/material";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useTranslation } from "react-i18next";
+import { getParentDir } from "../extract-utils";
 import type { ExtractionFinishedEvent } from "../protocol";
 import { getExtractStatus } from "../service";
 import { useMkvStore } from "../store";
+import { GroupCard } from "./GroupCard";
 import { MkvFileCard } from "./MkvFileCard";
+
+type RenderEntry =
+  | { kind: "single"; file: string }
+  | { kind: "group"; key: string; files: string[] };
 
 const EXTRACT_POLL_INTERVAL_MS = 200;
 
@@ -34,6 +40,47 @@ export default function FileList() {
   const addFiles = useMkvStore((s) => s.addFiles);
   const applyExtractSnapshot = useMkvStore((s) => s.applyExtractSnapshot);
   const recordFinishedOutcome = useMkvStore((s) => s.recordFinishedOutcome);
+  const groupByFile = useMkvStore((s) => s.groupByFile);
+  const fileTrackCounts = useMkvStore((s) => s.fileTrackCounts);
+
+  const entries = useMemo<RenderEntry[]>(() => {
+    if (!groupByFile) {
+      return files.map((file) => ({ kind: "single", file }));
+    }
+    const buckets = new Map<string, string[]>();
+    const bucketOrder: string[] = [];
+    const ungroupable: string[] = [];
+    for (const file of files) {
+      const counts = fileTrackCounts[file];
+      if (!counts) {
+        ungroupable.push(file);
+        continue;
+      }
+      const key = `${getParentDir(file)}|v=${counts.video}|a=${counts.audio}|s=${counts.subtitles}`;
+      let bucket = buckets.get(key);
+      if (!bucket) {
+        bucket = [];
+        buckets.set(key, bucket);
+        bucketOrder.push(key);
+      }
+      bucket.push(file);
+    }
+    const result: RenderEntry[] = [];
+    for (const key of bucketOrder) {
+      const groupFiles = buckets.get(key) ?? [];
+      if (groupFiles.length >= 2) {
+        result.push({ kind: "group", key, files: groupFiles });
+      } else {
+        for (const file of groupFiles) {
+          result.push({ kind: "single", file });
+        }
+      }
+    }
+    for (const file of ungroupable) {
+      result.push({ kind: "single", file });
+    }
+    return result;
+  }, [files, groupByFile, fileTrackCounts]);
 
   useEffect(() => {
     let cancelled = false;
@@ -116,9 +163,13 @@ export default function FileList() {
 
   return (
     <Box>
-      {files.map((path) => (
-        <MkvFileCard key={path} path={path} />
-      ))}
+      {entries.map((entry) =>
+        entry.kind === "single" ? (
+          <MkvFileCard key={entry.file} path={entry.file} />
+        ) : (
+          <GroupCard key={entry.key} files={entry.files} />
+        ),
+      )}
     </Box>
   );
 }

@@ -31,9 +31,15 @@
   "toolbar": {
     "extractAll": "すべて抽出 (F3)",
     "clear": "クリア (Ctrl + Q)",
+    "groupByFile": "グループモード (F8)",
     "profile": "プロファイル (F9)",
     "settings": "設定 (F10)",
     "about": "情報"
+  },
+  "group": {
+    "copyAllCommands": "すべてのコマンドをコピー",
+    "extractAll": "すべて抽出",
+    "clearAll": "すべて削除"
   },
   "tabs": {
     "fileList": "ファイル一覧",

@@ -113,7 +113,9 @@ export default function Settings() {
   }, [config]);
 
   useEffect(() => {
-    if (!initializedRef.current) return;
+    if (!initializedRef.current) {
+      return;
+    }
     if (checkDebounceRef.current) {
       clearTimeout(checkDebounceRef.current);
     }
@@ -121,7 +123,9 @@ export default function Settings() {
     checkDebounceRef.current = setTimeout(async () => {
       try {
         const status = await isMkvextractFound(mkvToolNixPath.trim());
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         setMkvextractFound(status.found);
         if (
           status.found &&
@@ -136,7 +140,9 @@ export default function Settings() {
           }
         }
       } catch {
-        if (!cancelled) setMkvextractFound(false);
+        if (!cancelled) {
+          setMkvextractFound(false);
+        }
       }
     }, 250);
     return () => {
@@ -257,7 +263,9 @@ export default function Settings() {
           const activeProfile =
             config.profiles.find((p) => p.name === config.activeProfile) ??
             config.profiles[0];
-          if (!activeProfile) return null;
+          if (!activeProfile) {
+            return null;
+          }
           const trimmed = newProfileName.trim();
           const canAdd =
             trimmed.length > 0 &&

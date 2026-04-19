@@ -31,9 +31,15 @@
   "toolbar": {
     "extractAll": "Extract All (F3)",
     "clear": "Clear (Ctrl + Q)",
+    "groupByFile": "Group Mode (F8)",
     "profile": "Profile (F9)",
     "settings": "Settings (F10)",
     "about": "About"
+  },
+  "group": {
+    "copyAllCommands": "Copy All Commands",
+    "extractAll": "Extract All",
+    "clearAll": "Clear All"
   },
   "tabs": {
     "fileList": "File List",

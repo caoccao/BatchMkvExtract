@@ -23,6 +23,7 @@ import type {
   ConfigProfile,
   ExtractEntry,
   ExtractOutcome,
+  MkvTrack,
 } from "./protocol";
 import {
   DEFAULT_PROFILE_NAME,
@@ -33,6 +34,12 @@ export { QueueItemStatus } from "./protocol";
 import { getAbout, getConfig, setConfig } from "./service";
 
 export type TabType = "fileList" | "queue" | "settings" | "about";
+
+export interface TrackCounts {
+  video: number;
+  audio: number;
+  subtitles: number;
+}
 
 function isTerminalStatus(status: QueueItemStatus): boolean {
   return (
@@ -62,8 +69,10 @@ interface MkvStore {
   config: Config | null;
   queueItems: Record<string, QueueItem>;
   queueOrder: string[];
-  fileExtractHandlers: Record<string, () => Promise<void>>;
-  fileHasSelection: Record<string, boolean>;
+  fileTracks: Record<string, MkvTrack[]>;
+  fileTrackCounts: Record<string, TrackCounts>;
+  fileSelectedIds: Record<string, number[]>;
+  groupByFile: boolean;
   addFiles: (paths: string[]) => void;
   removeFile: (path: string) => void;
   clearFiles: () => void;
@@ -90,9 +99,11 @@ interface MkvStore {
     error: string | null,
   ) => void;
   clearCompletedInDrive: (drive: string) => void;
-  registerExtractHandler: (file: string, handler: () => Promise<void>) => void;
-  unregisterExtractHandler: (file: string) => void;
-  setFileHasSelection: (file: string, hasSelection: boolean) => void;
+  setFileTracks: (file: string, tracks: MkvTrack[]) => void;
+  setFileTrackCounts: (file: string, counts: TrackCounts) => void;
+  setFileSelectedIds: (file: string, ids: number[]) => void;
+  setGroupSelectedIds: (files: string[], ids: number[]) => void;
+  setGroupByFile: (value: boolean) => void;
 }
 
 export const useMkvStore = create<MkvStore>((set, get) => ({
@@ -104,8 +115,10 @@ export const useMkvStore = create<MkvStore>((set, get) => ({
   config: null,
   queueItems: {},
   queueOrder: [],
-  fileExtractHandlers: {},
-  fileHasSelection: {},
+  fileTracks: {},
+  fileTrackCounts: {},
+  fileSelectedIds: {},
+  groupByFile: false,
   addFiles: (paths) =>
     set((state) => {
       const existing = new Set(state.files);
@@ -113,8 +126,27 @@ export const useMkvStore = create<MkvStore>((set, get) => ({
       return { files: [...state.files, ...toAdd] };
     }),
   removeFile: (path) =>
-    set((state) => ({ files: state.files.filter((f) => f !== path) })),
-  clearFiles: () => set({ files: [] }),
+    set((state) => {
+      const nextTracks = { ...state.fileTracks };
+      delete nextTracks[path];
+      const nextCounts = { ...state.fileTrackCounts };
+      delete nextCounts[path];
+      const nextSelected = { ...state.fileSelectedIds };
+      delete nextSelected[path];
+      return {
+        files: state.files.filter((f) => f !== path),
+        fileTracks: nextTracks,
+        fileTrackCounts: nextCounts,
+        fileSelectedIds: nextSelected,
+      };
+    }),
+  clearFiles: () =>
+    set({
+      files: [],
+      fileTracks: {},
+      fileTrackCounts: {},
+      fileSelectedIds: {},
+    }),
   setActiveTab: (type) => set({ activeTab: type }),
   openSettings: () => set({ showSettings: true, activeTab: "settings" }),
   openAbout: () => set({ showAbout: true, activeTab: "about" }),
@@ -146,7 +178,9 @@ export const useMkvStore = create<MkvStore>((set, get) => ({
   },
   updateConfig: async (patch) => {
     const current = get().config;
-    if (!current) return;
+    if (!current) {
+      return;
+    }
     const next = { ...current, ...patch };
     set({ config: next });
     try {
@@ -157,7 +191,9 @@ export const useMkvStore = create<MkvStore>((set, get) => ({
   },
   updateActiveProfile: async (patch) => {
     const current = get().config;
-    if (!current) return;
+    if (!current) {
+      return;
+    }
     const profiles = current.profiles.map((p) =>
       p.name === current.activeProfile ? { ...p, ...patch } : p,
     );
@@ -165,10 +201,16 @@ export const useMkvStore = create<MkvStore>((set, get) => ({
   },
   addProfile: async (name) => {
     const trimmed = name.trim();
-    if (!trimmed) return;
+    if (!trimmed) {
+      return;
+    }
     const current = get().config;
-    if (!current) return;
-    if (current.profiles.some((p) => p.name === trimmed)) return;
+    if (!current) {
+      return;
+    }
+    if (current.profiles.some((p) => p.name === trimmed)) {
+      return;
+    }
     const fresh = createDefaultProfile(trimmed);
     await get().updateConfig({
       profiles: [...current.profiles, fresh],
@@ -177,8 +219,12 @@ export const useMkvStore = create<MkvStore>((set, get) => ({
   },
   deleteActiveProfile: async () => {
     const current = get().config;
-    if (!current) return;
-    if (current.activeProfile === DEFAULT_PROFILE_NAME) return;
+    if (!current) {
+      return;
+    }
+    if (current.activeProfile === DEFAULT_PROFILE_NAME) {
+      return;
+    }
     const profiles = current.profiles.filter(
       (p) => p.name !== current.activeProfile,
     );
@@ -189,13 +235,19 @@ export const useMkvStore = create<MkvStore>((set, get) => ({
   },
   setActiveProfile: async (name) => {
     const current = get().config;
-    if (!current) return;
-    if (!current.profiles.some((p) => p.name === name)) return;
+    if (!current) {
+      return;
+    }
+    if (!current.profiles.some((p) => p.name === name)) {
+      return;
+    }
     await get().updateConfig({ activeProfile: name });
   },
   resetActiveProfileTemplates: async () => {
     const current = get().config;
-    if (!current) return;
+    if (!current) {
+      return;
+    }
     const fresh = createDefaultProfile(current.activeProfile);
     const profiles = current.profiles.map((p) =>
       p.name === current.activeProfile ? fresh : p,
@@ -295,7 +347,9 @@ export const useMkvStore = create<MkvStore>((set, get) => ({
   },
   removeFromQueue: (file) =>
     set((state) => {
-      if (!state.queueItems[file]) return {};
+      if (!state.queueItems[file]) {
+        return {};
+      }
       const nextItems = { ...state.queueItems };
       delete nextItems[file];
       return {
@@ -306,8 +360,12 @@ export const useMkvStore = create<MkvStore>((set, get) => ({
   markCancelRequested: (file) =>
     set((state) => {
       const existing = state.queueItems[file];
-      if (!existing) return {};
-      if (isTerminalStatus(existing.status)) return {};
+      if (!existing) {
+        return {};
+      }
+      if (isTerminalStatus(existing.status)) {
+        return {};
+      }
       return {
         queueItems: {
           ...state.queueItems,
@@ -357,7 +415,9 @@ export const useMkvStore = create<MkvStore>((set, get) => ({
       const nextOrder: string[] = [];
       for (const file of state.queueOrder) {
         const item = nextItems[file];
-        if (!item) continue;
+        if (!item) {
+          continue;
+        }
         if (item.drive === drive && isTerminalStatus(item.status)) {
           delete nextItems[file];
         } else {
@@ -366,23 +426,25 @@ export const useMkvStore = create<MkvStore>((set, get) => ({
       }
       return { queueItems: nextItems, queueOrder: nextOrder };
     }),
-  registerExtractHandler: (file, handler) =>
+  setFileTracks: (file, tracks) =>
     set((state) => ({
-      fileExtractHandlers: { ...state.fileExtractHandlers, [file]: handler },
+      fileTracks: { ...state.fileTracks, [file]: tracks },
     })),
-  unregisterExtractHandler: (file) =>
+  setFileTrackCounts: (file, counts) =>
+    set((state) => ({
+      fileTrackCounts: { ...state.fileTrackCounts, [file]: counts },
+    })),
+  setFileSelectedIds: (file, ids) =>
+    set((state) => ({
+      fileSelectedIds: { ...state.fileSelectedIds, [file]: ids },
+    })),
+  setGroupSelectedIds: (files, ids) =>
     set((state) => {
-      const next = { ...state.fileExtractHandlers };
-      delete next[file];
-      return { fileExtractHandlers: next };
+      const next = { ...state.fileSelectedIds };
+      for (const f of files) {
+        next[f] = ids;
+      }
+      return { fileSelectedIds: next };
     }),
-  setFileHasSelection: (file, hasSelection) =>
-    set((state) => {
-      const current = state.fileHasSelection[file] ?? false;
-      if (current === hasSelection) return {};
-      const next = { ...state.fileHasSelection };
-      if (hasSelection) next[file] = true;
-      else delete next[file];
-      return { fileHasSelection: next };
-    }),
+  setGroupByFile: (value) => set({ groupByFile: value }),
 }));

@@ -31,9 +31,15 @@
   "toolbar": {
     "extractAll": "全部提取 (F3)",
     "clear": "清空 (Ctrl + Q)",
+    "groupByFile": "分组模式 (F8)",
     "profile": "配置文件 (F9)",
     "settings": "设置 (F10)",
     "about": "关于"
+  },
+  "group": {
+    "copyAllCommands": "复制全部命令",
+    "extractAll": "全部提取",
+    "clearAll": "全部清除"
   },
   "tabs": {
     "fileList": "文件列表",

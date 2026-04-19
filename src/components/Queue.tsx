@@ -81,7 +81,9 @@ function eta(item: QueueItem, now: number): string {
 }
 
 function formatClockTime(ms: number | null): string {
-  if (ms === null) return "--:--:--";
+  if (ms === null) {
+    return "--:--:--";
+  }
   const d = new Date(ms);
   const pad = (n: number) => n.toString().padStart(2, "0");
   return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
@@ -113,7 +115,9 @@ export default function Queue() {
     const byDrive = new Map<string, QueueItem[]>();
     for (const file of queueOrder) {
       const item = queueItems[file];
-      if (!item) continue;
+      if (!item) {
+        continue;
+      }
       const list = byDrive.get(item.drive) ?? [];
       list.push(item);
       byDrive.set(item.drive, list);
