@@ -79,6 +79,66 @@ export default function MainContent() {
     return null;
   };
 
+  const closeTab = (type: TabType) => {
+    const handler = closeHandlerOf(type);
+    if (!handler) {
+      return;
+    }
+    if (type === activeTab) {
+      const idx = tabs.indexOf(type);
+      const leftIdx = Math.max(0, idx - 1);
+      const leftTab = tabs[leftIdx];
+      if (leftTab && leftTab !== type) {
+        setActiveTab(leftTab);
+      }
+    }
+    handler();
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!event.ctrlKey || event.altKey) {
+        return;
+      }
+      if (event.key === "Tab") {
+        event.preventDefault();
+        event.stopPropagation();
+        if (tabs.length <= 1) {
+          return;
+        }
+        const delta = event.shiftKey ? -1 : 1;
+        const next = (activeIndex + delta + tabs.length) % tabs.length;
+        setActiveTab(tabs[next]);
+        return;
+      }
+      if (event.shiftKey) {
+        return;
+      }
+      if (event.key >= "1" && event.key <= "9") {
+        const idx = parseInt(event.key, 10) - 1;
+        if (idx >= 0 && idx < tabs.length) {
+          event.preventDefault();
+          event.stopPropagation();
+          setActiveTab(tabs[idx]);
+        }
+        return;
+      }
+      if (event.key === "w" || event.key === "W") {
+        event.preventDefault();
+        event.stopPropagation();
+        const current = tabs[activeIndex];
+        if (!current) {
+          return;
+        }
+        closeTab(current);
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [tabs, activeIndex, activeTab, setActiveTab, closeSettings, closeAbout]);
+
   return (
     <Box
       sx={{
@@ -102,7 +162,7 @@ export default function MainContent() {
           }}
         >
           {tabs.map((type) => {
-            const handleClose = closeHandlerOf(type);
+            const closable = closeHandlerOf(type) !== null;
             return (
               <Tab
                 key={type}
@@ -113,7 +173,7 @@ export default function MainContent() {
                     sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
                   >
                     <span>{labelOf(type)}</span>
-                    {handleClose && (
+                    {closable && (
                       <Tooltip title={t("tabs.close")}>
                         <IconButton
                           size="small"
@@ -121,7 +181,7 @@ export default function MainContent() {
                           sx={{ ml: 0.5, p: 0.25 }}
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleClose();
+                            closeTab(type);
                           }}
                         >
                           <CloseIcon sx={{ fontSize: 14 }} />
