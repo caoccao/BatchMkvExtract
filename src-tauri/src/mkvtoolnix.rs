@@ -364,7 +364,8 @@ pub async fn is_mkvextract_found(path: String) -> Result<MkvextractStatus> {
         });
     }
     let resolution = resolve_mkvtoolnix(trimmed_path, "mkvextract");
-    let found = has_tool(&resolution.path, "mkvextract");
+    let found =
+        has_tool(&resolution.path, "mkvextract") && has_tool(&resolution.path, "mkvmerge");
     if found {
         persist_mkvtoolnix_path_if_auto_detected(&resolution)?;
     }

@@ -476,8 +476,8 @@ export default function Settings() {
               }}
             >
               {mkvextractFound
-                ? t("settings.mkvextractFound")
-                : t("settings.mkvextractNotFound")}
+                ? t("settings.mkvToolNixFound")
+                : t("settings.mkvToolNixNotFound")}
             </Typography>
           </Box>
         </Paper>
