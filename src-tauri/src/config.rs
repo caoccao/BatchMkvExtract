@@ -34,8 +34,8 @@ pub struct Config {
     pub theme: Theme,
     #[serde(default)]
     pub language: Language,
-    #[serde(default)]
-    pub mkv: ConfigMkv,
+    #[serde(rename = "externalTools", default)]
+    pub external_tools: ConfigExternalTools,
     #[serde(default = "Config::default_profiles")]
     pub profiles: Vec<ConfigProfile>,
     #[serde(rename = "activeProfile", default = "Config::default_active_profile")]
@@ -60,7 +60,7 @@ impl Default for Config {
             display_mode: Default::default(),
             theme: Default::default(),
             language: Default::default(),
-            mkv: Default::default(),
+            external_tools: Default::default(),
             profiles: Self::default_profiles(),
             active_profile: Self::default_active_profile(),
             window: Default::default(),
@@ -152,15 +152,17 @@ impl Default for ConfigProfile {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct ConfigMkv {
+pub struct ConfigExternalTools {
     #[serde(
         rename = "mkvToolNixPath",
-        default = "ConfigMkv::default_mkv_toolnix_path"
+        default = "ConfigExternalTools::default_mkv_toolnix_path"
     )]
     pub mkv_toolnix_path: String,
+    #[serde(rename = "betterMediaInfoPath", default)]
+    pub better_media_info_path: String,
 }
 
-impl ConfigMkv {
+impl ConfigExternalTools {
     fn default_mkv_toolnix_path() -> String {
         if cfg!(target_os = "windows") {
             r"C:\Program Files\MKVToolNix".to_owned()
@@ -172,10 +174,11 @@ impl ConfigMkv {
     }
 }
 
-impl Default for ConfigMkv {
+impl Default for ConfigExternalTools {
     fn default() -> Self {
         Self {
             mkv_toolnix_path: Self::default_mkv_toolnix_path(),
+            better_media_info_path: String::new(),
         }
     }
 }

@@ -18,10 +18,11 @@
 import { invoke } from "@tauri-apps/api/core";
 import type {
   About,
+  BetterMediaInfoStatus,
   Config,
   ExtractSnapshot,
+  MkvToolNixStatus,
   MkvTrack,
-  MkvextractStatus,
 } from "./protocol";
 
 export async function getAbout(): Promise<About> {
@@ -44,10 +45,10 @@ export async function getLaunchArgs(): Promise<string[]> {
   return await invoke<string[]>("get_launch_args");
 }
 
-export async function isMkvextractFound(
+export async function isMkvtoolnixFound(
   path: string,
-): Promise<MkvextractStatus> {
-  return await invoke<MkvextractStatus>("is_mkvextract_found", { path });
+): Promise<MkvToolNixStatus> {
+  return await invoke<MkvToolNixStatus>("is_mkvtoolnix_found", { path });
 }
 
 export async function getMkvTracks(file: string): Promise<MkvTrack[]> {
@@ -75,4 +76,12 @@ export async function checkOutputPathWritable(path: string): Promise<boolean> {
 
 export async function ensureOutputPath(path: string): Promise<void> {
   return await invoke<void>("ensure_output_path", { path });
+}
+
+export async function detectBetterMediaInfo(
+  path: string,
+): Promise<BetterMediaInfoStatus> {
+  return await invoke<BetterMediaInfoStatus>("detect_better_media_info", {
+    path,
+  });
 }

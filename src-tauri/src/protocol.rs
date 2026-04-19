@@ -24,10 +24,16 @@ pub struct About {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct MkvextractStatus {
+pub struct MkvToolNixStatus {
     pub found: bool,
     #[serde(rename = "mkvToolNixPath")]
     pub mkv_toolnix_path: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct BetterMediaInfoStatus {
+    pub found: bool,
+    pub path: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

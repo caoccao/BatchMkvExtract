@@ -20,7 +20,7 @@ use std::path::{Path, PathBuf};
 
 use crate::config;
 use crate::mkvtoolnix::is_mkv;
-use crate::protocol::About;
+use crate::protocol::{About, BetterMediaInfoStatus};
 
 pub async fn get_about() -> Result<About> {
     Ok(About {
@@ -103,4 +103,91 @@ pub async fn ensure_output_path(path: String) -> Result<()> {
     }
     std::fs::create_dir_all(p).map_err(anyhow::Error::msg)?;
     Ok(())
+}
+
+fn better_media_info_exe_name() -> &'static str {
+    if cfg!(target_os = "windows") {
+        "BetterMediaInfo.exe"
+    } else {
+        "BetterMediaInfo"
+    }
+}
+
+fn find_better_media_info_dir(path: &Path) -> Option<PathBuf> {
+    if !path.exists() {
+        return None;
+    }
+    let exe_name = better_media_info_exe_name();
+    if path.is_file() {
+        let matches = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .map(|n| n.eq_ignore_ascii_case(exe_name))
+            .unwrap_or(false);
+        if matches {
+            return path.parent().map(|p| p.to_path_buf());
+        }
+        return None;
+    }
+    if path.is_dir() && path.join(exe_name).is_file() {
+        return Some(path.to_path_buf());
+    }
+    None
+}
+
+fn common_better_media_info_dirs() -> Vec<PathBuf> {
+    let mut dirs: Vec<PathBuf> = Vec::new();
+    #[cfg(target_os = "windows")]
+    {
+        for env_var in ["LOCALAPPDATA"] {
+            if let Ok(value) = std::env::var(env_var) {
+                if !value.is_empty() {
+                    dirs.push(PathBuf::from(value).join("Programs").join("BetterMediaInfo"));
+                }
+            }
+        }
+        for env_var in ["ProgramFiles", "ProgramFiles(x86)"] {
+            if let Ok(value) = std::env::var(env_var) {
+                if !value.is_empty() {
+                    dirs.push(PathBuf::from(value).join("BetterMediaInfo"));
+                }
+            }
+        }
+    }
+    #[cfg(target_os = "macos")]
+    {
+        dirs.push(PathBuf::from(
+            "/Applications/BetterMediaInfo.app/Contents/MacOS",
+        ));
+    }
+    #[cfg(target_os = "linux")]
+    {
+        dirs.push(PathBuf::from("/usr/bin"));
+        dirs.push(PathBuf::from("/usr/local/bin"));
+    }
+    dirs
+}
+
+pub async fn detect_better_media_info(user_path: String) -> Result<BetterMediaInfoStatus> {
+    let trimmed = user_path.trim();
+    if !trimmed.is_empty() {
+        if let Some(found) = find_better_media_info_dir(Path::new(trimmed)) {
+            return Ok(BetterMediaInfoStatus {
+                found: true,
+                path: found.to_string_lossy().to_string(),
+            });
+        }
+    }
+    for dir in common_better_media_info_dirs() {
+        if let Some(found) = find_better_media_info_dir(&dir) {
+            return Ok(BetterMediaInfoStatus {
+                found: true,
+                path: found.to_string_lossy().to_string(),
+            });
+        }
+    }
+    Ok(BetterMediaInfoStatus {
+        found: false,
+        path: String::new(),
+    })
 }

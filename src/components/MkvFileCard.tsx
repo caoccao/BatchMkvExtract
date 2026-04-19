@@ -74,7 +74,7 @@ export function MkvFileCard({ path }: MkvFileCardProps) {
   const { t } = useTranslation();
   const removeFile = useMkvStore((s) => s.removeFile);
   const mkvToolNixPath = useMkvStore(
-    (s) => s.config?.mkv?.mkvToolNixPath ?? "",
+    (s) => s.config?.externalTools?.mkvToolNixPath ?? "",
   );
   const entry = useMkvStore((s) => s.queueItems[path]);
   const addToQueue = useMkvStore((s) => s.addToQueue);

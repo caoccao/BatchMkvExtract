@@ -77,8 +77,9 @@ export interface ConfigWindow {
   size: ConfigWindowSize;
 }
 
-export interface ConfigMkv {
+export interface ConfigExternalTools {
   mkvToolNixPath: string;
+  betterMediaInfoPath: string;
 }
 
 export interface ConfigProfile {
@@ -100,7 +101,7 @@ export interface Config {
   displayMode: DisplayMode;
   theme: Theme;
   language: Language;
-  mkv: ConfigMkv;
+  externalTools: ConfigExternalTools;
   profiles: ConfigProfile[];
   activeProfile: string;
   window: ConfigWindow;
@@ -128,9 +129,14 @@ export function createDefaultProfile(name = DEFAULT_PROFILE_NAME): ConfigProfile
   };
 }
 
-export interface MkvextractStatus {
+export interface MkvToolNixStatus {
   found: boolean;
   mkvToolNixPath: string;
+}
+
+export interface BetterMediaInfoStatus {
+  found: boolean;
+  path: string;
 }
 
 export interface MkvTrack {

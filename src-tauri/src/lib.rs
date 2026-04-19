@@ -58,8 +58,8 @@ async fn get_mkv_tracks(file: String) -> Result<Vec<protocol::MkvTrack>, String>
 }
 
 #[tauri::command]
-async fn is_mkvextract_found(path: String) -> Result<protocol::MkvextractStatus, String> {
-    mkvtoolnix::is_mkvextract_found(path)
+async fn is_mkvtoolnix_found(path: String) -> Result<protocol::MkvToolNixStatus, String> {
+    mkvtoolnix::is_mkvtoolnix_found(path)
         .await
         .map_err(convert_error)
 }
@@ -98,6 +98,15 @@ async fn ensure_output_path(path: String) -> Result<(), String> {
         .map_err(convert_error)
 }
 
+#[tauri::command]
+async fn detect_better_media_info(
+    path: String,
+) -> Result<protocol::BetterMediaInfoStatus, String> {
+    controller::detect_better_media_info(path)
+        .await
+        .map_err(convert_error)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let runtime = tokio::runtime::Builder::new_multi_thread()
@@ -114,6 +123,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             cancel_extract,
             check_output_path_writable,
+            detect_better_media_info,
             ensure_output_path,
             enqueue_extract,
             get_about,
@@ -122,7 +132,7 @@ pub fn run() {
             get_launch_args,
             get_mkv_files,
             get_mkv_tracks,
-            is_mkvextract_found,
+            is_mkvtoolnix_found,
             set_config
         ])
         .setup(|app| {

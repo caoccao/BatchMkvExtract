@@ -16,6 +16,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { useDebouncedEffect } from "../hooks";
 import {
   Box,
   Button,
@@ -41,7 +42,7 @@ import PersonIcon from "@mui/icons-material/Person";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useTranslation } from "react-i18next";
 import * as Protocol from "../protocol";
-import { isMkvextractFound } from "../service";
+import { detectBetterMediaInfo, isMkvtoolnixFound } from "../service";
 import { useMkvStore } from "../store";
 
 function SectionHeader({
@@ -99,60 +100,100 @@ export default function Settings() {
   );
 
   const [mkvToolNixPath, setMkvToolNixPath] = useState("");
-  const [mkvextractFound, setMkvextractFound] = useState(false);
+  const [mkvtoolnixFound, setMkvtoolnixFound] = useState(false);
+  const [betterMediaInfoPath, setBetterMediaInfoPath] = useState("");
+  const [betterMediaInfoDetection, setBetterMediaInfoDetection] = useState<
+    null | { found: boolean }
+  >(null);
   const [newProfileName, setNewProfileName] = useState("");
-  const checkDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(
-    undefined,
-  );
   const initializedRef = useRef(false);
 
   useEffect(() => {
     if (config && !initializedRef.current) {
       initializedRef.current = true;
-      setMkvToolNixPath(config.mkv?.mkvToolNixPath ?? "");
+      setMkvToolNixPath(config.externalTools?.mkvToolNixPath ?? "");
+      setBetterMediaInfoPath(config.externalTools?.betterMediaInfoPath ?? "");
     }
   }, [config]);
 
-  useEffect(() => {
-    if (!initializedRef.current) {
-      return;
-    }
-    if (checkDebounceRef.current) {
-      clearTimeout(checkDebounceRef.current);
-    }
-    let cancelled = false;
-    checkDebounceRef.current = setTimeout(async () => {
+  useDebouncedEffect(
+    async (isCancelled) => {
+      if (!initializedRef.current) {
+        return;
+      }
       try {
-        const status = await isMkvextractFound(mkvToolNixPath.trim());
-        if (cancelled) {
+        const status = await isMkvtoolnixFound(mkvToolNixPath.trim());
+        if (isCancelled()) {
           return;
         }
-        setMkvextractFound(status.found);
+        setMkvtoolnixFound(status.found);
         if (
           status.found &&
           status.mkvToolNixPath &&
           status.mkvToolNixPath !== mkvToolNixPath
         ) {
           setMkvToolNixPath(status.mkvToolNixPath);
-          if (config && config.mkv?.mkvToolNixPath !== status.mkvToolNixPath) {
+          if (
+            config &&
+            config.externalTools?.mkvToolNixPath !== status.mkvToolNixPath
+          ) {
             updateConfig({
-              mkv: { mkvToolNixPath: status.mkvToolNixPath },
+              externalTools: {
+                mkvToolNixPath: status.mkvToolNixPath,
+                betterMediaInfoPath:
+                  config.externalTools?.betterMediaInfoPath ?? "",
+              },
             });
           }
         }
       } catch {
-        if (!cancelled) {
-          setMkvextractFound(false);
+        if (!isCancelled()) {
+          setMkvtoolnixFound(false);
         }
       }
-    }, 250);
-    return () => {
-      cancelled = true;
-      if (checkDebounceRef.current) {
-        clearTimeout(checkDebounceRef.current);
+    },
+    250,
+    [mkvToolNixPath, config, updateConfig],
+  );
+
+  useDebouncedEffect(
+    async (isCancelled) => {
+      if (!initializedRef.current) {
+        return;
       }
-    };
-  }, [mkvToolNixPath, config, updateConfig]);
+      try {
+        const result = await detectBetterMediaInfo(betterMediaInfoPath.trim());
+        if (isCancelled()) {
+          return;
+        }
+        setBetterMediaInfoDetection({ found: result.found });
+        if (
+          result.found &&
+          result.path &&
+          result.path !== betterMediaInfoPath
+        ) {
+          setBetterMediaInfoPath(result.path);
+          if (
+            config &&
+            config.externalTools?.betterMediaInfoPath !== result.path
+          ) {
+            updateConfig({
+              externalTools: {
+                mkvToolNixPath: config.externalTools?.mkvToolNixPath ?? "",
+                betterMediaInfoPath: result.path,
+              },
+            });
+          }
+        }
+      } catch {
+        if (!isCancelled()) {
+          setBetterMediaInfoDetection({ found: false });
+        }
+      }
+    },
+    250,
+    [betterMediaInfoPath, config, updateConfig],
+  );
 
   const handleBrowseMkvToolNixPath = async () => {
     const directory = await open({
@@ -161,14 +202,68 @@ export default function Settings() {
     });
     if (typeof directory === "string" && directory.length > 0) {
       setMkvToolNixPath(directory);
-      updateConfig({ mkv: { mkvToolNixPath: directory } });
+      updateConfig({
+        externalTools: {
+          mkvToolNixPath: directory,
+          betterMediaInfoPath: config?.externalTools?.betterMediaInfoPath ?? "",
+        },
+      });
     }
   };
 
   const handlePathBlur = () => {
     const trimmed = mkvToolNixPath.trim();
-    if (config && trimmed !== (config.mkv?.mkvToolNixPath ?? "")) {
-      updateConfig({ mkv: { mkvToolNixPath: trimmed } });
+    if (config && trimmed !== (config.externalTools?.mkvToolNixPath ?? "")) {
+      updateConfig({
+        externalTools: {
+          mkvToolNixPath: trimmed,
+          betterMediaInfoPath: config.externalTools?.betterMediaInfoPath ?? "",
+        },
+      });
+    }
+  };
+
+  const persistBetterMediaInfoPath = (value: string) => {
+    if (!config) {
+      return;
+    }
+    if (value === (config.externalTools?.betterMediaInfoPath ?? "")) {
+      return;
+    }
+    updateConfig({
+      externalTools: {
+        mkvToolNixPath: config.externalTools?.mkvToolNixPath ?? "",
+        betterMediaInfoPath: value,
+      },
+    });
+  };
+
+  const handleBrowseBetterMediaInfoPath = async () => {
+    const directory = await open({
+      directory: true,
+      defaultPath: betterMediaInfoPath.trim() || undefined,
+    });
+    if (typeof directory === "string" && directory.length > 0) {
+      setBetterMediaInfoPath(directory);
+      persistBetterMediaInfoPath(directory);
+    }
+  };
+
+  const handleBetterMediaInfoPathBlur = () => {
+    const trimmed = betterMediaInfoPath.trim();
+    persistBetterMediaInfoPath(trimmed);
+  };
+
+  const handleDetectBetterMediaInfo = async () => {
+    try {
+      const result = await detectBetterMediaInfo(betterMediaInfoPath.trim());
+      setBetterMediaInfoDetection({ found: result.found });
+      if (result.found && result.path && result.path !== betterMediaInfoPath) {
+        setBetterMediaInfoPath(result.path);
+        persistBetterMediaInfoPath(result.path);
+      }
+    } catch {
+      setBetterMediaInfoDetection({ found: false });
     }
   };
 
@@ -444,7 +539,7 @@ export default function Settings() {
         <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
           <SectionHeader
             icon={<ContentCutIcon fontSize="small" />}
-            title={t("settings.mkv")}
+            title={t("settings.externalTools")}
           />
           <Box sx={{ py: 1 }}>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
@@ -472,13 +567,57 @@ export default function Settings() {
               sx={{
                 mt: 0.75,
                 display: "block",
-                color: mkvextractFound ? "success.main" : "error.main",
+                color: mkvtoolnixFound ? "success.main" : "error.main",
               }}
             >
-              {mkvextractFound
+              {mkvtoolnixFound
                 ? t("settings.mkvToolNixFound")
                 : t("settings.mkvToolNixNotFound")}
             </Typography>
+          </Box>
+          <Box sx={{ py: 1, borderTop: 1, borderColor: "divider" }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              {t("settings.betterMediaInfoPath")}
+            </Typography>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <TextField
+                value={betterMediaInfoPath}
+                onChange={(e) => setBetterMediaInfoPath(e.target.value)}
+                onBlur={handleBetterMediaInfoPathBlur}
+                size="small"
+                fullWidth
+              />
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleBrowseBetterMediaInfoPath}
+                sx={{ minWidth: 90, height: 36, textTransform: "none" }}
+              >
+                {t("settings.browse")}
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleDetectBetterMediaInfo}
+                sx={{ minWidth: 90, height: 36, textTransform: "none" }}
+              >
+                {t("settings.detect")}
+              </Button>
+            </Box>
+            {betterMediaInfoDetection ? (
+              <Typography
+                variant="caption"
+                sx={{
+                  mt: 0.75,
+                  display: "block",
+                  color: betterMediaInfoDetection.found ? "success.main" : "error.main",
+                }}
+              >
+                {betterMediaInfoDetection.found
+                  ? t("settings.betterMediaInfoFound")
+                  : t("settings.betterMediaInfoNotFound")}
+              </Typography>
+            ) : null}
           </Box>
         </Paper>
       </Stack>
