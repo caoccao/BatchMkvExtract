@@ -47,8 +47,12 @@ export async function getLaunchArgs(): Promise<string[]> {
 
 export async function isMkvtoolnixFound(
   path: string,
+  checkRunning: boolean = false,
 ): Promise<MkvToolNixStatus> {
-  return await invoke<MkvToolNixStatus>("is_mkvtoolnix_found", { path });
+  return await invoke<MkvToolNixStatus>("is_mkvtoolnix_found", {
+    path,
+    checkRunning,
+  });
 }
 
 export async function getMkvTracks(file: string): Promise<MkvTrack[]> {

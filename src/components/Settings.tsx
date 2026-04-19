@@ -196,6 +196,34 @@ export default function Settings() {
     [betterMediaInfoPath, config, updateConfig],
   );
 
+  const handleDetectMkvToolNix = async () => {
+    try {
+      const status = await isMkvtoolnixFound(mkvToolNixPath.trim(), true);
+      setMkvtoolnixFound(status.found);
+      if (
+        status.found &&
+        status.mkvToolNixPath &&
+        status.mkvToolNixPath !== mkvToolNixPath
+      ) {
+        setMkvToolNixPath(status.mkvToolNixPath);
+        if (
+          config &&
+          config.externalTools?.mkvToolNixPath !== status.mkvToolNixPath
+        ) {
+          updateConfig({
+            externalTools: {
+              mkvToolNixPath: status.mkvToolNixPath,
+              betterMediaInfoPath:
+                config.externalTools?.betterMediaInfoPath ?? "",
+            },
+          });
+        }
+      }
+    } catch {
+      setMkvtoolnixFound(false);
+    }
+  };
+
   const handleBrowseMkvToolNixPath = async () => {
     const directory = await open({
       directory: true,
@@ -566,6 +594,14 @@ export default function Settings() {
                 sx={{ minWidth: 90, height: 36, textTransform: "none" }}
               >
                 {t("settings.browse")}
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleDetectMkvToolNix}
+                sx={{ minWidth: 90, height: 36, textTransform: "none" }}
+              >
+                {t("settings.detect")}
               </Button>
             </Box>
             <Typography

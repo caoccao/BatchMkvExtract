@@ -361,7 +361,36 @@ pub fn spawn_mkvextract(file: &str, args: &[String]) -> Result<std::process::Chi
     })
 }
 
-pub async fn is_mkvtoolnix_found(path: String) -> Result<MkvToolNixStatus> {
+fn mkvtoolnix_gui_process_name() -> &'static str {
+    if cfg!(target_os = "windows") {
+        "mkvtoolnix-gui.exe"
+    } else {
+        "mkvtoolnix-gui"
+    }
+}
+
+pub async fn is_mkvtoolnix_found(
+    path: String,
+    check_running: bool,
+) -> Result<MkvToolNixStatus> {
+    if check_running {
+        if let Some(dir) =
+            crate::controller::find_running_process_dir(mkvtoolnix_gui_process_name())
+        {
+            if has_mkvtoolnix(&dir) {
+                let mut cfg = config::get_config();
+                let path_string = dir.to_string_lossy().to_string();
+                if cfg.external_tools.mkv_toolnix_path != path_string {
+                    cfg.external_tools.mkv_toolnix_path = path_string.clone();
+                    config::set_config(cfg)?;
+                }
+                return Ok(MkvToolNixStatus {
+                    found: true,
+                    mkv_toolnix_path: path_string,
+                });
+            }
+        }
+    }
     let trimmed_path = path.trim();
     if trimmed_path.is_empty() {
         return Ok(MkvToolNixStatus {

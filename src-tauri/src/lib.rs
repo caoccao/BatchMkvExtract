@@ -58,8 +58,11 @@ async fn get_mkv_tracks(file: String) -> Result<Vec<protocol::MkvTrack>, String>
 }
 
 #[tauri::command]
-async fn is_mkvtoolnix_found(path: String) -> Result<protocol::MkvToolNixStatus, String> {
-    mkvtoolnix::is_mkvtoolnix_found(path)
+async fn is_mkvtoolnix_found(
+    path: String,
+    check_running: bool,
+) -> Result<protocol::MkvToolNixStatus, String> {
+    mkvtoolnix::is_mkvtoolnix_found(path, check_running)
         .await
         .map_err(convert_error)
 }

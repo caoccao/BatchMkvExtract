@@ -113,8 +113,7 @@ fn better_media_info_exe_name() -> &'static str {
     }
 }
 
-fn find_running_better_media_info_dir() -> Option<PathBuf> {
-    let exe_name = better_media_info_exe_name();
+pub fn find_running_process_dir(exe_name: &str) -> Option<PathBuf> {
     let sys = sysinfo::System::new_all();
     for process in sys.processes().values() {
         let name = process.name().to_string_lossy();
@@ -128,6 +127,10 @@ fn find_running_better_media_info_dir() -> Option<PathBuf> {
         }
     }
     None
+}
+
+fn find_running_better_media_info_dir() -> Option<PathBuf> {
+    find_running_process_dir(better_media_info_exe_name())
 }
 
 fn find_better_media_info_dir(path: &Path) -> Option<PathBuf> {
