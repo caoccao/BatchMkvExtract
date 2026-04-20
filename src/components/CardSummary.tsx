@@ -45,7 +45,7 @@ export function CardSummary({ counts, outputPath }: Props) {
       parts.push(`${counts.attachments} 📎`);
     }
     if (parts.length > 0) {
-      pieces.push(`${parts.join(", ")}.`);
+      pieces.push(`${parts.join(" ")}`);
     }
   }
   if (outputPath) {
