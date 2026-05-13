@@ -1,0 +1,149 @@
+{
+  "app": {
+    "dropHere": "Rilascia qui i file .mkv o una cartella"
+  },
+  "list": {
+    "delete": "Elimina"
+  },
+  "extract": {
+    "copyCommand": "Comando copia",
+    "extract": "Estrai",
+    "cancel": "Annulla",
+    "ok": "OK",
+    "browse": "Sfoglia",
+    "setOutputPath": "Imposta cartella destinazione",
+    "outputPath": "Cartella destinazione",
+    "openInBetterMediaInfo": "Apri in BetterMediaInfo",
+    "outputPathNotWritable": "Il percorso destinazione non è scrivibile. Scegli un altro percorso.",
+    "commandCopied": "Comando copiato negli appunti.",
+    "extractionComplete": "Estrazione completata.",
+    "noTracks": "Nessuna traccia trovata.",
+    "header": {
+      "id": "ID",
+      "number": "Numero",
+      "type": "Tipo",
+      "codec": "Codec",
+      "trackName": "Nome traccia",
+      "language": "Lingua"
+    },
+    "error": {
+      "mkvmergeNotAvailable": "mkvmerge non è disponibile. Controlla il percorso MKVToolNix in Impostazioni. {{detail}}",
+      "mkvmergeFailed": "mkvmerge non riuscito: {{detail}}",
+      "parseError": "Impossibile analizzare l'output di mkvmerge: {{detail}}",
+      "mkvextractNotAvailable": "mkvextract non è disponibile. Controlla il percorso MKVToolNix in Impostazioni. {{detail}}",
+      "mkvextractFailed": "mkvextract non riuscito: {{detail}}"
+    }
+  },
+  "toolbar": {
+    "extractAll": "Estrai tutto (F3)",
+    "cancelAll": "Interrompi tutto (F4)",
+    "clear": "Cancella (Ctrl + Q)",
+    "groupByFile": "Modo gruppo (F8)",
+    "profile": "Profilo (F9)",
+    "settings": "Impostazioni (F10)",
+    "about": "Info programma"
+  },
+  "group": {
+    "copyAllCommands": "Copia tutti i comandi",
+    "extractAll": "Estrai tutto",
+    "clearAll": "Cancella tutto"
+  },
+  "tabs": {
+    "fileList": "Elenco file",
+    "queue": "Coda",
+    "settings": "Impostazioni",
+    "about": "Info programma",
+    "close": "Chiudi"
+  },
+  "queue": {
+    "defaultDrive": "Coda",
+    "cancelAll": "Interrompi tutto",
+    "resumeAll": "Riprendi tutto",
+    "clearCompleted": "Cancella completati",
+    "header": {
+      "filePath": "Percorso file",
+      "status": "Stato",
+      "start": "Avvia",
+      "end": "Fine",
+      "elapsed": "Trascorso",
+      "eta": "Stimato"
+    },
+    "status": {
+      "waiting": "In attesa",
+      "extracting": "Estrazione",
+      "completed": "Completato",
+      "cancelled": "Annullato",
+      "failed": "Fallito"
+    }
+  },
+  "settings": {
+    "title": "Impostazioni",
+    "appearance": "Aspetto",
+    "displayMode": "Modo visualizzazione",
+    "autoMode": "Automatico",
+    "lightMode": "Chiaro",
+    "darkMode": "Scuro",
+    "theme": "Tema",
+    "language": "Lingua",
+    "mkv": "MKV",
+    "externalTools": "Strumenti esterni",
+    "mkvToolNixPath": "Percorso MKVToolNix",
+    "betterMediaInfoPath": "Percorso BetterMediaInfo",
+    "browse": "Sfoglia",
+    "detect": "Rileva",
+    "mkvToolNixFound": "mkvmerge e mkvextract trovati nel percorso MKVToolNix.",
+    "mkvToolNixNotFound": "mkvmerge o mkvextract non trovati nel percorso MKVToolNix.",
+    "betterMediaInfoFound": "BetterMediaInfo trovato",
+    "betterMediaInfoNotFound": "BetterMediaInfo non è stato trovato. Verifica il relativo percorso e riprova.",
+    "update": "Aggiorna",
+    "checkNewVersion": "Controllo aggiornamenti",
+    "daily": "Giornaliero",
+    "weekly": "Settimanale",
+    "monthly": "Mensile",
+    "profiles": "Profili",
+    "activeProfile": "Profilo attivo",
+    "newProfileName": "Nuovo nome profilo",
+    "addProfile": "Aggiungi",
+    "deleteProfile": "Elimina",
+    "video": "Video",
+    "audio": "Audio",
+    "subtitles": "Sottotitoli",
+    "chapters": "Capitoli",
+    "attachments": "Allegati",
+    "autoSelectOnDrop": "Seleziona automaticamente ad aggiunta file",
+    "autoSelectOnDropForLanguages": "Seleziona automaticamente ad aggiunta file per lingua",
+    "defaultGroupMode": "Modo gruppo predefinito",
+    "templatePlaceholdersHint": "Segnaposti: {file_name}, {track_id}, {track_number}, {language}, {codec_name}, {track_name}",
+    "resetTemplates": "Ripristina predefiniti"
+  },
+  "about": {
+    "title": "Info programma",
+    "tagline": "GUI Batch per mkvextract",
+    "author": "Autore",
+    "github": "GitHub"
+  },
+  "footer": {
+    "donate": "Dona per supportare lo sviluppo",
+    "copyright": "© Copyright 2026"
+  },
+  "notification": {
+    "completedIn": "Completato in {{elapsed}}",
+    "unknownError": "Errore sconosciuto",
+    "failedCreateOutput": "Impossibile creare {{path}}. Controlla e riprova."
+  },
+  "confirm": {
+    "exitTitle": "Esci",
+    "exitMessage": "Ci sono estrazioni in corso. Vuoi uscire?",
+    "yes": "Sì",
+    "no": "No"
+  },
+  "card": {
+    "summary": {
+      "toPath": "Nel percorso {{path}}"
+    }
+  },
+  "update": {
+    "newVersionAvailable": "È disponibile una nuova versione {{version}}.",
+    "skipThisVersion": "Salta questa versione"
+  }
+}
