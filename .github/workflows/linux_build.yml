@@ -61,7 +61,7 @@ jobs:
 
     - name: Build BatchMkvExtract
       run: |
-        pnpm install
+        pnpm install --frozen-lockfile
         pnpm tauri build
 
     - name: Upload the deb
