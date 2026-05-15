@@ -120,7 +120,7 @@ export function OutputPathDialog({
             variant="outlined"
             size="small"
             onClick={handleBrowse}
-            sx={{ whiteSpace: "nowrap" }}
+            sx={{ whiteSpace: "nowrap", textTransform: "none" }}
           >
             {t("extract.browse")}
           </Button>
@@ -132,8 +132,14 @@ export function OutputPathDialog({
         ) : null}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t("extract.cancel")}</Button>
-        <Button onClick={handleConfirm} variant="contained">
+        <Button onClick={onClose} sx={{ textTransform: "none" }}>
+          {t("extract.cancel")}
+        </Button>
+        <Button
+          onClick={handleConfirm}
+          variant="contained"
+          sx={{ textTransform: "none" }}
+        >
           {t("extract.ok")}
         </Button>
       </DialogActions>
