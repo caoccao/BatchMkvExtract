@@ -16,7 +16,7 @@
  */
 
 import { useEffect, useMemo } from "react";
-import { Box, Typography } from "@mui/material";
+import { Box } from "@mui/material";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
@@ -28,6 +28,7 @@ import { getExtractStatus } from "../service";
 import { useMkvStore } from "../store";
 import { GroupCard } from "./GroupCard";
 import { MkvFileCard } from "./MkvFileCard";
+import Welcome from "./Welcome";
 
 type RenderEntry =
   | { kind: "single"; file: string }
@@ -161,22 +162,7 @@ export default function FileList() {
   }, [addFiles]);
 
   if (files.length === 0) {
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100%",
-          color: "text.secondary",
-          border: "2px dashed",
-          borderColor: "divider",
-          borderRadius: 2,
-        }}
-      >
-        <Typography variant="body1">{t("app.dropHere")}</Typography>
-      </Box>
-    );
+    return <Welcome />;
   }
 
   return (

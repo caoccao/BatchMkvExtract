@@ -145,5 +145,14 @@
   "update": {
     "newVersionAvailable": "新版本 {{version}} 已发布。",
     "skipThisVersion": "跳过此版本"
+  },
+  "welcome": {
+    "title": "欢迎使用 BatchMkvExtract",
+    "subtitle": "基于 MKVToolNix mkvextract 的批处理图形界面。",
+    "intro": "一次从多个 .mkv 文件中提取轨道、章节和附件。基于 MKVToolNix 的 mkvextract 构建的批处理图形界面。",
+    "addFiles": "添加文件",
+    "addFolder": "添加文件夹",
+    "emptyHint": "提示：你也可以将 .mkv 文件或文件夹拖放到此窗口中。",
+    "viewOnGithub": "在 GitHub 查看"
   }
 }

@@ -145,5 +145,14 @@
   "update": {
     "newVersionAvailable": "Une nouvelle version {{version}} est disponible.",
     "skipThisVersion": "Ignorer cette version"
+  },
+  "welcome": {
+    "title": "Bienvenue dans BatchMkvExtract",
+    "subtitle": "Une interface par lots pour mkvextract de MKVToolNix.",
+    "intro": "Extrayez des pistes, chapitres et pièces jointes de nombreux fichiers .mkv à la fois. Une interface par lots au-dessus de mkvextract de MKVToolNix.",
+    "addFiles": "Ajouter des fichiers",
+    "addFolder": "Ajouter un dossier",
+    "emptyHint": "Astuce : vous pouvez aussi glisser-déposer des fichiers .mkv ou des dossiers dans cette fenêtre.",
+    "viewOnGithub": "Voir sur GitHub"
   }
 }

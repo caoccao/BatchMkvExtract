@@ -145,5 +145,14 @@
   "update": {
     "newVersionAvailable": "Eine neue Version {{version}} ist verfügbar.",
     "skipThisVersion": "Diese Version überspringen"
+  },
+  "welcome": {
+    "title": "Willkommen bei BatchMkvExtract",
+    "subtitle": "Eine stapelorientierte GUI für mkvextract aus MKVToolNix.",
+    "intro": "Extrahieren Sie Spuren, Kapitel und Anhänge aus vielen .mkv-Dateien gleichzeitig. Eine stapelorientierte GUI für mkvextract aus MKVToolNix.",
+    "addFiles": "Dateien hinzufügen",
+    "addFolder": "Ordner hinzufügen",
+    "emptyHint": "Tipp: Sie können auch .mkv-Dateien oder Ordner per Drag & Drop in dieses Fenster ziehen.",
+    "viewOnGithub": "Auf GitHub ansehen"
   }
 }
