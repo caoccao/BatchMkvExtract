@@ -79,7 +79,7 @@
   "settings": {
     "title": "设置",
     "appearance": "外观",
-    "displayMode": "显示模式",
+    "mode": "模式",
     "autoMode": "自动",
     "lightMode": "浅色",
     "darkMode": "深色",

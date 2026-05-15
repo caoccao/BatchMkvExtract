@@ -236,7 +236,7 @@ export default function Settings() {
             icon={<PaletteIcon fontSize="small" />}
             title={t("settings.appearance")}
           />
-          <SettingRow label={t("settings.displayMode")}>
+          <SettingRow label={t("settings.mode")}>
             <ToggleButtonGroup
               value={config.displayMode}
               exclusive

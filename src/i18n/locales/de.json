@@ -79,7 +79,7 @@
   "settings": {
     "title": "Einstellungen",
     "appearance": "Darstellung",
-    "displayMode": "Anzeigemodus",
+    "mode": "Modus",
     "autoMode": "Automatisch",
     "lightMode": "Hell",
     "darkMode": "Dunkel",

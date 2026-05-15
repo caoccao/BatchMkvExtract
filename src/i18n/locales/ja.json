@@ -79,7 +79,7 @@
   "settings": {
     "title": "設定",
     "appearance": "外観",
-    "displayMode": "表示モード",
+    "mode": "モード",
     "autoMode": "自動",
     "lightMode": "ライト",
     "darkMode": "ダーク",
