@@ -39,11 +39,6 @@ jobs:
       with:
         node-version: 24
 
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v5
-      with:
-        version: 10
-
     - name: Setup Rust
       uses: actions-rust-lang/setup-rust-toolchain@v1
       with:
@@ -54,11 +49,18 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y libsoup-3.0-dev libjavascriptcoregtk-4.1-dev libwebkit2gtk-4.1-dev librsvg2-dev
 
-    - name: Build BatchMkvExtract
+    - name: Test BatchMkvExtract
       run: |
         cd src-tauri
         cargo test -r
-        cd ..
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v5
+      with:
+        version: 11
+
+    - name: Build BatchMkvExtract
+      run: |
         pnpm install
         pnpm tauri build
 
