@@ -88,7 +88,16 @@ Detection lives in `src-tauri/src/config.rs::get_config_dir`. Old config files f
 
 ### i18n
 
-Eight locales (`de`, `en-US`, `es`, `fr`, `ja`, `zh-CN`, `zh-HK`, `zh-TW`). When adding a user-facing string, add the key to **all eight** files under `src/i18n/locales/`. Missing keys fall back to `en-US` via i18next, but that's not a design pattern to lean on.
+Nine locales (`de`, `en-US`, `es`, `fr`, `it`, `ja`, `zh-CN`, `zh-HK`, `zh-TW`). When adding a user-facing string, add the key to **all nine** files under `src/i18n/locales/`. Missing keys fall back to `en-US` via i18next, but that's not a design pattern to lean on.
+
+### External tools
+
+Two optional external binaries are integrated, both opt-in via Settings:
+
+- **MKVToolNix** (`mkvmerge`, `mkvextract`) — required for the core extraction flow; the app shells out to them.
+- **BetterMediaInfo** — optional; when its path is configured, the "Open in BetterMediaInfo" entry becomes available on each card.
+
+Both paths live under `config.externalTools` (`mkvToolNixPath`, `betterMediaInfoPath`). Backend probe commands return `MkvToolNixStatus` / `BetterMediaInfoStatus` (`src-tauri/src/protocol.rs`) with auto-detected directories — see `controller.rs` for the per-OS search paths (Windows registry / `Program Files`, macOS `/Applications`, Linux `$PATH`). The shared **`src/components/settings/ExternalToolPathRow.tsx`** + **`useToolPathDetection.ts`** drive the Browse/Detect UI for both tools — change them once and both settings rows update.
 
 ## Project conventions
 
