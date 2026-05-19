@@ -147,12 +147,12 @@
     "skipThisVersion": "Salta questa versione"
   },
   "welcome": {
-    "title": "Benvenuti in BatchMkvExtract",
+    "title": "Benvenuto in BatchMkvExtract",
     "subtitle": "Una GUI batch per mkvextract di MKVToolNix.",
-    "intro": "Estrai tracce, capitoli e allegati da più file .mkv contemporaneamente. Una GUI intuitiva batch basata su mkvextract di MKVToolNix.",
+    "intro": "Estrai tracce, capitoli e allegati da più file .mkv contemporaneamente. Una GUI batch intuitiva basata su mkvextract di MKVToolNix.",
     "addFiles": "Aggiungi file",
     "addFolder": "Aggiungi cartella",
-    "emptyHint": "Suggerimento: puoi anche trascinare e rilasciare file .mkv o cartelle in questa finestra.",
+    "emptyHint": "Suggerimento: puoi anche trascinare e rilasciare in questa finestra file .mkv o cartelle.",
     "viewOnGithub": "Visualizza su GitHub"
   }
 }
