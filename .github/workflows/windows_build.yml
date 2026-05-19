@@ -18,7 +18,7 @@ on:
       - "docs/**"
 
 env:
-  BATCH_MKV_EXTRACT_VERSION: 0.1.0
+  BATCH_MKV_EXTRACT_VERSION: 0.2.0
 
 jobs:
   build_package:
