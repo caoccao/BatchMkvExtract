@@ -246,6 +246,7 @@ export default function Settings() {
                   updateConfig({ displayMode: value as Protocol.DisplayMode });
                 }
               }}
+              sx={{ "& .MuiToggleButton-root": { textTransform: "none" } }}
             >
               <ToggleButton
                 value={Protocol.DisplayMode.Auto}
@@ -286,7 +287,7 @@ export default function Settings() {
               >
                 {Protocol.getThemes().map((theme) => (
                   <MenuItem key={theme} value={theme}>
-                    {theme}
+                    {t(`settings.theme${theme}`)}
                   </MenuItem>
                 ))}
               </Select>
