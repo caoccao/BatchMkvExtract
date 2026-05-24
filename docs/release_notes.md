@@ -1,5 +1,31 @@
 # Release Notes
 
+## 0.2.0
+
+### Getting started
+
+* The empty file list now opens to a Welcome screen with clear Add Files and Add Folder actions
+* The Welcome screen keeps the drag-and-drop hint visible and links to the project on GitHub
+
+### External tools
+
+* Settings now has a dedicated Integration tab for MKVToolNix and BetterMediaInfo
+* MKVToolNix and BetterMediaInfo paths can both be browsed for or detected from the same settings flow
+* Tool detection now shows localized found and not-found messages
+* Opening files in BetterMediaInfo behaves more naturally on macOS and no longer opens an extra console window on Windows
+* The BetterMediaInfo icon is easier to see
+
+### Appearance and language
+
+* Italian has been added, bringing the UI to 9 languages: English (US), Deutsch, Español, Français, Italiano, 日本語, 简体中文, 繁體中文 (香港), 繁體中文 (台灣)
+* Theme names are now translated in every supported language
+* On first launch, the app can start in your system language when it is supported
+
+### Installation
+
+* Windows installers now include localized installer languages
+* Windows installers can download the required WebView2 runtime when needed
+
 ## 0.1.0
 
 ### Platforms
