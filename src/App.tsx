@@ -167,7 +167,7 @@ function App() {
     changeLanguage(language);
   }, [language]);
 
-  const bmiPath = config?.externalTools?.betterMediaInfoPath ?? "";
+  const bmiPath = config?.integration?.betterMediaInfoPath ?? "";
   useEffect(() => {
     let cancelled = false;
     (async () => {

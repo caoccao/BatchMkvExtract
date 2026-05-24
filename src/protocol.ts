@@ -98,7 +98,7 @@ export interface UpdateCheckResult {
   latestVersion: string | null;
 }
 
-export interface ConfigExternalTools {
+export interface ConfigIntegration {
   mkvToolNixPath: string;
   betterMediaInfoPath: string;
 }
@@ -125,7 +125,7 @@ export interface Config {
   displayMode: DisplayMode;
   theme: Theme;
   language: Language;
-  externalTools: ConfigExternalTools;
+  integration: ConfigIntegration;
   profiles: ConfigProfile[];
   activeProfile: string;
   window: ConfigWindow;

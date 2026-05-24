@@ -46,7 +46,7 @@ import { useTranslation } from "react-i18next";
 import * as Protocol from "../protocol";
 import { detectBetterMediaInfo, isMkvtoolnixFound } from "../service";
 import { useMkvStore } from "../store";
-import { ExternalToolPathRow } from "./settings/ExternalToolPathRow";
+import { IntegrationPathRow } from "./settings/IntegrationPathRow";
 import {
   DetectToolPath,
   useToolPathDetection,
@@ -120,18 +120,18 @@ export default function Settings() {
     SettingsTab.Appearance,
   );
 
-  const updateExternalTools = useCallback(
-    (patch: Partial<Protocol.ConfigExternalTools>) => {
+  const updateIntegration = useCallback(
+    (patch: Partial<Protocol.ConfigIntegration>) => {
       if (!config) {
         return;
       }
       updateConfig({
-        externalTools: {
+        integration: {
           mkvToolNixPath:
-            patch.mkvToolNixPath ?? config.externalTools?.mkvToolNixPath ?? "",
+            patch.mkvToolNixPath ?? config.integration?.mkvToolNixPath ?? "",
           betterMediaInfoPath:
             patch.betterMediaInfoPath ??
-            config.externalTools?.betterMediaInfoPath ??
+            config.integration?.betterMediaInfoPath ??
             "",
         },
       });
@@ -144,12 +144,12 @@ export default function Settings() {
       if (!config) {
         return;
       }
-      if (value === (config.externalTools?.mkvToolNixPath ?? "")) {
+      if (value === (config.integration?.mkvToolNixPath ?? "")) {
         return;
       }
-      updateExternalTools({ mkvToolNixPath: value });
+      updateIntegration({ mkvToolNixPath: value });
     },
-    [config, updateExternalTools],
+    [config, updateIntegration],
   );
 
   const persistBetterMediaInfoPath = useCallback(
@@ -157,12 +157,12 @@ export default function Settings() {
       if (!config) {
         return;
       }
-      if (value === (config.externalTools?.betterMediaInfoPath ?? "")) {
+      if (value === (config.integration?.betterMediaInfoPath ?? "")) {
         return;
       }
-      updateExternalTools({ betterMediaInfoPath: value });
+      updateIntegration({ betterMediaInfoPath: value });
     },
-    [config, updateExternalTools],
+    [config, updateIntegration],
   );
 
   const detectMkvToolNixPath = useCallback<DetectToolPath>(
@@ -195,7 +195,7 @@ export default function Settings() {
     handleBlur: handlePathBlur,
   } = useToolPathDetection({
     ready: config !== null,
-    initialPath: config?.externalTools?.mkvToolNixPath ?? "",
+    initialPath: config?.integration?.mkvToolNixPath ?? "",
     detectPath: detectMkvToolNixPath,
     persistPath: persistMkvToolNixPath,
   });
@@ -208,7 +208,7 @@ export default function Settings() {
     handleBlur: handleBetterMediaInfoPathBlur,
   } = useToolPathDetection({
     ready: config !== null,
-    initialPath: config?.externalTools?.betterMediaInfoPath ?? "",
+    initialPath: config?.integration?.betterMediaInfoPath ?? "",
     detectPath: detectBetterMediaInfoPath,
     persistPath: persistBetterMediaInfoPath,
     onFoundChange: setBetterMediaInfoAvailable,
@@ -538,7 +538,7 @@ export default function Settings() {
       />
       <Stack spacing={2}>
         <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-          <ExternalToolPathRow
+          <IntegrationPathRow
             label={t("settings.mkvToolNixPath")}
             value={mkvToolNixPath}
             status={mkvtoolnixFound ?? false}
@@ -553,7 +553,7 @@ export default function Settings() {
           />
         </Paper>
         <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-          <ExternalToolPathRow
+          <IntegrationPathRow
             label={t("settings.betterMediaInfoPath")}
             value={betterMediaInfoPath}
             status={betterMediaInfoDetection}

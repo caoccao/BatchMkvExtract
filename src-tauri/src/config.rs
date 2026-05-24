@@ -27,6 +27,7 @@ use crate::constants::APP_NAME;
 static CONFIG: OnceLock<RwLock<Config>> = OnceLock::new();
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(default)]
 pub struct Config {
     #[serde(rename = "displayMode", default)]
     pub display_mode: DisplayMode,
@@ -34,8 +35,8 @@ pub struct Config {
     pub theme: Theme,
     #[serde(default)]
     pub language: Language,
-    #[serde(rename = "externalTools", default)]
-    pub external_tools: ConfigExternalTools,
+    #[serde(default)]
+    pub integration: ConfigIntegration,
     #[serde(default = "Config::default_profiles")]
     pub profiles: Vec<ConfigProfile>,
     #[serde(rename = "activeProfile", default = "Config::default_active_profile")]
@@ -62,7 +63,7 @@ impl Default for Config {
             display_mode: Default::default(),
             theme: Default::default(),
             language: Default::default(),
-            external_tools: Default::default(),
+            integration: Default::default(),
             profiles: Self::default_profiles(),
             active_profile: Self::default_active_profile(),
             window: Default::default(),
@@ -72,6 +73,7 @@ impl Default for Config {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(default)]
 pub struct ConfigUpdate {
     #[serde(rename = "checkInterval", default)]
     pub check_interval: UpdateCheckInterval,
@@ -108,6 +110,7 @@ impl Default for UpdateCheckInterval {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(default)]
 pub struct ConfigProfile {
     pub name: String,
     #[serde(rename = "videoTemplate", default = "ConfigProfile::default_template")]
@@ -209,17 +212,18 @@ impl Default for ConfigProfile {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct ConfigExternalTools {
+#[serde(default)]
+pub struct ConfigIntegration {
     #[serde(
         rename = "mkvToolNixPath",
-        default = "ConfigExternalTools::default_mkv_toolnix_path"
+        default = "ConfigIntegration::default_mkv_toolnix_path"
     )]
     pub mkv_toolnix_path: String,
     #[serde(rename = "betterMediaInfoPath", default)]
     pub better_media_info_path: String,
 }
 
-impl ConfigExternalTools {
+impl ConfigIntegration {
     fn default_mkv_toolnix_path() -> String {
         if cfg!(target_os = "windows") {
             r"C:\Program Files\MKVToolNix".to_owned()
@@ -231,7 +235,7 @@ impl ConfigExternalTools {
     }
 }
 
-impl Default for ConfigExternalTools {
+impl Default for ConfigIntegration {
     fn default() -> Self {
         Self {
             mkv_toolnix_path: Self::default_mkv_toolnix_path(),
@@ -313,6 +317,7 @@ impl Default for Language {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(default)]
 pub struct ConfigWindow {
     #[serde(default)]
     pub position: ConfigWindowPosition,
@@ -330,6 +335,7 @@ impl Default for ConfigWindow {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(default)]
 pub struct ConfigWindowPosition {
     pub x: i32,
     pub y: i32,
@@ -342,6 +348,7 @@ impl Default for ConfigWindowPosition {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(default)]
 pub struct ConfigWindowSize {
     pub width: u32,
     pub height: u32,
@@ -468,4 +475,97 @@ pub fn set_config(config: Config) -> Result<()> {
         .unwrap()
         .clone_from(&config);
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn config_deserialization_uses_defaults_for_missing_nodes() {
+        let config: Config = serde_json::from_str("{}").unwrap();
+        let default_profile = ConfigProfile::default();
+
+        assert!(matches!(config.display_mode, DisplayMode::Auto));
+        assert!(matches!(config.theme, Theme::Ocean));
+        assert!(matches!(config.language, Language::EnUS));
+        assert_eq!(
+            config.integration.mkv_toolnix_path,
+            ConfigIntegration::default().mkv_toolnix_path
+        );
+        assert_eq!(config.integration.better_media_info_path, "");
+        assert_eq!(config.profiles.len(), 1);
+        assert_eq!(config.profiles[0].name, default_profile.name);
+        assert_eq!(config.profiles[0].video_template, default_profile.video_template);
+        assert!(config.profiles[0].select_subtitle);
+        assert_eq!(
+            config.profiles[0].subtitle_languages,
+            default_profile.subtitle_languages
+        );
+        assert!(config.profiles[0].default_group_mode);
+        assert_eq!(config.active_profile, ConfigProfile::DEFAULT_NAME);
+        assert_eq!(config.window.position.x, -1);
+        assert_eq!(config.window.position.y, -1);
+        assert_eq!(config.window.size.width, 1200);
+        assert_eq!(config.window.size.height, 900);
+        assert!(matches!(
+            config.update.check_interval,
+            UpdateCheckInterval::Weekly
+        ));
+    }
+
+    #[test]
+    fn config_deserialization_preserves_present_nodes_while_filling_missing_children() {
+        let config: Config = serde_json::from_str(
+            r#"{
+                "displayMode": "Dark",
+                "integration": {
+                    "betterMediaInfoPath": "/Applications/BetterMediaInfo.app"
+                },
+                "profiles": [
+                    {
+                        "name": "Custom",
+                        "audioTemplate": "{file_name}.audio",
+                        "selectAudio": true,
+                        "subtitleLanguages": "eng,jpn",
+                        "defaultGroupMode": false
+                    }
+                ],
+                "window": {
+                    "position": {
+                        "x": 10
+                    }
+                },
+                "update": {}
+            }"#,
+        )
+        .unwrap();
+        let default_profile = ConfigProfile::default();
+
+        assert!(matches!(config.display_mode, DisplayMode::Dark));
+        assert_eq!(
+            config.integration.mkv_toolnix_path,
+            ConfigIntegration::default().mkv_toolnix_path
+        );
+        assert_eq!(
+            config.integration.better_media_info_path,
+            "/Applications/BetterMediaInfo.app"
+        );
+        assert_eq!(config.profiles.len(), 1);
+        assert_eq!(config.profiles[0].name, "Custom");
+        assert_eq!(config.profiles[0].video_template, default_profile.video_template);
+        assert_eq!(config.profiles[0].audio_template, "{file_name}.audio");
+        assert!(config.profiles[0].select_audio);
+        assert!(config.profiles[0].select_subtitle);
+        assert_eq!(config.profiles[0].subtitle_languages, "eng,jpn");
+        assert!(!config.profiles[0].default_group_mode);
+        assert_eq!(config.window.position.x, 10);
+        assert_eq!(config.window.position.y, -1);
+        assert_eq!(config.window.size.width, 1200);
+        assert_eq!(config.window.size.height, 900);
+        assert!(matches!(
+            config.update.check_interval,
+            UpdateCheckInterval::Weekly
+        ));
+    }
 }

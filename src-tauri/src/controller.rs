@@ -252,7 +252,7 @@ fn find_macos_app_bundle(bin: &Path) -> Option<PathBuf> {
 
 pub async fn launch_better_media_info(paths: Vec<String>) -> Result<()> {
     let cfg = config::get_config();
-    let configured = cfg.external_tools.better_media_info_path.trim().to_owned();
+    let configured = cfg.integration.better_media_info_path.trim().to_owned();
     if configured.is_empty() {
         anyhow::bail!("BetterMediaInfo path is not set");
     }

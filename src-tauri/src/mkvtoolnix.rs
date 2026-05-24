@@ -97,7 +97,7 @@ fn get_tool_path(path: &Path, tool: &str) -> PathBuf {
 
 fn resolve_mkvtoolnix_tool_path(tool: &str) -> Result<PathBuf> {
     let cfg = config::get_config();
-    let resolution = resolve_mkvtoolnix(&cfg.external_tools.mkv_toolnix_path, tool);
+    let resolution = resolve_mkvtoolnix(&cfg.integration.mkv_toolnix_path, tool);
     persist_mkvtoolnix_path_if_auto_detected(&resolution)?;
     Ok(get_tool_path(&resolution.path, tool))
 }
@@ -245,10 +245,10 @@ fn persist_mkvtoolnix_path_if_auto_detected(resolution: &MkvToolNixResolution) -
     }
     let path = resolution.path.to_string_lossy().to_string();
     let mut cfg = config::get_config();
-    if cfg.external_tools.mkv_toolnix_path == path {
+    if cfg.integration.mkv_toolnix_path == path {
         return Ok(());
     }
-    cfg.external_tools.mkv_toolnix_path = path;
+    cfg.integration.mkv_toolnix_path = path;
     config::set_config(cfg)?;
     Ok(())
 }
@@ -381,8 +381,8 @@ pub async fn is_mkvtoolnix_found(
             if has_mkvtoolnix(&dir) {
                 let mut cfg = config::get_config();
                 let path_string = dir.to_string_lossy().to_string();
-                if cfg.external_tools.mkv_toolnix_path != path_string {
-                    cfg.external_tools.mkv_toolnix_path = path_string.clone();
+                if cfg.integration.mkv_toolnix_path != path_string {
+                    cfg.integration.mkv_toolnix_path = path_string.clone();
                     config::set_config(cfg)?;
                 }
                 return Ok(MkvToolNixStatus {

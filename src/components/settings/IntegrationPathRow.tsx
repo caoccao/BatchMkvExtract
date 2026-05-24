@@ -17,7 +17,7 @@
 
 import { Box, Button, TextField, Typography } from "@mui/material";
 
-interface ExternalToolPathRowProps {
+interface IntegrationPathRowProps {
   label: string;
   value: string;
   status: boolean | null;
@@ -31,7 +31,7 @@ interface ExternalToolPathRowProps {
   onDetect: () => void | Promise<void>;
 }
 
-export function ExternalToolPathRow({
+export function IntegrationPathRow({
   label,
   value,
   status,
@@ -43,7 +43,7 @@ export function ExternalToolPathRow({
   onBlur,
   onBrowse,
   onDetect,
-}: ExternalToolPathRowProps) {
+}: IntegrationPathRowProps) {
   return (
     <>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>

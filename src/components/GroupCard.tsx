@@ -105,7 +105,7 @@ export function GroupCard({ files }: GroupCardProps) {
   };
 
   const mkvToolNixPath = useMkvStore(
-    (s) => s.config?.externalTools?.mkvToolNixPath ?? "",
+    (s) => s.config?.integration?.mkvToolNixPath ?? "",
   );
   const activeProfile = useMkvStore((s) => {
     const cfg = s.config;
