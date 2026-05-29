@@ -140,6 +140,10 @@ pub async fn check_output_path_writable(path: String) -> Result<bool> {
     }
 }
 
+pub async fn output_path_exists(path: String) -> Result<bool> {
+    Ok(Path::new(&path).is_dir())
+}
+
 pub async fn ensure_output_path(path: String) -> Result<()> {
     let p = Path::new(&path);
     if p.exists() {

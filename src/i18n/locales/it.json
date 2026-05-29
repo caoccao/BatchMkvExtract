@@ -15,6 +15,7 @@
     "outputPath": "Cartella destinazione",
     "openInBetterMediaInfo": "Apri in BetterMediaInfo",
     "outputPathNotWritable": "Il percorso destinazione non è scrivibile. Scegli un altro percorso.",
+    "outputPathDoesNotExist": "Il percorso destinazione non esiste. Verrà creato.",
     "commandCopied": "Comando copiato negli appunti.",
     "extractionComplete": "Estrazione completata.",
     "noTracks": "Nessuna traccia trovata.",
@@ -41,6 +42,7 @@
     "groupByFile": "Modo gruppo (F8)",
     "profile": "Profilo (F9)",
     "settings": "Impostazioni (F10)",
+    "setGlobalOutputPath": "Imposta percorso di output globale",
     "about": "Info programma"
   },
   "group": {
@@ -111,6 +113,7 @@
     "betterMediaInfoPath": "Percorso BetterMediaInfo",
     "browse": "Sfoglia",
     "detect": "Rileva",
+    "clear": "Cancella",
     "mkvToolNixFound": "mkvmerge e mkvextract trovati nel percorso MKVToolNix.",
     "mkvToolNixNotFound": "mkvmerge o mkvextract non trovati nel percorso MKVToolNix.",
     "betterMediaInfoFound": "BetterMediaInfo trovato",

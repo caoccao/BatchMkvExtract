@@ -79,6 +79,10 @@ export async function checkOutputPathWritable(path: string): Promise<boolean> {
   return await invoke<boolean>("check_output_path_writable", { path });
 }
 
+export async function outputPathExists(path: string): Promise<boolean> {
+  return await invoke<boolean>("output_path_exists", { path });
+}
+
 export async function ensureOutputPath(path: string): Promise<void> {
   return await invoke<void>("ensure_output_path", { path });
 }

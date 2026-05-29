@@ -15,6 +15,7 @@
     "outputPath": "Ausgabepfad",
     "openInBetterMediaInfo": "In BetterMediaInfo öffnen",
     "outputPathNotWritable": "Der Ausgabepfad ist nicht beschreibbar. Bitte wähle einen anderen Pfad.",
+    "outputPathDoesNotExist": "Der Ausgabepfad existiert nicht. Er wird erstellt.",
     "commandCopied": "Befehl in die Zwischenablage kopiert.",
     "extractionComplete": "Extraktion abgeschlossen.",
     "noTracks": "Keine Spuren gefunden.",
@@ -41,6 +42,7 @@
     "groupByFile": "Gruppenmodus (F8)",
     "profile": "Profil (F9)",
     "settings": "Einstellungen (F10)",
+    "setGlobalOutputPath": "Globalen Ausgabepfad festlegen",
     "about": "Info"
   },
   "group": {
@@ -111,6 +113,7 @@
     "betterMediaInfoPath": "BetterMediaInfo-Pfad",
     "browse": "Durchsuchen",
     "detect": "Erkennen",
+    "clear": "Löschen",
     "mkvToolNixFound": "mkvmerge und mkvextract im MKVToolNix-Pfad gefunden.",
     "mkvToolNixNotFound": "mkvmerge oder mkvextract im MKVToolNix-Pfad nicht gefunden.",
     "betterMediaInfoFound": "BetterMediaInfo gefunden",

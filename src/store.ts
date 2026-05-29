@@ -84,6 +84,7 @@ interface MkvStore {
   fileTrackCounts: Record<string, TrackCounts>;
   fileSelectedIds: Record<string, string[]>;
   fileOutputDirs: Record<string, string>;
+  globalOutputDir: string | undefined;
   groupByFile: boolean;
   betterMediaInfoAvailable: boolean;
   notification: Notification | null;
@@ -121,6 +122,7 @@ interface MkvStore {
   clearFileOutputDir: (file: string) => void;
   setGroupOutputDir: (files: string[], dir: string) => void;
   clearGroupOutputDir: (files: string[]) => void;
+  setGlobalOutputDir: (dir: string) => void;
   setGroupByFile: (value: boolean) => void;
   setBetterMediaInfoAvailable: (value: boolean) => void;
   showNotification: (kind: NotificationKind, file: string, detail: string) => void;
@@ -140,6 +142,7 @@ export const useMkvStore = create<MkvStore>((set, get) => ({
   fileTrackCounts: {},
   fileSelectedIds: {},
   fileOutputDirs: {},
+  globalOutputDir: undefined,
   groupByFile: false,
   betterMediaInfoAvailable: false,
   notification: null,
@@ -513,6 +516,8 @@ export const useMkvStore = create<MkvStore>((set, get) => ({
       }
       return { fileOutputDirs: next };
     }),
+  setGlobalOutputDir: (dir) =>
+    set({ globalOutputDir: dir.length > 0 ? dir : undefined }),
   setGroupByFile: (value) => set({ groupByFile: value }),
   setBetterMediaInfoAvailable: (value) =>
     set({ betterMediaInfoAvailable: value }),

@@ -108,6 +108,13 @@ async fn check_output_path_writable(path: String) -> Result<bool, String> {
 }
 
 #[tauri::command]
+async fn output_path_exists(path: String) -> Result<bool, String> {
+    controller::output_path_exists(path)
+        .await
+        .map_err(convert_error)
+}
+
+#[tauri::command]
 async fn ensure_output_path(path: String) -> Result<(), String> {
     controller::ensure_output_path(path)
         .await
@@ -179,6 +186,7 @@ pub fn run() {
             get_update_result,
             is_mkvtoolnix_found,
             launch_better_media_info,
+            output_path_exists,
             set_config,
             skip_version
         ])

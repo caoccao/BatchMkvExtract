@@ -35,7 +35,6 @@ import ContentCutIcon from "@mui/icons-material/ContentCut";
 import DeleteIcon from "@mui/icons-material/Delete";
 import FolderOpenIcon from "@mui/icons-material/FolderOpen";
 import betterMediaInfoIcon from "../assets/bettermediainfo.png";
-import { dirname } from "@tauri-apps/api/path";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useTranslation } from "react-i18next";
 import {
@@ -79,6 +78,7 @@ export function MkvFileCard({ path }: MkvFileCardProps) {
   const cachedTracks = useMkvStore((s) => s.fileTracks[path]);
   const storedSelectedIds = useMkvStore((s) => s.fileSelectedIds[path]);
   const outputDirOverride = useMkvStore((s) => s.fileOutputDirs[path]);
+  const globalOutputDir = useMkvStore((s) => s.globalOutputDir);
   const trackCounts = useMkvStore((s) => s.fileTrackCounts[path]);
   const betterMediaInfoAvailable = useMkvStore(
     (s) => s.betterMediaInfoAvailable,
@@ -231,7 +231,11 @@ export function MkvFileCard({ path }: MkvFileCardProps) {
     if (!hasSelection || !activeProfile) {
       return null;
     }
-    const outputDir = await resolveOutputDir(path, outputDirOverride);
+    const outputDir = await resolveOutputDir(
+      path,
+      outputDirOverride,
+      globalOutputDir,
+    );
     return await buildCommandString(
       path,
       outputDir,
@@ -285,7 +289,7 @@ export function MkvFileCard({ path }: MkvFileCardProps) {
       initial = outputDirOverride;
     } else {
       try {
-        initial = await dirname(path);
+        initial = await resolveOutputDir(path, undefined, globalOutputDir);
       } catch {
         initial = "";
       }

@@ -15,6 +15,7 @@
     "outputPath": "出力先",
     "openInBetterMediaInfo": "BetterMediaInfo で開く",
     "outputPathNotWritable": "出力先に書き込めません。別のパスを選択してください。",
+    "outputPathDoesNotExist": "出力先が存在しません。作成されます。",
     "commandCopied": "コマンドをクリップボードにコピーしました。",
     "extractionComplete": "抽出が完了しました。",
     "noTracks": "トラックが見つかりません。",
@@ -41,6 +42,7 @@
     "groupByFile": "グループモード (F8)",
     "profile": "プロファイル (F9)",
     "settings": "設定 (F10)",
+    "setGlobalOutputPath": "グローバル出力先を設定",
     "about": "情報"
   },
   "group": {
@@ -111,6 +113,7 @@
     "betterMediaInfoPath": "BetterMediaInfo のパス",
     "browse": "参照",
     "detect": "検出",
+    "clear": "クリア",
     "mkvToolNixFound": "MKVToolNix のパスに mkvmerge と mkvextract が見つかりました。",
     "mkvToolNixNotFound": "MKVToolNix のパスに mkvmerge または mkvextract が見つかりません。",
     "betterMediaInfoFound": "BetterMediaInfo が見つかりました",

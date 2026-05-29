@@ -83,7 +83,11 @@ export async function enqueueSelectedTracksForFile(
   if (skipIfActive && isActiveStatus(status)) {
     return false;
   }
-  const outputDir = await resolveOutputDir(file, state.fileOutputDirs[file]);
+  const outputDir = await resolveOutputDir(
+    file,
+    state.fileOutputDirs[file],
+    state.globalOutputDir,
+  );
   try {
     await ensureOutputPath(outputDir);
   } catch {

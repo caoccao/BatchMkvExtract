@@ -15,6 +15,7 @@
     "outputPath": "Output Path",
     "openInBetterMediaInfo": "Open in BetterMediaInfo",
     "outputPathNotWritable": "The output path is not writable. Please choose another path.",
+    "outputPathDoesNotExist": "The output path doesn't exist. It will be created.",
     "commandCopied": "Command copied to clipboard.",
     "extractionComplete": "Extraction complete.",
     "noTracks": "No tracks found.",
@@ -41,6 +42,7 @@
     "groupByFile": "Group Mode (F8)",
     "profile": "Profile (F9)",
     "settings": "Settings (F10)",
+    "setGlobalOutputPath": "Set global output path",
     "about": "About"
   },
   "group": {
@@ -111,6 +113,7 @@
     "betterMediaInfoPath": "BetterMediaInfo Path",
     "browse": "Browse",
     "detect": "Detect",
+    "clear": "Clear",
     "mkvToolNixFound": "mkvmerge and mkvextract found under MKVToolNix path.",
     "mkvToolNixNotFound": "mkvmerge or mkvextract not found under MKVToolNix path.",
     "betterMediaInfoFound": "BetterMediaInfo found",

@@ -19,6 +19,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Box,
   ButtonGroup,
+  Divider,
   IconButton,
   ListItemIcon,
   ListItemText,
@@ -31,6 +32,7 @@ import CheckIcon from "@mui/icons-material/Check";
 import ContentCutIcon from "@mui/icons-material/ContentCut";
 import DeleteIcon from "@mui/icons-material/Delete";
 import FolderCopyIcon from "@mui/icons-material/FolderCopy";
+import FolderSpecialIcon from "@mui/icons-material/FolderSpecial";
 import InfoIcon from "@mui/icons-material/Info";
 import PersonIcon from "@mui/icons-material/Person";
 import SettingsIcon from "@mui/icons-material/Settings";
@@ -43,6 +45,7 @@ import {
 } from "../actions/extractionActions";
 import { QueueItemStatus } from "../protocol";
 import { useMkvStore } from "../store";
+import { OutputPathDialog } from "./OutputPathDialog";
 
 export default function Toolbar() {
   const { t } = useTranslation();
@@ -70,6 +73,9 @@ export default function Toolbar() {
   const setGroupByFile = useMkvStore((s) => s.setGroupByFile);
   const config = useMkvStore((s) => s.config);
   const setActiveProfile = useMkvStore((s) => s.setActiveProfile);
+  const globalOutputDir = useMkvStore((s) => s.globalOutputDir);
+  const setGlobalOutputDir = useMkvStore((s) => s.setGlobalOutputDir);
+  const [globalOutputDialogOpen, setGlobalOutputDialogOpen] = useState(false);
   const [profileAnchor, setProfileAnchor] = useState<null | HTMLElement>(null);
   const profileButtonRef = useRef<HTMLButtonElement | null>(null);
   const profiles = config?.profiles ?? [];
@@ -241,6 +247,17 @@ export default function Toolbar() {
   return (
     <Box sx={{ mx: 1, my: 0, display: "flex", gap: 1 }}>
       <ButtonGroup variant="outlined" size="small">
+        <Tooltip title={t("toolbar.setGlobalOutputPath")}>
+          <IconButton
+            sx={{
+              ...buttonSx,
+              color: globalOutputDir ? "primary.main" : "text.secondary",
+            }}
+            onClick={() => setGlobalOutputDialogOpen(true)}
+          >
+            <FolderSpecialIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
         <Tooltip title={t("toolbar.extractAll")}>
           <span>
             <IconButton
@@ -252,6 +269,7 @@ export default function Toolbar() {
             </IconButton>
           </span>
         </Tooltip>
+        <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
         <Tooltip title={t("toolbar.cancelAll")}>
           <span>
             <IconButton
@@ -275,6 +293,7 @@ export default function Toolbar() {
             </IconButton>
           </span>
         </Tooltip>
+        <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
         <Tooltip title={t("toolbar.groupByFile")}>
           <IconButton
             sx={groupByFile ? activeButtonSx : buttonSx}
@@ -283,9 +302,6 @@ export default function Toolbar() {
             <FolderCopyIcon fontSize="small" />
           </IconButton>
         </Tooltip>
-      </ButtonGroup>
-
-      <ButtonGroup variant="outlined" size="small">
         <Tooltip title={t("toolbar.profile")}>
           <span>
             <IconButton
@@ -306,6 +322,7 @@ export default function Toolbar() {
             <SettingsIcon fontSize="small" />
           </IconButton>
         </Tooltip>
+        <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
         <Tooltip title={t("toolbar.about")}>
           <IconButton
             sx={activeTab === "about" ? activeButtonSx : buttonSx}
@@ -343,6 +360,14 @@ export default function Toolbar() {
           </MenuItem>
         ))}
       </Menu>
+
+      <OutputPathDialog
+        open={globalOutputDialogOpen}
+        initialValue={globalOutputDir ?? ""}
+        title={t("toolbar.setGlobalOutputPath")}
+        onConfirm={setGlobalOutputDir}
+        onClose={() => setGlobalOutputDialogOpen(false)}
+      />
     </Box>
   );
 }

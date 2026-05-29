@@ -15,6 +15,7 @@
     "outputPath": "輸出路徑",
     "openInBetterMediaInfo": "在 BetterMediaInfo 中開啟",
     "outputPathNotWritable": "輸出路徑無法寫入。請選擇其他路徑。",
+    "outputPathDoesNotExist": "輸出路徑不存在。將會建立。",
     "commandCopied": "指令已複製到剪貼簿。",
     "extractionComplete": "擷取完成。",
     "noTracks": "找不到軌道。",
@@ -41,6 +42,7 @@
     "groupByFile": "分組模式 (F8)",
     "profile": "設定檔 (F9)",
     "settings": "設定 (F10)",
+    "setGlobalOutputPath": "設定全域輸出路徑",
     "about": "關於"
   },
   "group": {
@@ -111,6 +113,7 @@
     "betterMediaInfoPath": "BetterMediaInfo 路徑",
     "browse": "瀏覽",
     "detect": "偵測",
+    "clear": "清除",
     "mkvToolNixFound": "已在 MKVToolNix 路徑下找到 mkvmerge 和 mkvextract。",
     "mkvToolNixNotFound": "在 MKVToolNix 路徑下未找到 mkvmerge 或 mkvextract。",
     "betterMediaInfoFound": "已找到 BetterMediaInfo",
