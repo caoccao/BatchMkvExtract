@@ -170,6 +170,7 @@
     "title": "Bienvenue dans BatchMkvExtract",
     "subtitle": "Une interface par lots pour mkvextract de MKVToolNix.",
     "intro": "Extrayez des pistes, chapitres et pièces jointes de nombreux fichiers .mkv à la fois. Une interface par lots au-dessus de mkvextract de MKVToolNix.",
+    "introBetterMediaInfo": "Inspectez n’importe quel fichier multimédia avec une interface rapide et moderne. Parcourez en un coup d’œil les flux, propriétés et métadonnées des pistes vidéo, audio, image et sous-titres.",
     "addFiles": "Ajouter des fichiers",
     "addFolder": "Ajouter un dossier",
     "emptyHint": "Astuce : vous pouvez aussi glisser-déposer des fichiers .mkv ou des dossiers dans cette fenêtre.",

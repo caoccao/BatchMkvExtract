@@ -170,6 +170,7 @@
     "title": "Welcome to BatchMkvExtract",
     "subtitle": "A batch-friendly GUI for mkvextract from MKVToolNix.",
     "intro": "Pull tracks, chapters, and attachments from many .mkv files at once. A batch-friendly GUI on top of mkvextract from MKVToolNix.",
+    "introBetterMediaInfo": "Inspect any media file with a fast, modern UI. Browse streams, properties, and metadata for video, audio, image, and subtitle tracks at a glance.",
     "addFiles": "Add Files",
     "addFolder": "Add Folder",
     "emptyHint": "Tip: you can also drag and drop .mkv files or folders into this window.",

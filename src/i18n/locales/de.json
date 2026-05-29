@@ -170,6 +170,7 @@
     "title": "Willkommen bei BatchMkvExtract",
     "subtitle": "Eine stapelorientierte GUI für mkvextract aus MKVToolNix.",
     "intro": "Extrahieren Sie Spuren, Kapitel und Anhänge aus vielen .mkv-Dateien gleichzeitig. Eine stapelorientierte GUI für mkvextract aus MKVToolNix.",
+    "introBetterMediaInfo": "Untersuchen Sie jede Mediendatei mit einer schnellen, modernen Oberfläche. Durchsuchen Sie Streams, Eigenschaften und Metadaten für Video-, Audio-, Bild- und Untertitelspuren auf einen Blick.",
     "addFiles": "Dateien hinzufügen",
     "addFolder": "Ordner hinzufügen",
     "emptyHint": "Tipp: Sie können auch .mkv-Dateien oder Ordner per Drag & Drop in dieses Fenster ziehen.",

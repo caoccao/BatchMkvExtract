@@ -170,6 +170,7 @@
     "title": "BatchMkvExtract へようこそ",
     "subtitle": "MKVToolNix の mkvextract 向けのバッチ GUI。",
     "intro": "複数の .mkv ファイルからトラック・チャプター・添付ファイルを一括で抽出。MKVToolNix の mkvextract を活用したバッチ向け GUI です。",
+    "introBetterMediaInfo": "高速でモダンな UI であらゆるメディアファイルを検査します。ビデオ、オーディオ、画像、字幕トラックのストリーム、プロパティ、メタデータを一目で参照できます。",
     "addFiles": "ファイルを追加",
     "addFolder": "フォルダを追加",
     "emptyHint": "ヒント：このウィンドウに .mkv ファイルやフォルダをドラッグ＆ドロップすることもできます。",

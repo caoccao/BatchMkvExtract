@@ -24,12 +24,14 @@ import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useTranslation } from "react-i18next";
 import appIconUrl from "../../src-tauri/icons/icon.png";
+import betterMediaInfoIcon from "../assets/bettermediainfo.png";
 import { getMkvFiles } from "../service";
 import { useMkvStore } from "../store";
 
 const AUTHOR_NAME = "Sam Cao";
 const AUTHOR_URL = "https://github.com/caoccao/";
 const GITHUB_URL = "https://github.com/caoccao/BatchMkvExtract";
+const BETTER_MEDIA_INFO_URL = "https://github.com/caoccao/BetterMediaInfo";
 
 interface AppCardProps {
   logo: string;
@@ -223,6 +225,12 @@ export default function Welcome() {
             intro={t("welcome.intro")}
             githubUrl={GITHUB_URL}
             isPrimary
+          />
+          <AppCard
+            logo={betterMediaInfoIcon}
+            title="BetterMediaInfo"
+            intro={t("welcome.introBetterMediaInfo")}
+            githubUrl={BETTER_MEDIA_INFO_URL}
           />
         </Box>
 
