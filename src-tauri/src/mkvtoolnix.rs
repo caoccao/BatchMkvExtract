@@ -1,19 +1,19 @@
 /*
- *   Copyright (c) 2026. caoccao.com Sam Cao
- *   All rights reserved.
+*   Copyright (c) 2026. caoccao.com Sam Cao
+*   All rights reserved.
 
- *   Licensed under the Apache License, Version 2.0 (the "License");
- *   you may not use this file except in compliance with the License.
- *   You may obtain a copy of the License at
+*   Licensed under the Apache License, Version 2.0 (the "License");
+*   you may not use this file except in compliance with the License.
+*   You may obtain a copy of the License at
 
- *   http://www.apache.org/licenses/LICENSE-2.0
+*   http://www.apache.org/licenses/LICENSE-2.0
 
- *   Unless required by applicable law or agreed to in writing, software
- *   distributed under the License is distributed on an "AS IS" BASIS,
- *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *   See the License for the specific language governing permissions and
- *   limitations under the License.
- */
+*   Unless required by applicable law or agreed to in writing, software
+*   distributed under the License is distributed on an "AS IS" BASIS,
+*   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*   See the License for the specific language governing permissions and
+*   limitations under the License.
+*/
 
 use anyhow::Result;
 #[cfg(target_os = "macos")]
@@ -29,383 +29,373 @@ use crate::protocol::{MkvToolNixStatus, MkvTrack};
 const MKV_EXTENSION: &str = "mkv";
 
 pub fn is_mkv(path: &Path) -> bool {
-    path.extension()
-        .and_then(|e| e.to_str())
-        .map(|e| e.eq_ignore_ascii_case(MKV_EXTENSION))
-        .unwrap_or(false)
+  path
+    .extension()
+    .and_then(|e| e.to_str())
+    .map(|e| e.eq_ignore_ascii_case(MKV_EXTENSION))
+    .unwrap_or(false)
 }
 
 pub(crate) fn parse_mkvextract_progress(line: &str) -> Option<u32> {
-    let trimmed = line.trim();
-    if trimmed.starts_with("Progress:") {
-        trimmed
-            .trim_start_matches("Progress:")
-            .trim()
-            .trim_end_matches('%')
-            .parse::<u32>()
-            .ok()
-    } else {
-        None
-    }
+  let trimmed = line.trim();
+  if trimmed.starts_with("Progress:") {
+    trimmed
+      .trim_start_matches("Progress:")
+      .trim()
+      .trim_end_matches('%')
+      .parse::<u32>()
+      .ok()
+  } else {
+    None
+  }
 }
 
 pub(crate) fn read_mkvextract_output<F>(reader: impl Read, mut on_line: F)
 where
-    F: FnMut(&str),
+  F: FnMut(&str),
 {
-    let mut buf_reader = BufReader::new(reader);
-    let mut current_line = Vec::new();
-    let mut byte = [0u8; 1];
-    loop {
-        match buf_reader.read(&mut byte) {
-            Ok(0) => break,
-            Ok(_) => {
-                if byte[0] == b'\r' || byte[0] == b'\n' {
-                    if !current_line.is_empty() {
-                        let line = String::from_utf8_lossy(&current_line);
-                        on_line(&line);
-                        current_line.clear();
-                    }
-                } else {
-                    current_line.push(byte[0]);
-                }
-            }
-            Err(_) => break,
+  let mut buf_reader = BufReader::new(reader);
+  let mut current_line = Vec::new();
+  let mut byte = [0u8; 1];
+  loop {
+    match buf_reader.read(&mut byte) {
+      Ok(0) => break,
+      Ok(_) => {
+        if byte[0] == b'\r' || byte[0] == b'\n' {
+          if !current_line.is_empty() {
+            let line = String::from_utf8_lossy(&current_line);
+            on_line(&line);
+            current_line.clear();
+          }
+        } else {
+          current_line.push(byte[0]);
         }
+      }
+      Err(_) => break,
     }
-    if !current_line.is_empty() {
-        let line = String::from_utf8_lossy(&current_line);
-        on_line(&line);
-    }
+  }
+  if !current_line.is_empty() {
+    let line = String::from_utf8_lossy(&current_line);
+    on_line(&line);
+  }
 }
 
 struct MkvToolNixResolution {
-    path: PathBuf,
-    auto_detected: bool,
+  path: PathBuf,
+  auto_detected: bool,
 }
 
 fn get_tool_path(path: &Path, tool: &str) -> PathBuf {
-    #[cfg(target_os = "windows")]
-    {
-        let exe_path = path.join(format!("{}.exe", tool));
-        if exe_path.exists() && exe_path.is_file() {
-            return exe_path;
-        }
+  #[cfg(target_os = "windows")]
+  {
+    let exe_path = path.join(format!("{}.exe", tool));
+    if exe_path.exists() && exe_path.is_file() {
+      return exe_path;
     }
-    path.join(tool)
+  }
+  path.join(tool)
 }
 
 fn resolve_mkvtoolnix_tool_path(tool: &str) -> Result<PathBuf> {
-    let cfg = config::get_config();
-    let resolution = resolve_mkvtoolnix(&cfg.integration.mkv_toolnix_path, tool);
-    persist_mkvtoolnix_path_if_auto_detected(&resolution)?;
-    Ok(get_tool_path(&resolution.path, tool))
+  let cfg = config::get_config();
+  let resolution = resolve_mkvtoolnix(&cfg.integration.mkv_toolnix_path, tool);
+  persist_mkvtoolnix_path_if_auto_detected(&resolution)?;
+  Ok(get_tool_path(&resolution.path, tool))
 }
 
 fn create_mkvtoolnix_command(tool: &str) -> Result<(PathBuf, std::process::Command)> {
-    let tool_path = resolve_mkvtoolnix_tool_path(tool)?;
-    #[cfg_attr(not(target_os = "windows"), allow(unused_mut))]
-    let mut cmd = std::process::Command::new(&tool_path);
-    #[cfg(target_os = "windows")]
-    {
-        use std::os::windows::process::CommandExt;
-        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
-    }
-    Ok((tool_path, cmd))
+  let tool_path = resolve_mkvtoolnix_tool_path(tool)?;
+  #[cfg_attr(not(target_os = "windows"), allow(unused_mut))]
+  let mut cmd = std::process::Command::new(&tool_path);
+  #[cfg(target_os = "windows")]
+  {
+    use std::os::windows::process::CommandExt;
+    cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+  }
+  Ok((tool_path, cmd))
 }
 
 fn validate_path_as_file(path: &Path) -> anyhow::Result<()> {
-    if !path.exists() {
-        Err(anyhow::anyhow!("Path {} does not exist.", path.display()))
-    } else if !path.is_file() {
-        Err(anyhow::anyhow!("Path {} is not a file.", path.display()))
-    } else {
-        Ok(())
-    }
+  if !path.exists() {
+    Err(anyhow::anyhow!("Path {} does not exist.", path.display()))
+  } else if !path.is_file() {
+    Err(anyhow::anyhow!("Path {} is not a file.", path.display()))
+  } else {
+    Ok(())
+  }
 }
 
 fn has_tool(path: &Path, tool: &str) -> bool {
-    let tool_path = path.join(tool);
-    if tool_path.exists() && tool_path.is_file() {
-        return true;
+  let tool_path = path.join(tool);
+  if tool_path.exists() && tool_path.is_file() {
+    return true;
+  }
+  #[cfg(target_os = "windows")]
+  {
+    let tool_exe_path = path.join(format!("{}.exe", tool));
+    if tool_exe_path.exists() && tool_exe_path.is_file() {
+      return true;
     }
-    #[cfg(target_os = "windows")]
-    {
-        let tool_exe_path = path.join(format!("{}.exe", tool));
-        if tool_exe_path.exists() && tool_exe_path.is_file() {
-            return true;
-        }
-    }
-    false
+  }
+  false
 }
 
 const MKVTOOLNIX_TOOLS: &[&str] = &["mkvmerge", "mkvextract"];
 
 fn has_mkvtoolnix(path: &Path) -> bool {
-    MKVTOOLNIX_TOOLS.iter().all(|tool| has_tool(path, tool))
+  MKVTOOLNIX_TOOLS.iter().all(|tool| has_tool(path, tool))
 }
 
 #[cfg(target_os = "macos")]
 fn compare_version_parts(left: &[u32], right: &[u32]) -> Ordering {
-    let len = left.len().max(right.len());
-    for i in 0..len {
-        let l = left.get(i).copied().unwrap_or(0);
-        let r = right.get(i).copied().unwrap_or(0);
-        match l.cmp(&r) {
-            Ordering::Equal => continue,
-            non_eq => return non_eq,
-        }
+  let len = left.len().max(right.len());
+  for i in 0..len {
+    let l = left.get(i).copied().unwrap_or(0);
+    let r = right.get(i).copied().unwrap_or(0);
+    match l.cmp(&r) {
+      Ordering::Equal => continue,
+      non_eq => return non_eq,
     }
-    Ordering::Equal
+  }
+  Ordering::Equal
 }
 
 #[cfg(target_os = "macos")]
 fn parse_version_parts(version: &str) -> Vec<u32> {
-    version
-        .split('.')
-        .filter_map(|part| {
-            let digits: String = part.chars().take_while(|c| c.is_ascii_digit()).collect();
-            if digits.is_empty() {
-                None
-            } else {
-                digits.parse::<u32>().ok()
-            }
-        })
-        .collect()
+  version
+    .split('.')
+    .filter_map(|part| {
+      let digits: String = part.chars().take_while(|c| c.is_ascii_digit()).collect();
+      if digits.is_empty() {
+        None
+      } else {
+        digits.parse::<u32>().ok()
+      }
+    })
+    .collect()
 }
 
 #[cfg(target_os = "macos")]
 fn is_default_macos_mkvtoolnix_path(path: &str) -> bool {
-    path.trim().trim_end_matches('/') == "/Applications/MKVToolNix.app/Contents/MacOS"
+  path.trim().trim_end_matches('/') == "/Applications/MKVToolNix.app/Contents/MacOS"
 }
 
 #[cfg(target_os = "macos")]
 fn find_latest_versioned_macos_mkvtoolnix_path(tool: &str) -> Option<PathBuf> {
-    let entries = fs::read_dir("/Applications").ok()?;
-    let mut latest: Option<(Vec<u32>, PathBuf)> = None;
-    for entry in entries.flatten() {
-        let file_name = entry.file_name();
-        let app_name = match file_name.to_str() {
-            Some(value) => value,
-            None => continue,
-        };
-        if !app_name.starts_with("MKVToolNix-") || !app_name.ends_with(".app") {
-            continue;
-        }
-        let version = &app_name["MKVToolNix-".len()..app_name.len() - ".app".len()];
-        let version_parts = parse_version_parts(version);
-        if version_parts.is_empty() {
-            continue;
-        }
-        let mkvtoolnix_path = entry.path().join("Contents").join("MacOS");
-        if !has_tool(&mkvtoolnix_path, tool) {
-            continue;
-        }
-        match &latest {
-            None => latest = Some((version_parts, mkvtoolnix_path)),
-            Some((latest_version, _)) => {
-                if compare_version_parts(&version_parts, latest_version) == Ordering::Greater {
-                    latest = Some((version_parts, mkvtoolnix_path));
-                }
-            }
-        }
+  let entries = fs::read_dir("/Applications").ok()?;
+  let mut latest: Option<(Vec<u32>, PathBuf)> = None;
+  for entry in entries.flatten() {
+    let file_name = entry.file_name();
+    let app_name = match file_name.to_str() {
+      Some(value) => value,
+      None => continue,
+    };
+    if !app_name.starts_with("MKVToolNix-") || !app_name.ends_with(".app") {
+      continue;
     }
-    latest.map(|(_, path)| path)
+    let version = &app_name["MKVToolNix-".len()..app_name.len() - ".app".len()];
+    let version_parts = parse_version_parts(version);
+    if version_parts.is_empty() {
+      continue;
+    }
+    let mkvtoolnix_path = entry.path().join("Contents").join("MacOS");
+    if !has_tool(&mkvtoolnix_path, tool) {
+      continue;
+    }
+    match &latest {
+      None => latest = Some((version_parts, mkvtoolnix_path)),
+      Some((latest_version, _)) => {
+        if compare_version_parts(&version_parts, latest_version) == Ordering::Greater {
+          latest = Some((version_parts, mkvtoolnix_path));
+        }
+      }
+    }
+  }
+  latest.map(|(_, path)| path)
 }
 
 fn resolve_mkvtoolnix(path: &str, tool: &str) -> MkvToolNixResolution {
-    let trimmed_path = path.trim();
-    let configured_path = PathBuf::from(trimmed_path);
-    if has_tool(&configured_path, tool) {
+  let trimmed_path = path.trim();
+  let configured_path = PathBuf::from(trimmed_path);
+  if has_tool(&configured_path, tool) {
+    return MkvToolNixResolution {
+      path: configured_path,
+      auto_detected: false,
+    };
+  }
+  #[cfg(target_os = "macos")]
+  {
+    if is_default_macos_mkvtoolnix_path(trimmed_path) {
+      if let Some(latest_path) = find_latest_versioned_macos_mkvtoolnix_path(tool) {
         return MkvToolNixResolution {
-            path: configured_path,
-            auto_detected: false,
+          path: latest_path,
+          auto_detected: true,
         };
+      }
     }
-    #[cfg(target_os = "macos")]
-    {
-        if is_default_macos_mkvtoolnix_path(trimmed_path) {
-            if let Some(latest_path) = find_latest_versioned_macos_mkvtoolnix_path(tool) {
-                return MkvToolNixResolution {
-                    path: latest_path,
-                    auto_detected: true,
-                };
-            }
-        }
-    }
-    MkvToolNixResolution {
-        path: configured_path,
-        auto_detected: false,
-    }
+  }
+  MkvToolNixResolution {
+    path: configured_path,
+    auto_detected: false,
+  }
 }
 
 fn persist_mkvtoolnix_path_if_auto_detected(resolution: &MkvToolNixResolution) -> Result<()> {
-    if !resolution.auto_detected {
-        return Ok(());
-    }
-    let path = resolution.path.to_string_lossy().to_string();
-    let mut cfg = config::get_config();
-    if cfg.integration.mkv_toolnix_path == path {
-        return Ok(());
-    }
-    cfg.integration.mkv_toolnix_path = path;
-    config::set_config(cfg)?;
-    Ok(())
+  if !resolution.auto_detected {
+    return Ok(());
+  }
+  let path = resolution.path.to_string_lossy().to_string();
+  let mut cfg = config::get_config();
+  if cfg.integration.mkv_toolnix_path == path {
+    return Ok(());
+  }
+  cfg.integration.mkv_toolnix_path = path;
+  config::set_config(cfg)?;
+  Ok(())
 }
 
 pub async fn get_mkv_tracks(file: String) -> Result<Vec<MkvTrack>> {
-    let path = Path::new(file.as_str());
-    validate_path_as_file(path)?;
-    let (mkvmerge_path, mut cmd) = create_mkvtoolnix_command("mkvmerge")?;
-    cmd.arg("-J").arg(&file);
-    let output = cmd.output().map_err(|e| {
-        anyhow::anyhow!(
-            "MKVMERGE_NOT_AVAILABLE:{}: {}",
-            mkvmerge_path.display(),
-            e
-        )
-    })?;
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(anyhow::anyhow!("MKVMERGE_FAILED:{}", stderr));
-    }
-    let json: serde_json::Value = serde_json::from_slice(&output.stdout)
-        .map_err(|e| anyhow::anyhow!("MKVMERGE_PARSE_ERROR:{}", e))?;
-    let mut tracks: Vec<MkvTrack> = json["tracks"]
-        .as_array()
-        .map(|arr| {
-            arr.iter()
-                .map(|t| {
-                    let props = &t["properties"];
-                    MkvTrack {
-                        id: t["id"].as_i64().unwrap_or(0),
-                        number: props["number"].as_i64().unwrap_or(0),
-                        track_type: t["type"].as_str().unwrap_or("").to_owned(),
-                        codec: t["codec"].as_str().unwrap_or("").to_owned(),
-                        codec_id: props["codec_id"].as_str().unwrap_or("").to_owned(),
-                        track_name: props["track_name"].as_str().unwrap_or("").to_owned(),
-                        language: props["language"].as_str().unwrap_or("und").to_owned(),
-                    }
-                })
-                .collect()
+  let path = Path::new(file.as_str());
+  validate_path_as_file(path)?;
+  let (mkvmerge_path, mut cmd) = create_mkvtoolnix_command("mkvmerge")?;
+  cmd.arg("-J").arg(&file);
+  let output = cmd
+    .output()
+    .map_err(|e| anyhow::anyhow!("MKVMERGE_NOT_AVAILABLE:{}: {}", mkvmerge_path.display(), e))?;
+  if !output.status.success() {
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    return Err(anyhow::anyhow!("MKVMERGE_FAILED:{}", stderr));
+  }
+  let json: serde_json::Value =
+    serde_json::from_slice(&output.stdout).map_err(|e| anyhow::anyhow!("MKVMERGE_PARSE_ERROR:{}", e))?;
+  let mut tracks: Vec<MkvTrack> = json["tracks"]
+    .as_array()
+    .map(|arr| {
+      arr
+        .iter()
+        .map(|t| {
+          let props = &t["properties"];
+          MkvTrack {
+            id: t["id"].as_i64().unwrap_or(0),
+            number: props["number"].as_i64().unwrap_or(0),
+            track_type: t["type"].as_str().unwrap_or("").to_owned(),
+            codec: t["codec"].as_str().unwrap_or("").to_owned(),
+            codec_id: props["codec_id"].as_str().unwrap_or("").to_owned(),
+            track_name: props["track_name"].as_str().unwrap_or("").to_owned(),
+            language: props["language"].as_str().unwrap_or("und").to_owned(),
+          }
         })
-        .unwrap_or_default();
+        .collect()
+    })
+    .unwrap_or_default();
 
-    let chapter_entries: i64 = json["chapters"]
-        .as_array()
-        .and_then(|arr| arr.first())
-        .and_then(|v| v["num_entries"].as_i64())
-        .unwrap_or(0);
-    if chapter_entries > 0 {
-        tracks.push(MkvTrack {
-            id: 0,
-            number: 0,
-            track_type: "chapters".to_owned(),
-            codec: "xml".to_owned(),
-            codec_id: "xml".to_owned(),
-            track_name: String::new(),
-            language: String::new(),
-        });
+  let chapter_entries: i64 = json["chapters"]
+    .as_array()
+    .and_then(|arr| arr.first())
+    .and_then(|v| v["num_entries"].as_i64())
+    .unwrap_or(0);
+  if chapter_entries > 0 {
+    tracks.push(MkvTrack {
+      id: 0,
+      number: 0,
+      track_type: "chapters".to_owned(),
+      codec: "xml".to_owned(),
+      codec_id: "xml".to_owned(),
+      track_name: String::new(),
+      language: String::new(),
+    });
+  }
+
+  if let Some(atts) = json["attachments"].as_array() {
+    for att in atts {
+      let id = att["id"].as_i64().unwrap_or(0);
+      let file_name = att["file_name"].as_str().unwrap_or("").to_owned();
+      let content_type = att["content_type"].as_str().unwrap_or("").to_owned();
+      let subtype = derive_attachment_subtype(&file_name, &content_type);
+      tracks.push(MkvTrack {
+        id,
+        number: 0,
+        track_type: "attachment".to_owned(),
+        codec: subtype.clone(),
+        codec_id: subtype,
+        track_name: file_name,
+        language: String::new(),
+      });
     }
+  }
 
-    if let Some(atts) = json["attachments"].as_array() {
-        for att in atts {
-            let id = att["id"].as_i64().unwrap_or(0);
-            let file_name = att["file_name"].as_str().unwrap_or("").to_owned();
-            let content_type = att["content_type"].as_str().unwrap_or("").to_owned();
-            let subtype = derive_attachment_subtype(&file_name, &content_type);
-            tracks.push(MkvTrack {
-                id,
-                number: 0,
-                track_type: "attachment".to_owned(),
-                codec: subtype.clone(),
-                codec_id: subtype,
-                track_name: file_name,
-                language: String::new(),
-            });
-        }
-    }
-
-    Ok(tracks)
+  Ok(tracks)
 }
 
 fn derive_attachment_subtype(file_name: &str, content_type: &str) -> String {
-    if let Some(ext_pos) = file_name.rfind('.') {
-        let ext = &file_name[ext_pos + 1..];
-        if !ext.is_empty() {
-            return ext.to_ascii_lowercase();
-        }
+  if let Some(ext_pos) = file_name.rfind('.') {
+    let ext = &file_name[ext_pos + 1..];
+    if !ext.is_empty() {
+      return ext.to_ascii_lowercase();
     }
-    if let Some(slash) = content_type.find('/') {
-        let subtype = &content_type[slash + 1..];
-        if !subtype.is_empty() {
-            return subtype.to_ascii_lowercase();
-        }
+  }
+  if let Some(slash) = content_type.find('/') {
+    let subtype = &content_type[slash + 1..];
+    if !subtype.is_empty() {
+      return subtype.to_ascii_lowercase();
     }
-    String::new()
+  }
+  String::new()
 }
 
 pub fn spawn_mkvextract(file: &str, args: &[String]) -> Result<std::process::Child> {
-    let path = Path::new(file);
-    validate_path_as_file(path)?;
-    let (mkvextract_path, mut cmd) = create_mkvtoolnix_command("mkvextract")?;
-    cmd.arg(file)
-        .args(args)
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped());
-    cmd.spawn().map_err(|e| {
-        anyhow::anyhow!(
-            "MKVEXTRACT_NOT_AVAILABLE:{}: {}",
-            mkvextract_path.display(),
-            e
-        )
-    })
+  let path = Path::new(file);
+  validate_path_as_file(path)?;
+  let (mkvextract_path, mut cmd) = create_mkvtoolnix_command("mkvextract")?;
+  cmd
+    .arg(file)
+    .args(args)
+    .stdout(std::process::Stdio::piped())
+    .stderr(std::process::Stdio::piped());
+  cmd
+    .spawn()
+    .map_err(|e| anyhow::anyhow!("MKVEXTRACT_NOT_AVAILABLE:{}: {}", mkvextract_path.display(), e))
 }
 
 fn mkvtoolnix_gui_process_name() -> &'static str {
-    if cfg!(target_os = "windows") {
-        "mkvtoolnix-gui.exe"
-    } else {
-        "mkvtoolnix-gui"
-    }
+  if cfg!(target_os = "windows") {
+    "mkvtoolnix-gui.exe"
+  } else {
+    "mkvtoolnix-gui"
+  }
 }
 
-pub async fn is_mkvtoolnix_found(
-    path: String,
-    check_running: bool,
-) -> Result<MkvToolNixStatus> {
-    if check_running {
-        if let Some(dir) =
-            crate::controller::find_running_process_dir(mkvtoolnix_gui_process_name())
-        {
-            if has_mkvtoolnix(&dir) {
-                let mut cfg = config::get_config();
-                let path_string = dir.to_string_lossy().to_string();
-                if cfg.integration.mkv_toolnix_path != path_string {
-                    cfg.integration.mkv_toolnix_path = path_string.clone();
-                    config::set_config(cfg)?;
-                }
-                return Ok(MkvToolNixStatus {
-                    found: true,
-                    mkv_toolnix_path: path_string,
-                });
-            }
+pub async fn is_mkvtoolnix_found(path: String, check_running: bool) -> Result<MkvToolNixStatus> {
+  if check_running {
+    if let Some(dir) = crate::controller::find_running_process_dir(mkvtoolnix_gui_process_name()) {
+      if has_mkvtoolnix(&dir) {
+        let mut cfg = config::get_config();
+        let path_string = dir.to_string_lossy().to_string();
+        if cfg.integration.mkv_toolnix_path != path_string {
+          cfg.integration.mkv_toolnix_path = path_string.clone();
+          config::set_config(cfg)?;
         }
-    }
-    let trimmed_path = path.trim();
-    if trimmed_path.is_empty() {
         return Ok(MkvToolNixStatus {
-            found: false,
-            mkv_toolnix_path: String::new(),
+          found: true,
+          mkv_toolnix_path: path_string,
         });
+      }
     }
-    let resolution = resolve_mkvtoolnix(trimmed_path, MKVTOOLNIX_TOOLS[0]);
-    let found = has_mkvtoolnix(&resolution.path);
-    if found {
-        persist_mkvtoolnix_path_if_auto_detected(&resolution)?;
-    }
-    Ok(MkvToolNixStatus {
-        found,
-        mkv_toolnix_path: resolution.path.to_string_lossy().to_string(),
-    })
+  }
+  let trimmed_path = path.trim();
+  if trimmed_path.is_empty() {
+    return Ok(MkvToolNixStatus {
+      found: false,
+      mkv_toolnix_path: String::new(),
+    });
+  }
+  let resolution = resolve_mkvtoolnix(trimmed_path, MKVTOOLNIX_TOOLS[0]);
+  let found = has_mkvtoolnix(&resolution.path);
+  if found {
+    persist_mkvtoolnix_path_if_auto_detected(&resolution)?;
+  }
+  Ok(MkvToolNixStatus {
+    found,
+    mkv_toolnix_path: resolution.path.to_string_lossy().to_string(),
+  })
 }

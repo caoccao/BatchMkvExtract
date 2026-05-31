@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    batch_mkvextract_lib::run()
+  batch_mkvextract_lib::run()
 }

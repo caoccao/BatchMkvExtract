@@ -88,7 +88,7 @@ function App() {
 
   const displayMode = config?.displayMode ?? Protocol.DisplayMode.Auto;
   const selectedTheme = config?.theme ?? Protocol.Theme.Ocean;
-  const language = config?.language ?? Protocol.Language.EnUS;
+  const language = config?.language;
 
   useEffect(() => {
     initConfig();
@@ -164,7 +164,9 @@ function App() {
   }, []);
 
   useEffect(() => {
-    changeLanguage(language);
+    if (language) {
+      changeLanguage(language);
+    }
   }, [language]);
 
   const bmiPath = config?.integration?.betterMediaInfoPath ?? "";
