@@ -1,5 +1,29 @@
 # Release Notes
 
+## 0.3.0
+
+### Output paths
+
+* Set a global output path from the toolbar for all files that do not have their own file or group output path
+* Output path dialogs now warn when a target directory does not exist and tell you it will be created
+* Extraction now creates missing output directories automatically before queueing work
+* If an output directory cannot be created, the app shows a localized error notification instead of starting the extraction
+
+### Welcome screen
+
+* The Welcome screen now highlights BatchMkvExtract alongside BatchMkvMerge, BetterMediaInfo, and BDMaster
+* Related app cards include icons, localized descriptions, and GitHub links
+
+### Linux
+
+* Linux builds now disable the problematic WebKit DMABUF renderer by default when the environment has not already chosen a renderer, improving compatibility on affected systems
+
+### Localization and maintenance
+
+* Italian translations were refined
+* Version metadata, build workflows, and documentation were updated for 0.3.0
+* Internal formatting and cleanup improved readability across the frontend and Tauri backend
+
 ## 0.2.0
 
 ### Getting started
