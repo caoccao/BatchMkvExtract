@@ -29,6 +29,17 @@ use protocol::{UpdateCheckResult, UpdateCheckState};
 
 static WINDOW_READY: AtomicBool = AtomicBool::new(false);
 
+const MIN_WINDOW_WIDTH: u32 = 600;
+const MIN_WINDOW_HEIGHT: u32 = 450;
+
+fn is_persistable_window_size(width: u32, height: u32) -> bool {
+  width >= MIN_WINDOW_WIDTH && height >= MIN_WINDOW_HEIGHT
+}
+
+fn sanitize_window_size(width: u32, height: u32) -> (u32, u32) {
+  (width.max(MIN_WINDOW_WIDTH), height.max(MIN_WINDOW_HEIGHT))
+}
+
 #[cfg(target_os = "linux")]
 fn configure_linux_webkit_renderer() {
   if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
@@ -183,8 +194,12 @@ pub fn run() {
       let window = app.get_webview_window("main").unwrap();
       window.set_title(&format!("BatchMkvExtract v{}", env!("CARGO_PKG_VERSION")))?;
 
-      let cfg = config::get_config();
-      let _ = window.set_size(tauri::LogicalSize::new(cfg.window.size.width, cfg.window.size.height));
+      let mut cfg = config::get_config();
+      let (window_width, window_height) = sanitize_window_size(cfg.window.size.width, cfg.window.size.height);
+      let should_save_sanitized_size = cfg.window.size.width != window_width || cfg.window.size.height != window_height;
+      cfg.window.size.width = window_width;
+      cfg.window.size.height = window_height;
+      let _ = window.set_size(tauri::LogicalSize::new(window_width, window_height));
       if cfg.window.position.x < 0 || cfg.window.position.y < 0 {
         let _ = window.center();
       } else {
@@ -192,6 +207,9 @@ pub fn run() {
           cfg.window.position.x,
           cfg.window.position.y,
         ));
+      }
+      if should_save_sanitized_size {
+        let _ = config::set_config(cfg.clone());
       }
 
       let _ = window.show();
@@ -272,6 +290,9 @@ pub fn run() {
       }
       match event {
         tauri::WindowEvent::Moved(_) | tauri::WindowEvent::Resized(_) => {
+          if window.is_minimized().unwrap_or(false) {
+            return;
+          }
           let Ok(scale) = window.scale_factor() else {
             return;
           };
@@ -283,6 +304,9 @@ pub fn run() {
           };
           let logical_pos: tauri::LogicalPosition<i32> = pos.to_logical(scale);
           let logical_size: tauri::LogicalSize<u32> = size.to_logical(scale);
+          if !is_persistable_window_size(logical_size.width, logical_size.height) {
+            return;
+          }
           let mut cfg = config::get_config();
           cfg.window.position.x = logical_pos.x;
           cfg.window.position.y = logical_pos.y;
@@ -297,4 +321,25 @@ pub fn run() {
     })
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn persistable_window_size_respects_configured_minimums() {
+    assert!(is_persistable_window_size(MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT));
+    assert!(!is_persistable_window_size(MIN_WINDOW_WIDTH - 1, MIN_WINDOW_HEIGHT));
+    assert!(!is_persistable_window_size(MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT - 1));
+  }
+
+  #[test]
+  fn sanitize_window_size_clamps_poisoned_config_values() {
+    assert_eq!(sanitize_window_size(1, 2), (MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT));
+    assert_eq!(
+      sanitize_window_size(MIN_WINDOW_WIDTH + 100, MIN_WINDOW_HEIGHT + 100),
+      (MIN_WINDOW_WIDTH + 100, MIN_WINDOW_HEIGHT + 100)
+    );
+  }
 }
