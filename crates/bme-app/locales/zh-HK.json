@@ -155,7 +155,9 @@
     "resetTemplates": "還原預設值",
     "mkvToolNix": "MKVToolNix",
     "betterMediaInfo": "BetterMediaInfo",
-    "reset": "重設"
+    "reset": "重設",
+    "trackSelection": "軌道選擇",
+    "fileNameTemplates": "檔案名稱範本"
   },
   "about": {
     "title": "關於",

@@ -88,8 +88,9 @@ pub fn bind_keys(cx: &mut App) {
 }
 
 /// Registers the global handlers of the actions above (except Quit, which
-/// needs the main window).
+/// needs the main window) and the numeric word stops of the text inputs.
 pub fn install(stores: &Stores, cx: &mut App) {
+  super::word_navigation::install(cx);
   let ui = stores.ui.clone();
   cx.on_action({
     let ui = ui.clone();

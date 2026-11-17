@@ -155,7 +155,9 @@
     "resetTemplates": "Ripristina predefiniti",
     "mkvToolNix": "MKVToolNix",
     "betterMediaInfo": "BetterMediaInfo",
-    "reset": "Ripristina"
+    "reset": "Ripristina",
+    "trackSelection": "Selezione tracce",
+    "fileNameTemplates": "Modelli di nome file"
   },
   "about": {
     "title": "Info programma",

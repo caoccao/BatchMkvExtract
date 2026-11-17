@@ -681,6 +681,38 @@ fn type_and_confirm(shell: &Shell, cx: &mut TestAppContext, text: &str) {
 }
 
 #[gpui_kit::test]
+fn word_keys_stop_at_every_dot_of_the_output_path(cx: &mut TestAppContext) {
+  use gpui_kit::component::WindowExt as _;
+
+  let shell = shell(cx, &[A]);
+  click_in(&shell, cx, 0, "card-output");
+  assert!(shell.has_dialog(cx));
+  shell.window(cx, |window, cx| {
+    window.press(SELECT_ALL, cx);
+    window.press("backspace", cx);
+    window.input("Movie.2024.1080p.mkv", cx);
+  });
+  cx.run_until_parked();
+  let word_left = if cfg!(target_os = "macos") {
+    "alt-left"
+  } else {
+    "ctrl-left"
+  };
+  let caret = |shell: &Shell, cx: &mut TestAppContext| {
+    shell.window(cx, |window, cx| match window.focused_input(cx) {
+      Some(gpui_kit::component::input::AnyInputState::Input(state)) => state.read(cx).cursor(),
+      _ => panic!("the dialog field has the focus"),
+    })
+  };
+  let mut stops = Vec::new();
+  for _ in 0..4 {
+    shell.press(cx, word_left);
+    stops.push(caret(&shell, cx));
+  }
+  assert_eq!(stops, [17, 11, 6, 0]);
+}
+
+#[gpui_kit::test]
 fn the_output_dialog_sets_and_clears_a_cards_output_directory(cx: &mut TestAppContext) {
   let dir = TempDir::new("cards-output");
   let shell = shell(cx, &[A]);

@@ -155,7 +155,9 @@
     "resetTemplates": "Auf Standard zurücksetzen",
     "mkvToolNix": "MKVToolNix",
     "betterMediaInfo": "BetterMediaInfo",
-    "reset": "Zurücksetzen"
+    "reset": "Zurücksetzen",
+    "trackSelection": "Spurauswahl",
+    "fileNameTemplates": "Dateinamenvorlagen"
   },
   "about": {
     "title": "Info",

@@ -30,6 +30,7 @@ use gpui_kit::component::{ActiveTheme, WindowExt, v_flex};
 use gpui_kit::*;
 
 use super::main_content::MainContent;
+use super::settings::SettingsView;
 use super::status_bar::AppStatusBar;
 use super::toolbar::Toolbar;
 use super::topmost::TopmostWindow;
@@ -94,6 +95,10 @@ impl AppView {
           NotificationKind::Error => Notification::error(message.to_string()),
         };
         let notification = match event {
+          UiEvent::OpenSettings => {
+            let _ = SettingsView::open(&this.stores, window, cx);
+            return;
+          }
           UiEvent::CloseActiveTab => {
             if !window.has_active_dialog(cx) {
               this.stores.ui.update(cx, |ui, cx| ui.close_active_tab(cx));
@@ -112,8 +117,6 @@ impl AppView {
             this.quit_after_completion(window, cx);
             return;
           }
-          // The Settings dialog comes later.
-          UiEvent::OpenSettings => return,
         };
         window.push_notification(notification, cx);
       }),

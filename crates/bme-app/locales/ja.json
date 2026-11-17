@@ -155,7 +155,9 @@
     "resetTemplates": "デフォルトに戻す",
     "mkvToolNix": "MKVToolNix",
     "betterMediaInfo": "BetterMediaInfo",
-    "reset": "リセット"
+    "reset": "リセット",
+    "trackSelection": "トラック選択",
+    "fileNameTemplates": "ファイル名テンプレート"
   },
   "about": {
     "title": "情報",

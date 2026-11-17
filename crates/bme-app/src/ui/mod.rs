@@ -29,12 +29,14 @@ pub mod output_dialog;
 pub mod queue;
 pub mod root;
 pub mod selectable_path;
+pub mod settings;
 pub mod status_bar;
 pub mod toolbar;
 pub mod topmost;
 pub mod track_table;
 pub mod update_banner;
 pub mod welcome;
+pub mod word_navigation;
 
 #[cfg(test)]
 mod tests;

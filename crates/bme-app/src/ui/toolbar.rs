@@ -16,10 +16,10 @@
 */
 
 //! The single-row toolbar and its menus. Actions that do not fit are shown
-//! in an overflow menu. Profile also opens with F9.
+//! in an overflow menu. Profile also opens with F9, Settings with F10 and
+//! Ctrl+Comma (Cmd+Comma on macOS).
 //!
-//! Every button of the toolbar is drawn; Settings is disabled until its
-//! dialog exists. The global output path is highlighted while one is set.
+//! The global output path is highlighted while one is set.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -495,7 +495,7 @@ impl Render for Toolbar {
         crate::assets::SETTINGS_ICON_NAME,
         settings_tooltip,
         None,
-        false,
+        true,
         ToolbarAction::Settings,
       )),
       None,

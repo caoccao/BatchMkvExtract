@@ -77,17 +77,27 @@ impl Shell {
 
   /// The shell with `config` (its language is set to English).
   pub(super) fn with_config(cx: &mut TestAppContext, config: Config) -> Self {
-    Self::build(cx, config, HashMap::new())
+    Self::build(cx, config, HashMap::new(), ToolDetector::system())
+  }
+
+  /// The shell with `config` whose tool detection is `tools`.
+  pub(super) fn with_tools(cx: &mut TestAppContext, config: Config, tools: ToolDetector) -> Self {
+    Self::build(cx, config, HashMap::new(), tools)
   }
 
   /// The shell over track fixtures, with Group Mode off.
   pub(super) fn with_files(cx: &mut TestAppContext, fixtures: HashMap<String, Vec<MkvTrack>>) -> Self {
     let mut config = Config::default();
     config.profiles[0].default_group_mode = false;
-    Self::build(cx, config, fixtures)
+    Self::build(cx, config, fixtures, ToolDetector::system())
   }
 
-  fn build(cx: &mut TestAppContext, config: Config, fixtures: HashMap<String, Vec<MkvTrack>>) -> Self {
+  fn build(
+    cx: &mut TestAppContext,
+    config: Config,
+    fixtures: HashMap<String, Vec<MkvTrack>>,
+    tools: ToolDetector,
+  ) -> Self {
     let locale = LOCALE_LOCK.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
     crate::i18n::set_language(Language::EnUS);
     let written = Arc::new(Mutex::new(Vec::new()));
@@ -127,7 +137,7 @@ impl Shell {
           let progress = progress.clone();
           Box::new(move |percent| progress.borrow_mut().push(percent))
         }),
-        tools: ToolDetector::system(),
+        tools,
       };
       let stores = Stores::new(config, services, cx);
       extract_events::start(&stores, receiver, cx);
@@ -370,7 +380,6 @@ fn the_toolbar_enables_what_the_stores_allow(cx: &mut TestAppContext) {
     "toolbar-cancel-all",
     "toolbar-clear-completed",
     "toolbar-clear",
-    "toolbar-settings",
   ] {
     assert!(shell.disabled(cx, id), "{id} has nothing to act on");
   }
@@ -381,6 +390,7 @@ fn the_toolbar_enables_what_the_stores_allow(cx: &mut TestAppContext) {
     "toolbar-topmost-notification",
     "toolbar-group-mode",
     "toolbar-profile",
+    "toolbar-settings",
     "toolbar-about",
   ] {
     assert!(!shell.disabled(cx, id), "{id}");
@@ -399,9 +409,8 @@ fn the_toolbar_enables_what_the_stores_allow(cx: &mut TestAppContext) {
   assert_eq!(toggles, (true, true, true));
   shell.click(cx, "toolbar-system-notification");
   assert!(!shell.stores.ui.read_with(cx, |ui, _| ui.system_notification()));
-  // Without files the shortcuts have nothing to do, and F10 opens no dialog
-  // before Settings exists.
-  for key in ["f3", "f4", "ctrl-q", "f10"] {
+  // Without files the shortcuts have nothing to do.
+  for key in ["f3", "f4", "ctrl-q"] {
     shell.press(cx, key);
   }
   assert!(!shell.has_dialog(cx));
