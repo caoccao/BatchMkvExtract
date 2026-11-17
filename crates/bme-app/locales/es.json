@@ -1,0 +1,237 @@
+{
+  "app": {
+    "dropHere": "Suelta archivos .mkv o una carpeta aquí"
+  },
+  "list": {
+    "delete": "Eliminar"
+  },
+  "extract": {
+    "copyCommand": "Copiar comando",
+    "extract": "Extraer",
+    "cancel": "Cancelar",
+    "ok": "Aceptar",
+    "browse": "Examinar",
+    "setOutputPath": "Establecer ruta de salida",
+    "outputPath": "Ruta de salida",
+    "openInBetterMediaInfo": "Abrir en BetterMediaInfo",
+    "outputPathNotWritable": "La ruta de salida no se puede escribir. Elige otra ruta.",
+    "outputPathDoesNotExist": "La ruta de salida no existe. Se creará.",
+    "commandCopied": "Comando copiado al portapapeles.",
+    "extractionComplete": "Extracción completada.",
+    "noTracks": "No se encontraron pistas.",
+    "header": {
+      "id": "ID",
+      "number": "Número",
+      "type": "Tipo",
+      "codec": "Códec",
+      "trackName": "Nombre de pista",
+      "language": "Idioma"
+    },
+    "error": {
+      "mkvmergeNotAvailable": "mkvmerge no está disponible. Verifique la ruta de MKVToolNix en Ajustes. %{detail}",
+      "mkvmergeFailed": "mkvmerge falló: %{detail}",
+      "parseError": "No se pudo analizar la salida de mkvmerge: %{detail}",
+      "mkvextractNotAvailable": "mkvextract no está disponible. Verifique la ruta de MKVToolNix en Ajustes. %{detail}",
+      "mkvextractFailed": "mkvextract falló: %{detail}",
+      "sourceMissing": "No se encuentra el archivo de origen %{path}.",
+      "mkvextractExitCode": "mkvextract terminó con el código %{code}.",
+      "mkvextractTerminated": "mkvextract se detuvo de forma inesperada."
+    }
+  },
+  "toolbar": {
+    "extractAll": "Extraer todo (F3)",
+    "cancelAll": "Cancelar todo (F4)",
+    "clear": "Limpiar (Ctrl + Q)",
+    "groupByFile": "Modo de grupo (F8)",
+    "profile": "Perfil (F9)",
+    "settings": "Ajustes (Ctrl + ,)",
+    "setGlobalOutputPath": "Establecer ruta de salida global",
+    "about": "Acerca de",
+    "moreActions": "Más acciones de la barra de herramientas",
+    "settingsMac": "Ajustes (Cmd + ,)"
+  },
+  "group": {
+    "copyAllCommands": "Copiar todos los comandos",
+    "extractAll": "Extraer todo",
+    "clearAll": "Quitar todo"
+  },
+  "tabs": {
+    "fileList": "Lista de archivos",
+    "queue": "Cola",
+    "settings": "Ajustes",
+    "about": "Acerca de",
+    "close": "Cerrar"
+  },
+  "queue": {
+    "defaultDrive": "Cola",
+    "cancelAll": "Cancelar todo",
+    "resumeAll": "Reanudar todo",
+    "clearCompleted": "Eliminar completados",
+    "header": {
+      "filePath": "Ruta del archivo",
+      "status": "Estado",
+      "start": "Inicio",
+      "end": "Fin",
+      "elapsed": "Transcurrido",
+      "eta": "Restante"
+    },
+    "status": {
+      "waiting": "En espera",
+      "extracting": "Extrayendo",
+      "completed": "Completado",
+      "cancelled": "Cancelado",
+      "failed": "Fallido"
+    },
+    "resume": "Reanudar",
+    "quitWhenComplete": "Salir al finalizar",
+    "systemNotification": "Notificación del sistema",
+    "systemNotificationTooltip": "Mostrar una notificación del sistema al finalizar.",
+    "topmostNotification": "Notificación en primer plano",
+    "topmostNotificationTooltip": "Mostrar una notificación en primer plano al finalizar.",
+    "warnings": "Completado con advertencias:"
+  },
+  "settings": {
+    "title": "Ajustes",
+    "appearance": "Apariencia",
+    "mode": "Modo",
+    "autoMode": "Auto",
+    "lightMode": "Claro",
+    "darkMode": "Oscuro",
+    "theme": "Tema",
+    "themeOcean": "Océano",
+    "themeAqua": "Aguamarina",
+    "themeSky": "Cielo",
+    "themeArctic": "Ártico",
+    "themeGlacier": "Glaciar",
+    "themeMist": "Niebla",
+    "themeSlate": "Pizarra",
+    "themeCharcoal": "Carbón",
+    "themeMidnight": "Medianoche",
+    "themeIndigo": "Índigo",
+    "themeViolet": "Violeta",
+    "themeLavender": "Lavanda",
+    "themeRose": "Rosa",
+    "themeBlush": "Rubor",
+    "themeCoral": "Coral",
+    "themeSunset": "Atardecer",
+    "themeAmber": "Ámbar",
+    "themeSand": "Arena",
+    "themeForest": "Bosque",
+    "themeEmerald": "Esmeralda",
+    "language": "Idioma",
+    "mkv": "MKV",
+    "integration": "Integración",
+    "mkvToolNixPath": "Ruta de MKVToolNix",
+    "betterMediaInfoPath": "Ruta de BetterMediaInfo",
+    "browse": "Examinar",
+    "detect": "Detectar",
+    "clear": "Limpiar",
+    "mkvToolNixFound": "mkvmerge y mkvextract encontrados en la ruta de MKVToolNix.",
+    "mkvToolNixNotFound": "mkvmerge o mkvextract no encontrado en la ruta de MKVToolNix.",
+    "betterMediaInfoFound": "BetterMediaInfo encontrado",
+    "betterMediaInfoNotFound": "BetterMediaInfo no se ha detectado. Revisa la ruta e inténtalo de nuevo.",
+    "update": "Actualización",
+    "checkNewVersion": "Buscar nueva versión",
+    "daily": "Diario",
+    "weekly": "Semanal",
+    "monthly": "Mensual",
+    "profiles": "Perfiles",
+    "activeProfile": "Perfil activo",
+    "newProfileName": "Nombre del nuevo perfil",
+    "addProfile": "Añadir",
+    "deleteProfile": "Eliminar",
+    "video": "Video",
+    "audio": "Audio",
+    "subtitles": "Subtítulos",
+    "chapters": "Capítulos",
+    "attachments": "Adjuntos",
+    "autoSelectOnDrop": "Seleccionar automáticamente al añadir",
+    "autoSelectOnDropForLanguages": "Seleccionar automáticamente al añadir para idiomas",
+    "defaultGroupMode": "Modo de grupo predeterminado",
+    "templatePlaceholdersHint": "Marcadores: {file_name}, {track_id}, {track_number}, {language}, {codec_name}, {track_name}",
+    "resetTemplates": "Restablecer valores predeterminados",
+    "mkvToolNix": "MKVToolNix",
+    "betterMediaInfo": "BetterMediaInfo",
+    "reset": "Restablecer"
+  },
+  "about": {
+    "title": "Acerca de",
+    "tagline": "GUI por lotes para mkvextract",
+    "author": "Autor",
+    "github": "GitHub"
+  },
+  "footer": {
+    "donate": "Donar para apoyar el desarrollo",
+    "copyright": "© Copyright 2026"
+  },
+  "notification": {
+    "completedIn": "Completado en %{elapsed}",
+    "unknownError": "Error desconocido",
+    "failedCreateOutput": "No se pudo crear %{path}. Revísalo e inténtalo de nuevo.",
+    "quit": "Salir",
+    "okButDoNotQuit": "Aceptar sin salir",
+    "summary": "%{completed} completados, %{failed} fallidos, %{cancelled} cancelados",
+    "finishedIn": "Finalizado en %{elapsed}",
+    "configResetTitle": "No se pudo leer la configuración",
+    "configReset": "La configuración que no se pudo leer se restableció a sus valores predeterminados. El archivo original se guardó como %{path}.",
+    "configResetNoBackup": "La configuración que no se pudo leer se restableció a sus valores predeterminados.",
+    "completedWithWarnings": "Completado en %{elapsed} con advertencias: %{warnings}",
+    "pathsSkipped": "No se pudieron leer %{count} elemento(s) y se omitieron: %{paths}"
+  },
+  "confirm": {
+    "exitTitle": "Salir",
+    "exitMessage": "Hay extracciones en curso. ¿Seguro que quieres salir?",
+    "yes": "Sí",
+    "no": "No",
+    "deleteProfileTitle": "Eliminar perfil",
+    "deleteProfileMessage": "¿Eliminar el perfil «%{name}»?",
+    "resetProfileTitle": "Restablecer perfil",
+    "resetProfileMessage": "¿Restablecer el perfil «%{name}» a su configuración predeterminada?"
+  },
+  "card": {
+    "summary": {
+      "toPath": "A %{path}"
+    }
+  },
+  "update": {
+    "newVersionAvailable": "Una nueva versión %{version} está disponible.",
+    "skipThisVersion": "Omitir esta versión"
+  },
+  "welcome": {
+    "title": "Bienvenido a BatchMkvExtract",
+    "subtitle": "Una GUI por lotes para mkvextract de MKVToolNix.",
+    "intro": "Extraiga pistas, capítulos y adjuntos de muchos archivos .mkv a la vez. Una GUI por lotes sobre mkvextract de MKVToolNix.",
+    "introBatchMkvMerge": "Procese archivos multimedia por lotes de forma sencilla. Una GUI basada en mkvmerge de MKVToolNix.",
+    "introBetterMediaInfo": "Inspeccione cualquier archivo multimedia con una interfaz rápida y moderna. Explore flujos, propiedades y metadatos de pistas de vídeo, audio, imagen y subtítulos de un vistazo.",
+    "introBDMaster": "Inspeccione discos Blu-ray con una GUI moderna. Explore discos, listas de reproducción, flujos, pistas y gráficos de tasa de bits de un vistazo.",
+    "addFiles": "Agregar archivos",
+    "addFolder": "Agregar carpeta",
+    "emptyHint": "Sugerencia: también puede arrastrar y soltar archivos .mkv o carpetas en esta ventana.",
+    "viewOnGithub": "Ver en GitHub"
+  },
+  "gpui_component": {
+    "Settings": {
+      "search_placeholder": "Buscar...",
+      "no_results": "No hay ajustes coincidentes",
+      "no_results_description": "Pruebe con otra palabra clave.",
+      "Reset All": "Restablecer todo"
+    },
+    "Select": {
+      "placeholder": "Seleccione"
+    },
+    "List": {
+      "search_placeholder": "Buscar..."
+    },
+    "Input": {
+      "Cut": "Cortar",
+      "Copy": "Copiar",
+      "Paste": "Pegar",
+      "Select All": "Seleccionar todo",
+      "Clear": "Limpiar"
+    },
+    "Dialog": {
+      "ok": "Aceptar",
+      "cancel": "Cancelar"
+    }
+  }
+}

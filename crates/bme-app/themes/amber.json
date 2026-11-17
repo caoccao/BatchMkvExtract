@@ -1,0 +1,37 @@
+{
+  "name": "Amber",
+  "author": "Sam Cao",
+  "url": "https://github.com/caoccao/BatchMkvExtract",
+  "themes": [
+    {
+      "name": "Amber Light",
+      "mode": "light",
+      "font.size": 14,
+      "colors": {
+        "primary.background": "#ff8f00",
+        "primary.hover.background": "#b36400",
+        "primary.active.background": "#b36400",
+        "primary.foreground": "#000000de",
+        "ring": "#ff8f00",
+        "link": "#ff8f00",
+        "link.hover": "#b36400",
+        "link.active": "#b36400"
+      }
+    },
+    {
+      "name": "Amber Dark",
+      "mode": "dark",
+      "font.size": 14,
+      "colors": {
+        "primary.background": "#ff8f00",
+        "primary.hover.background": "#b36400",
+        "primary.active.background": "#b36400",
+        "primary.foreground": "#000000de",
+        "ring": "#ff8f00",
+        "link": "#ff8f00",
+        "link.hover": "#ffa533",
+        "link.active": "#ffa533"
+      }
+    }
+  ]
+}

@@ -18,16 +18,31 @@
 //! BatchMkvExtract desktop application on gpui-kit.
 //!
 //! Everything lives in this library so that tests run against it; the binary
-//! only calls [`run`]. For now the application is a skeleton: one themed
-//! window with the app's icon, name and version, so that the packaging
-//! pipeline can be proven before the screens are ported. [`domain`] already
-//! holds the logic the screens will show.
+//! only calls [`run`].
+
+/// `t!` as a [`gpui_kit::SharedString`], ready to become an element.
+macro_rules! tr {
+  ($($all:tt)*) => {
+    gpui_kit::SharedString::from(rust_i18n::t!($($all)*).into_owned())
+  };
+}
 
 pub mod assets;
 pub mod domain;
+pub mod i18n;
+pub mod logging;
+pub mod notifications;
+pub mod platform;
+pub mod state;
+pub mod theme;
+pub mod ui;
+pub mod updates;
 
-use gpui_kit::component::{ActiveTheme, Theme, v_flex};
 use gpui_kit::*;
+
+// The nine locale files under `locales/`; a key missing in a locale falls back
+// to en-US.
+rust_i18n::i18n!("locales", fallback = "en-US");
 
 /// Product name: window title, menus, notifications; also the name of the
 /// config file and its directory.
@@ -40,13 +55,6 @@ pub const DESKTOP_ID: &str = "BatchMkvExtract";
 /// The application version, shown in the title and About.
 pub const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-/// 0.3.0's default window size (`config.window.size`).
-const DEFAULT_WINDOW_SIZE: (f32, f32) = (1200.0, 900.0);
-/// 0.3.0's smallest window (`tauri.conf.json`).
-const MIN_WINDOW_SIZE: (f32, f32) = (600.0, 450.0);
-
-actions!(batch_mkvextract, [Quit]);
-
 /// The window title: `BatchMkvExtract v<version>`.
 pub fn window_title() -> SharedString {
   format!("{APP_NAME} v{APP_VERSION}").into()
@@ -54,104 +62,53 @@ pub fn window_title() -> SharedString {
 
 /// Starts the application and blocks until it quits.
 pub fn run() {
-  gpui_kit::application().with_assets(assets::AppAssets).run(|cx| {
+  // First, so that reading the config and everything after it is logged.
+  let log_file = logging::install(&bme_core::config::config_dir());
+  log::info!(
+    "{APP_NAME} v{APP_VERSION} on {} {}, log {}",
+    std::env::consts::OS,
+    std::env::consts::ARCH,
+    log_file
+      .as_deref()
+      .map_or_else(|| "unavailable".into(), |path| path.display().to_string())
+  );
+  // Read before the event loop starts; creates the default file on first run.
+  let config = bme_core::config::get_config();
+  gpui_kit::application().with_assets(assets::AppAssets).run(move |cx| {
+    // gpui-kit's own strings (dialog buttons, input menus) look up the
+    // application's locale files first; registered before `init`.
+    i18n::install_component_strings();
     gpui_kit::init(cx);
     cx.set_app_identity(APP_IDENTIFIER, APP_NAME);
-    #[cfg(target_os = "macos")]
-    install_app_menu(cx);
-    open_main_window(cx);
+    i18n::set_language(config.language);
+    theme::install(cx);
+    theme::apply(&config, cx.window_appearance(), cx);
+    let services = state::Services {
+      persistence: state::Persistence::disk(),
+    };
+    let stores = state::Stores::new(config, services, cx);
+    ui::actions::bind_keys(cx);
+    ui::actions::install(&stores, cx);
+    platform::menus::install(cx);
+    let Some(handle) = platform::window::open_main(&stores, cx) else {
+      cx.quit();
+      return;
+    };
+    platform::install_quit(handle, &stores, cx);
+    notifications::report_unreadable_config(&stores, cx);
+    updates::start(&stores, updates::UpdateSource::github(), cx);
     // Bring the app to the front also when started from a terminal; GPUI
     // delivers focus events only to the active window.
     cx.activate(true);
-    cx.on_window_closed(|cx, _| {
-      if cx.windows().is_empty() {
+    // The app ends with its main window.
+    let main = handle.window_id();
+    cx.on_window_closed(move |cx, closed| {
+      if closed == main || cx.windows().is_empty() {
         cx.quit();
       }
     })
     .detach();
   });
-}
-
-/// macOS application menu. Elsewhere Ctrl+Q is the app's Clear shortcut and
-/// closing the last window quits.
-#[cfg(target_os = "macos")]
-fn install_app_menu(cx: &mut App) {
-  cx.on_action(|_: &Quit, cx| cx.quit());
-  cx.bind_keys([KeyBinding::new("cmd-q", Quit, None)]);
-  cx.set_menus([Menu::new(APP_NAME).items([MenuItem::action("Quit", Quit)])]);
-}
-
-/// Window options of the main window: centred at 0.3.0's default size, its
-/// 600×450 minimum, the desktop id as the Wayland app id.
-pub fn main_window_options(cx: &App) -> WindowOptions {
-  let (width, height) = DEFAULT_WINDOW_SIZE;
-  let (min_width, min_height) = MIN_WINDOW_SIZE;
-  WindowOptions {
-    window_bounds: Some(WindowBounds::Windowed(Bounds::centered(
-      None,
-      size(px(width), px(height)),
-      cx,
-    ))),
-    titlebar: Some(TitlebarOptions {
-      title: Some(window_title()),
-      ..Default::default()
-    }),
-    window_min_size: Some(size(px(min_width), px(min_height))),
-    app_id: Some(DESKTOP_ID.into()),
-    ..Default::default()
-  }
-}
-
-/// Opens the main window with the [`SkeletonView`].
-pub fn open_main_window(cx: &mut App) -> Option<AnyWindowHandle> {
-  let options = main_window_options(cx);
-  match gpui_kit::open_window(options, cx, |window, cx| {
-    Theme::sync_system_appearance(Some(window), cx);
-    cx.new(|cx| SkeletonView::new(window, cx))
-  }) {
-    Ok((handle, _)) => Some(handle),
-    Err(error) => {
-      log::error!("Failed to open the main window: {error}");
-      cx.quit();
-      None
-    }
-  }
-}
-
-/// Placeholder content until the real layout lands: the app's icon, name and
-/// version in gpui-kit's default theme, light or dark as the OS is.
-pub struct SkeletonView {
-  _appearance: Subscription,
-}
-
-impl SkeletonView {
-  pub fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
-    let appearance = cx.observe_window_appearance(window, |_, window, cx| {
-      Theme::sync_system_appearance(Some(window), cx);
-    });
-    Self {
-      _appearance: appearance,
-    }
-  }
-}
-
-impl Render for SkeletonView {
-  fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-    v_flex()
-      .size_full()
-      .items_center()
-      .justify_center()
-      .gap_3()
-      .bg(cx.theme().background)
-      .text_color(cx.theme().foreground)
-      .child(img(assets::APP_ICON).size(px(128.0)))
-      .child(div().text_2xl().font_weight(FontWeight::SEMIBOLD).child(APP_NAME))
-      .child(
-        div()
-          .text_color(cx.theme().muted_foreground)
-          .child(format!("v{APP_VERSION}")),
-      )
-  }
 }
 
 #[cfg(test)]
@@ -166,23 +123,5 @@ mod tests {
       window_title().as_ref(),
       format!("BatchMkvExtract v{}", env!("CARGO_PKG_VERSION"))
     );
-  }
-
-  /// The test platform records a title only from `set_window_title`, not
-  /// from the options a window opens with, so the options are checked.
-  #[gpui_kit::test]
-  fn the_main_window_opens_with_its_title_and_minimum_size(cx: &mut TestAppContext) {
-    let handle = cx.update(|cx| {
-      gpui_kit::init(cx);
-      let options = main_window_options(cx);
-      let title = options.titlebar.as_ref().and_then(|titlebar| titlebar.title.clone());
-      assert_eq!(title, Some(window_title()));
-      assert_eq!(options.window_min_size, Some(size(px(600.0), px(450.0))));
-      assert_eq!(options.app_id.as_deref(), Some(DESKTOP_ID));
-      open_main_window(cx).expect("the main window")
-    });
-    let window = VisualTestContext::from_window(handle, cx);
-    window.run_until_parked();
-    assert_eq!(cx.update(|cx| cx.windows().len()), 1);
   }
 }

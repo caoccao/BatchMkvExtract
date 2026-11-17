@@ -1,0 +1,37 @@
+{
+  "name": "Arctic",
+  "author": "Sam Cao",
+  "url": "https://github.com/caoccao/BatchMkvExtract",
+  "themes": [
+    {
+      "name": "Arctic Light",
+      "mode": "light",
+      "font.size": 14,
+      "colors": {
+        "primary.background": "#4fc3f7",
+        "primary.hover.background": "#3789ad",
+        "primary.active.background": "#3789ad",
+        "primary.foreground": "#000000de",
+        "ring": "#4fc3f7",
+        "link": "#4fc3f7",
+        "link.hover": "#3789ad",
+        "link.active": "#3789ad"
+      }
+    },
+    {
+      "name": "Arctic Dark",
+      "mode": "dark",
+      "font.size": 14,
+      "colors": {
+        "primary.background": "#4fc3f7",
+        "primary.hover.background": "#3789ad",
+        "primary.active.background": "#3789ad",
+        "primary.foreground": "#000000de",
+        "ring": "#4fc3f7",
+        "link": "#4fc3f7",
+        "link.hover": "#72cff9",
+        "link.active": "#72cff9"
+      }
+    }
+  ]
+}

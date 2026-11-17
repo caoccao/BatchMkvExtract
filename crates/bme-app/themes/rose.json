@@ -1,0 +1,37 @@
+{
+  "name": "Rose",
+  "author": "Sam Cao",
+  "url": "https://github.com/caoccao/BatchMkvExtract",
+  "themes": [
+    {
+      "name": "Rose Light",
+      "mode": "light",
+      "font.size": 14,
+      "colors": {
+        "primary.background": "#c2185b",
+        "primary.hover.background": "#881140",
+        "primary.active.background": "#881140",
+        "primary.foreground": "#ffffff",
+        "ring": "#c2185b",
+        "link": "#c2185b",
+        "link.hover": "#881140",
+        "link.active": "#881140"
+      }
+    },
+    {
+      "name": "Rose Dark",
+      "mode": "dark",
+      "font.size": 14,
+      "colors": {
+        "primary.background": "#c2185b",
+        "primary.hover.background": "#881140",
+        "primary.active.background": "#881140",
+        "primary.foreground": "#ffffff",
+        "ring": "#c2185b",
+        "link": "#c2185b",
+        "link.hover": "#ce467c",
+        "link.active": "#ce467c"
+      }
+    }
+  ]
+}

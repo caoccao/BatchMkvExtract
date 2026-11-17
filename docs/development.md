@@ -13,7 +13,7 @@ The new application is a Cargo workspace at the repository root (one `Cargo.lock
 
 - `crates/bme-core` — the UI-free core: config file, per-drive extract queue, the `mkvextract` arguments and output file names (`extract_args.rs`, ported from `extract-utils.ts`), MKVToolNix (`mkvmerge -J` track listing, `mkvextract` launch), file intake, BetterMediaInfo, update check. `tests/extract_args_golden.rs` checks `extract_args` against `tests/golden/*.json`, recorded from the TypeScript.
 - `crates/bme-platform` — per-OS integrations GPUI lacks (taskbar / Dock / launcher progress, the display of a window).
-- `crates/bme-app` — the gpui-kit application, package `BatchMkvExtract` (library `batch_mkvextract` and a three-line binary), with the packaging metadata and `packaging/`. For now it opens one window with the app's name and version; `src/domain/` already holds the queue status rules, Group Mode's grouping, the labels and word navigation.
+- `crates/bme-app` — the gpui-kit application, package `BatchMkvExtract` (library `batch_mkvextract` and a three-line binary), with the packaging metadata and `packaging/`. It runs BatchMkvMerge's application shell: toolbar, tabs, Welcome, About, status bar, update banner, nine locales (`locales/`), twenty themes (`themes/`), window geometry and the close guard; the toolbar buttons whose stores come later are disabled. `src/domain/` holds the queue status rules, Group Mode's grouping, the labels, the localised extraction and track-listing errors and word navigation.
 
 The Rust toolchain is pinned in `rust-toolchain.toml` at the repository root (1.100.0; gpui-kit needs 1.92 or newer). The workspace commands:
 
@@ -25,6 +25,8 @@ cargo build --profile dist -p BatchMkvExtract            # installer build: rele
 cargo packager --profile dist -p BatchMkvExtract -f app,dmg   # or nsis,wix / deb,appimage (cargo-packager 0.11.8)
 cargo generate-rpm --profile dist -p crates/bme-app      # .rpm on Linux (cargo-generate-rpm 0.21.1)
 ```
+
+To try the app by hand without touching your own settings (it reads and writes the config file from Phase 3), start it with a scratch home: `HOME=/tmp/bme-home cargo run --release -p BatchMkvExtract` (on macOS and Linux the config directory follows `$HOME`; on Linux only while `XDG_CONFIG_HOME` is unset).
 
 ## Tech Stack
 

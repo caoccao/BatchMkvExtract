@@ -1,0 +1,37 @@
+{
+  "name": "Lavender",
+  "author": "Sam Cao",
+  "url": "https://github.com/caoccao/BatchMkvExtract",
+  "themes": [
+    {
+      "name": "Lavender Light",
+      "mode": "light",
+      "font.size": 14,
+      "colors": {
+        "primary.background": "#9575cd",
+        "primary.hover.background": "#685290",
+        "primary.active.background": "#685290",
+        "primary.foreground": "#ffffff",
+        "ring": "#9575cd",
+        "link": "#9575cd",
+        "link.hover": "#685290",
+        "link.active": "#685290"
+      }
+    },
+    {
+      "name": "Lavender Dark",
+      "mode": "dark",
+      "font.size": 14,
+      "colors": {
+        "primary.background": "#9575cd",
+        "primary.hover.background": "#685290",
+        "primary.active.background": "#685290",
+        "primary.foreground": "#ffffff",
+        "ring": "#9575cd",
+        "link": "#9575cd",
+        "link.hover": "#aa91d7",
+        "link.active": "#aa91d7"
+      }
+    }
+  ]
+}

@@ -19,21 +19,29 @@ name = "BatchMkvExtract"
 path = "src/main.rs"
 
 [dependencies]
+anyhow.workspace = true
 bme-core = { path = "../bme-core" }
-# The queue's Start and End clock times in local time.
+# The display a window is on (Windows); later the taskbar, Dock and launcher
+# progress.
+bme-platform = { path = "../bme-platform" }
+# The queue's Start and End clock times in local time, the log's timestamps.
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 gpui-kit = "=0.10.0"
 log.workspace = true
+# Locale files under `locales/` and `t!`; gpui-kit's i18n needs 4.2 or later.
+rust-i18n = "4.2"
 # Word navigation steps over UAX #29 word segments.
 unicode-segmentation = "1"
 
 # Headless test windows use gpui-kit's `test-support` feature; serde_json
-# reads the golden values of bme-core/tests/golden.
+# reads the locale files and the golden values of bme-core/tests/golden.
 [dev-dependencies]
 gpui-kit = { version = "=0.10.0", features = ["test-support"] }
 serde_json.workspace = true
 
 [build-dependencies]
+# Wrap the toolbar and card PNGs for GPUI's theme-tinted icon renderer.
+base64 = "0.22"
 # GPUI embeds its own Windows manifest, so this resource must not carry one.
 winresource = "0.1"
 

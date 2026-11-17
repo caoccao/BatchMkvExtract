@@ -18,7 +18,9 @@
 //! UI-domain logic without GPUI: what the cards, the queue and the inputs
 //! compute, tested without a window.
 
+pub mod extract_error;
 pub mod format;
 pub mod grouping;
 pub mod status;
+pub mod track_error;
 pub mod word_navigation;

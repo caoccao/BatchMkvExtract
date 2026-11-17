@@ -6,10 +6,14 @@ version = 4
 name = "BatchMkvExtract"
 version = "0.3.0"
 dependencies = [
+ "anyhow",
+ "base64 0.22.1",
  "bme-core",
+ "bme-platform",
  "chrono",
  "gpui-kit",
  "log",
+ "rust-i18n",
  "serde_json",
  "unicode-segmentation",
  "winresource",
