@@ -16,6 +16,7 @@
     "openInBetterMediaInfo": "BetterMediaInfo で開く",
     "outputPathNotWritable": "出力先に書き込めません。別のパスを選択してください。",
     "outputPathDoesNotExist": "出力先が存在しません。作成されます。",
+    "outputPathHint": "空欄のままにすると、既定の出力先が使われます。",
     "commandCopied": "コマンドをクリップボードにコピーしました。",
     "extractionComplete": "抽出が完了しました。",
     "noTracks": "トラックが見つかりません。",
@@ -25,7 +26,9 @@
       "type": "種類",
       "codec": "コーデック",
       "trackName": "トラック名",
-      "language": "言語"
+      "language": "言語",
+      "selectAll": "すべて選択",
+      "tracks": "トラック"
     },
     "error": {
       "mkvmergeNotAvailable": "mkvmerge が使用できません。設定で MKVToolNix のパスを確認してください。%{detail}",

@@ -15,9 +15,8 @@
 *   limitations under the License.
 */
 
-//! The File List and Queue tabs, plus the closable About tab. The File List
-//! shows the Welcome page while it has no files; the Queue tab stays empty
-//! until its view exists.
+//! The File List and Queue tabs, plus the closable About tab. The Queue tab
+//! stays empty until its view exists.
 
 use gpui_kit::assets::IconName;
 use gpui_kit::base::TestSupportExt;
@@ -44,6 +43,10 @@ impl MainContent {
       stores,
       _subscriptions: subscriptions,
     }
+  }
+
+  pub fn file_list(&self) -> &Entity<FileList> {
+    &self.file_list
   }
 
   fn tab(&self, tab: TabType, cx: &mut Context<Self>) -> Tab {

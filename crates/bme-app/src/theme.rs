@@ -28,7 +28,7 @@
 
 use bme_core::config::{Config, DisplayMode, Theme as ThemeName};
 use gpui_kit::component::{Theme, ThemeMode, ThemeRegistry, scroll::ScrollbarMode};
-use gpui_kit::{App, WindowAppearance};
+use gpui_kit::{App, Hsla, WindowAppearance};
 
 /// One configured theme: its registry names, its main colour and its embedded
 /// theme set.
@@ -117,6 +117,16 @@ pub fn resolve_mode(display_mode: DisplayMode, appearance: WindowAppearance) -> 
       WindowAppearance::Light | WindowAppearance::VibrantLight => ThemeMode::Light,
     },
   }
+}
+
+/// Tint selections with the active theme's color at the input selection opacity.
+pub(crate) fn selection_highlight(theme: &Theme) -> Hsla {
+  let color = if theme.is_dark() {
+    theme.link_hover
+  } else {
+    theme.primary
+  };
+  color.opacity(theme.selection.a)
 }
 
 /// Applies the configured theme and mode; `appearance` is the system's (the

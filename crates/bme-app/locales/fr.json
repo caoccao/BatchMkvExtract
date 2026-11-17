@@ -16,6 +16,7 @@
     "openInBetterMediaInfo": "Ouvrir dans BetterMediaInfo",
     "outputPathNotWritable": "Le chemin de sortie n'est pas accessible en écriture. Choisissez un autre chemin.",
     "outputPathDoesNotExist": "Le chemin de sortie n'existe pas. Il sera créé.",
+    "outputPathHint": "Laissez ce champ vide pour utiliser le chemin de sortie par défaut.",
     "commandCopied": "Commande copiée dans le presse-papiers.",
     "extractionComplete": "Extraction terminée.",
     "noTracks": "Aucune piste trouvée.",
@@ -25,7 +26,9 @@
       "type": "Type",
       "codec": "Codec",
       "trackName": "Nom de piste",
-      "language": "Langue"
+      "language": "Langue",
+      "selectAll": "Tout sélectionner",
+      "tracks": "Pistes"
     },
     "error": {
       "mkvmergeNotAvailable": "mkvmerge n'est pas disponible. Vérifiez le chemin MKVToolNix dans Paramètres. %{detail}",

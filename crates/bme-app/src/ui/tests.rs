@@ -59,6 +59,7 @@ pub(super) struct ExtractCalls {
 /// the app uses.
 pub(super) struct Shell {
   pub(super) handle: AnyWindowHandle,
+  pub(super) view: Entity<AppView>,
   pub(super) stores: Stores,
   /// Every config the store wrote, in order.
   pub(super) written: Arc<Mutex<Vec<Config>>>,
@@ -107,7 +108,7 @@ impl Shell {
     let (tracks, _) = fixture_source(fixtures);
     let taskbar: Rc<RefCell<Vec<Option<u8>>>> = Rc::default();
     let progress = taskbar.clone();
-    let (handle, stores) = cx.update(|cx| {
+    let (handle, view, stores) = cx.update(|cx| {
       gpui_kit::init(cx);
       crate::theme::install(cx);
       let config = Config {
@@ -137,14 +138,15 @@ impl Shell {
         ..Default::default()
       };
       let view_stores = stores.clone();
-      let (handle, _) = gpui_kit::open_window(options, cx, |window, cx| {
+      let (handle, view) = gpui_kit::open_window(options, cx, |window, cx| {
         cx.new(|cx| AppView::new(view_stores, window, cx))
       })
       .expect("open the main window");
-      (handle, stores)
+      (handle, view, stores)
     });
     let shell = Self {
       handle,
+      view,
       stores,
       written,
       extracts,
@@ -244,7 +246,7 @@ impl Shell {
     })
   }
 
-  fn has_dialog(&self, cx: &mut TestAppContext) -> bool {
+  pub(super) fn has_dialog(&self, cx: &mut TestAppContext) -> bool {
     self.window(cx, |window, cx| window.has_active_dialog(cx))
   }
 }
@@ -359,7 +361,6 @@ fn the_toolbar_opens_about_as_a_tab(cx: &mut TestAppContext) {
 fn the_toolbar_enables_what_the_stores_allow(cx: &mut TestAppContext) {
   let shell = Shell::open(cx);
   for id in [
-    "toolbar-global-output",
     "toolbar-extract-all",
     "toolbar-resume-all",
     "toolbar-cancel-all",
@@ -370,6 +371,7 @@ fn the_toolbar_enables_what_the_stores_allow(cx: &mut TestAppContext) {
     assert!(shell.disabled(cx, id), "{id} has nothing to act on");
   }
   for id in [
+    "toolbar-global-output",
     "toolbar-quit-when-complete",
     "toolbar-system-notification",
     "toolbar-topmost-notification",
@@ -1098,10 +1100,11 @@ fn resume_all_and_clear_completed_from_the_toolbar(cx: &mut TestAppContext) {
   assert!(shell.disabled(cx, "toolbar-clear-completed"));
 }
 
-/// The plain boxes follow loading and extracting: a box per file, a failed
-/// listing keeps its box, and a progress event repaints without a new list.
+/// The cards follow loading and extracting: a card per file from the start,
+/// a failed listing keeps its card, and progress events change no list.
 #[gpui_kit::test]
-fn the_boxes_follow_loading_and_extracting(cx: &mut TestAppContext) {
+fn the_cards_follow_loading_and_extracting(cx: &mut TestAppContext) {
+  use crate::ui::cards::FileCard;
   let (a, bad) = ("/media/a.mkv", "/media/bad.mkv");
   let shell = Shell::with_files(cx, movies(&[a]));
   shell.stores.files.update(cx, |files, cx| {
@@ -1110,8 +1113,8 @@ fn the_boxes_follow_loading_and_extracting(cx: &mut TestAppContext) {
   });
   shell.window(cx, |window, cx| {
     window.render_frame(cx);
-    window.find(("file-entry", 0usize));
-    window.find(("file-entry", 1usize));
+    window.within(("file-entry", 0usize)).find(FileCard::element_id(a));
+    window.within(("file-entry", 1usize)).find(FileCard::element_id(bad));
   });
   cx.run_until_parked();
   shell.press(cx, "f3");
@@ -1119,7 +1122,8 @@ fn the_boxes_follow_loading_and_extracting(cx: &mut TestAppContext) {
   shell.send(cx, progress(a, 42));
   shell.window(cx, |window, cx| {
     window.render_frame(cx);
-    window.find(("file-entry", 1usize));
+    window.within(("file-entry", 0usize)).find("card-progress");
+    window.within(("file-entry", 1usize)).find(FileCard::element_id(bad));
   });
   shell.stores.files.read_with(cx, |files, _| {
     assert!(matches!(files.load_state(a), crate::state::files::LoadState::Loaded));

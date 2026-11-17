@@ -16,6 +16,7 @@
     "openInBetterMediaInfo": "在 BetterMediaInfo 中打开",
     "outputPathNotWritable": "输出路径不可写。请选择其他路径。",
     "outputPathDoesNotExist": "输出路径不存在。将会创建。",
+    "outputPathHint": "留空以使用默认输出路径。",
     "commandCopied": "命令已复制到剪贴板。",
     "extractionComplete": "提取完成。",
     "noTracks": "未找到轨道。",
@@ -25,7 +26,9 @@
       "type": "类型",
       "codec": "编码",
       "trackName": "轨道名称",
-      "language": "语言"
+      "language": "语言",
+      "selectAll": "全选",
+      "tracks": "轨道"
     },
     "error": {
       "mkvmergeNotAvailable": "mkvmerge 不可用。请在设置中检查 MKVToolNix 路径。%{detail}",

@@ -16,6 +16,7 @@
     "openInBetterMediaInfo": "Apri in BetterMediaInfo",
     "outputPathNotWritable": "Il percorso destinazione non è scrivibile. Scegli un altro percorso.",
     "outputPathDoesNotExist": "Il percorso destinazione non esiste. Verrà creato.",
+    "outputPathHint": "Lascia vuoto per usare il percorso di destinazione predefinito.",
     "commandCopied": "Comando copiato negli appunti.",
     "extractionComplete": "Estrazione completata.",
     "noTracks": "Nessuna traccia trovata.",
@@ -25,7 +26,9 @@
       "type": "Tipo",
       "codec": "Codec",
       "trackName": "Nome traccia",
-      "language": "Lingua"
+      "language": "Lingua",
+      "selectAll": "Seleziona tutto",
+      "tracks": "Tracce"
     },
     "error": {
       "mkvmergeNotAvailable": "mkvmerge non è disponibile. Controlla il percorso MKVToolNix in Impostazioni. %{detail}",

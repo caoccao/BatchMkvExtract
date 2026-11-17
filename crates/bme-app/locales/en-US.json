@@ -16,6 +16,7 @@
     "openInBetterMediaInfo": "Open in BetterMediaInfo",
     "outputPathNotWritable": "The output path is not writable. Please choose another path.",
     "outputPathDoesNotExist": "The output path doesn't exist. It will be created.",
+    "outputPathHint": "Leave blank to use the default output path.",
     "commandCopied": "Command copied to clipboard.",
     "extractionComplete": "Extraction complete.",
     "noTracks": "No tracks found.",
@@ -25,7 +26,9 @@
       "type": "Type",
       "codec": "Codec",
       "trackName": "Track Name",
-      "language": "Language"
+      "language": "Language",
+      "selectAll": "Select all",
+      "tracks": "Tracks"
     },
     "error": {
       "mkvmergeNotAvailable": "mkvmerge is not available. Please check the MKVToolNix path in Settings. %{detail}",

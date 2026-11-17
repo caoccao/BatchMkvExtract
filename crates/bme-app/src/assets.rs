@@ -84,7 +84,7 @@ wrapped_icons!(CARD_ICONS, "cards"; "output-folder", "copy-command", "delete");
 
 // Lucide icons the UI needs that are not part of gpui-kit's default 106-icon
 // bundle; every icon is in the `IconName` enum, only the SVGs are opt-in.
-icon_assets!(ExtraIcons, [ChevronsRight, LogOut, X]);
+icon_assets!(ExtraIcons, [ChevronsRight, Clock, LogOut, Scissors, X]);
 
 /// The asset source registered with the application.
 pub struct AppAssets;

@@ -16,6 +16,7 @@
     "openInBetterMediaInfo": "In BetterMediaInfo öffnen",
     "outputPathNotWritable": "Der Ausgabepfad ist nicht beschreibbar. Bitte wähle einen anderen Pfad.",
     "outputPathDoesNotExist": "Der Ausgabepfad existiert nicht. Er wird erstellt.",
+    "outputPathHint": "Leer lassen, um den Standard-Ausgabepfad zu verwenden.",
     "commandCopied": "Befehl in die Zwischenablage kopiert.",
     "extractionComplete": "Extraktion abgeschlossen.",
     "noTracks": "Keine Spuren gefunden.",
@@ -25,7 +26,9 @@
       "type": "Typ",
       "codec": "Codec",
       "trackName": "Spurname",
-      "language": "Sprache"
+      "language": "Sprache",
+      "selectAll": "Alle auswählen",
+      "tracks": "Spuren"
     },
     "error": {
       "mkvmergeNotAvailable": "mkvmerge ist nicht verfügbar. Bitte MKVToolNix-Pfad in den Einstellungen prüfen. %{detail}",

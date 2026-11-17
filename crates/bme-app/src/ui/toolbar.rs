@@ -18,8 +18,8 @@
 //! The single-row toolbar and its menus. Actions that do not fit are shown
 //! in an overflow menu. Profile also opens with F9.
 //!
-//! Every button of the toolbar is drawn; the global output path (its dialog
-//! comes with the cards) and Settings are disabled until they exist.
+//! Every button of the toolbar is drawn; Settings is disabled until its
+//! dialog exists. The global output path is highlighted while one is set.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -37,6 +37,7 @@ use crate::actions;
 use crate::assets::{OUTPUT_DIRECTORY_ICON_NAME, QUIT_ICON_NAME, toolbar_icon};
 use crate::state::ui::ToolbarMenu;
 use crate::state::{Stores, TabType};
+use crate::ui::output_dialog::{OutputDialogRequest, OutputPathDialog};
 
 const BUTTON_SIZE: Pixels = px(40.0);
 const BUTTON_GAP: Pixels = px(2.0);
@@ -62,8 +63,9 @@ enum ToolbarAction {
 }
 
 impl ToolbarAction {
-  fn run(self, stores: &Stores, _window: &mut Window, cx: &mut App) {
+  fn run(self, stores: &Stores, window: &mut Window, cx: &mut App) {
     match self {
+      Self::OutputPath => open_global_output_dialog(stores, window, cx),
       Self::ExtractAll => actions::extract_all(stores, cx).detach(),
       Self::ResumeAll => actions::resume_all(stores, cx).detach(),
       Self::CancelAll => actions::cancel_all(stores, cx),
@@ -76,10 +78,22 @@ impl ToolbarAction {
       Self::Settings => stores.ui.update(cx, |ui, cx| ui.open_settings(cx)),
       Self::About => stores.ui.update(cx, |ui, cx| ui.open_about(cx)),
       Self::Menu(menu) => stores.ui.update(cx, |ui, cx| ui.show_menu(menu, cx)),
-      // Disabled until the output path dialog exists.
-      Self::OutputPath => {}
     }
   }
+}
+
+/// The session's default output directory (`setGlobalOutputDir`); clearing
+/// the field resets it, so each file goes to its own folder again.
+fn open_global_output_dialog(stores: &Stores, window: &mut Window, cx: &mut App) {
+  let files = stores.files.clone();
+  let request = OutputDialogRequest {
+    title: tr!("toolbar.setGlobalOutputPath"),
+    initial: files.read(cx).global_output_dir().unwrap_or_default().to_string(),
+    on_confirm: Rc::new(move |value: String, cx: &mut App| {
+      files.update(cx, |files, cx| files.set_global_output_dir(value, cx));
+    }),
+  };
+  OutputPathDialog::open(request, window, cx);
 }
 
 /// A button's presentation and command are shared by the toolbar and its menu.
@@ -344,6 +358,7 @@ impl Render for Toolbar {
     let can_clear_completed = actions::can_clear_completed(stores, cx);
     let can_clear = actions::can_clear(stores, cx);
     let group_mode = stores.files.read(cx).group_mode();
+    let has_global_output = stores.files.read(cx).global_output_dir().is_some();
     let ui = self.stores.ui.read(cx);
     let active_tab = ui.active_tab();
     let quit = ui.quit_when_complete();
@@ -372,8 +387,8 @@ impl Render for Toolbar {
         "toolbar-global-output",
         OUTPUT_DIRECTORY_ICON_NAME,
         tr!("toolbar.setGlobalOutputPath"),
-        Some(muted),
-        false,
+        Some(if has_global_output { primary } else { muted }),
+        true,
         ToolbarAction::OutputPath,
       )),
       None,
