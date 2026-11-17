@@ -111,7 +111,7 @@ impl FileStore {
   }
 
   /// A store with a fixed profile, following no config. Group Mode starts as
-  /// the profile's `defaultGroupMode` (0.3.0's `initConfig`).
+  /// the profile's `defaultGroupMode`, as at 0.3.0's start.
   pub fn with_profile(profile: Option<&ConfigProfile>, source: TrackSource) -> Self {
     Self {
       files: Vec::new(),
@@ -154,7 +154,7 @@ impl FileStore {
     self.file_selected_ids.get(file).map(Vec::as_slice)
   }
 
-  /// The selected rows of `file` in table order (`getSelectedTracksForFile`).
+  /// The selected rows of `file` in table order.
   pub fn selected_tracks(&self, file: &str) -> Vec<MkvTrack> {
     let (Some(tracks), Some(selected)) = (self.file_tracks.get(file), self.file_selected_ids.get(file)) else {
       return Vec::new();

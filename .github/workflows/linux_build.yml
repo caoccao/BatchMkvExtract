@@ -23,7 +23,7 @@ permissions:
   contents: read
 
 env:
-  BATCH_MKV_EXTRACT_VERSION: 0.3.0
+  BATCH_MKV_EXTRACT_VERSION: 1.0.0
 
 jobs:
   build_package:

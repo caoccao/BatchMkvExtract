@@ -1,7 +1,4 @@
 {
-  "app": {
-    "dropHere": "MKV-Dateien oder einen Ordner hier ablegen"
-  },
   "list": {
     "delete": "Löschen"
   },
@@ -61,13 +58,10 @@
   "tabs": {
     "fileList": "Dateiliste",
     "queue": "Warteschlange",
-    "settings": "Einstellungen",
     "about": "Info",
     "close": "Schließen"
   },
   "queue": {
-    "defaultDrive": "Warteschlange",
-    "cancelAll": "Alle abbrechen",
     "resumeAll": "Alle fortsetzen",
     "clearCompleted": "Abgeschlossene löschen",
     "header": {
@@ -87,9 +81,7 @@
     },
     "resume": "Fortsetzen",
     "quitWhenComplete": "Nach Abschluss beenden",
-    "systemNotification": "Systembenachrichtigung",
     "systemNotificationTooltip": "Systembenachrichtigung nach Abschluss anzeigen.",
-    "topmostNotification": "Benachrichtigung im Vordergrund",
     "topmostNotificationTooltip": "Benachrichtigung im Vordergrund nach Abschluss anzeigen.",
     "warnings": "Mit Warnungen abgeschlossen:"
   },
@@ -122,13 +114,11 @@
     "themeForest": "Wald",
     "themeEmerald": "Smaragd",
     "language": "Sprache",
-    "mkv": "MKV",
     "integration": "Integration",
     "mkvToolNixPath": "MKVToolNix-Pfad",
     "betterMediaInfoPath": "BetterMediaInfo-Pfad",
     "browse": "Durchsuchen",
     "detect": "Erkennen",
-    "clear": "Löschen",
     "mkvToolNixFound": "mkvmerge und mkvextract im MKVToolNix-Pfad gefunden.",
     "mkvToolNixNotFound": "mkvmerge oder mkvextract im MKVToolNix-Pfad nicht gefunden.",
     "betterMediaInfoFound": "BetterMediaInfo gefunden",
@@ -152,7 +142,6 @@
     "autoSelectOnDropForLanguages": "Beim Hinzufügen automatisch auswählen für Sprachen",
     "defaultGroupMode": "Standard-Gruppenmodus",
     "templatePlaceholdersHint": "Platzhalter: {file_name}, {track_id}, {track_number}, {language}, {codec_name}, {track_name}",
-    "resetTemplates": "Auf Standard zurücksetzen",
     "mkvToolNix": "MKVToolNix",
     "betterMediaInfo": "BetterMediaInfo",
     "reset": "Zurücksetzen",
@@ -160,7 +149,6 @@
     "fileNameTemplates": "Dateinamenvorlagen"
   },
   "about": {
-    "title": "Info",
     "tagline": "Batch-GUI für mkvextract",
     "author": "Autor",
     "github": "GitHub"

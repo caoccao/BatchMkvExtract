@@ -15,14 +15,13 @@
 *   limitations under the License.
 */
 
-//! Golden test of the extraction logic ported from 0.3.0's
-//! `src/extract-utils.ts`. The expected values of `tests/golden/*.json` were
-//! recorded by running that TypeScript, unchanged, under Deno before the
-//! Tauri app was removed (`extract_args.json` with a stand-in for Tauri's
-//! path API that follows Tauri's Rust code on a `/` platform), so they pin
-//! 0.3.0's file names and arguments: change them only when the behaviour is
-//! meant to change. `commands.json` is written by hand per platform, because
-//! the copyable command is quoted differently from 0.3.0 on purpose.
+//! Golden test of the extraction logic ported from 0.3.0. The expected values
+//! of `tests/golden/*.json` were recorded by running 0.3.0's own extraction
+//! code, unchanged, under Deno (`extract_args.json` with a stand-in for its
+//! path functions that follows their behaviour on a `/` platform), so they
+//! pin 0.3.0's file names and arguments: change them only when the behaviour
+//! is meant to change. `commands.json` is written by hand per platform,
+//! because the copyable command is quoted differently from 0.3.0 on purpose.
 //! `format_hms.json` is checked by `bme-app`'s `domain::format`.
 
 use std::collections::HashMap;
@@ -63,7 +62,7 @@ fn items(value: &Value) -> &[Value] {
   value.as_array().unwrap_or_else(|| panic!("not an array: {value}"))
 }
 
-/// A row in the shape of 0.3.0's `MkvTrack`.
+/// A row in the shape 0.3.0 recorded.
 fn track(value: &Value) -> MkvTrack {
   MkvTrack {
     id: value["id"].as_i64().unwrap(),
@@ -80,7 +79,7 @@ fn tracks(value: &Value) -> Vec<MkvTrack> {
   items(value).iter().map(track).collect()
 }
 
-/// A profile as the config file stores it (0.3.0's `ConfigProfile`).
+/// A profile as the config file stores it.
 fn profile(value: &Value) -> ConfigProfile {
   serde_json::from_value(value.clone()).unwrap()
 }

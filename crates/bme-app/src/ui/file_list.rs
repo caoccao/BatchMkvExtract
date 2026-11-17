@@ -19,8 +19,8 @@
 //! otherwise one card per entry: a [`FileCard`] per file, a [`GroupCard`]
 //! per group of files with the same folder and track counts.
 //!
-//! The cards are kept by their file or their group key, as 0.3.0's React
-//! keys were, so a card keeps its state (a group's splitter) while files
+//! The cards are kept by their file or their group key, as 0.3.0's cards
+//! were, so a card keeps its state (a group's splitter) while files
 //! come and go around it. Each card is drawn as a cached view at the height
 //! it measured, so a card that changes repaints alone. Files dragged in from
 //! the system outline the list.

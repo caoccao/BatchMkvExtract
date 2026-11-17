@@ -22,7 +22,7 @@ use std::time::{Duration, SystemTime};
 use bme_core::protocol::{MkvTrack, TrackCounts};
 
 /// The emoji the track table and the card summary show for a row type
-/// (0.3.0's `TRACK_TYPE_EMOJI`); `❓` for any other type.
+/// (0.3.0's emoji); `❓` for any other type.
 pub fn track_type_emoji(track_type: &str) -> &'static str {
   match track_type {
     MkvTrack::TYPE_VIDEO => "🎞️",
@@ -139,7 +139,8 @@ mod tests {
     assert_eq!(format_hms(Some(Duration::from_secs(100 * 3600 + 59))), "100:00:59");
   }
 
-  /// 0.3.0's `formatHMS` took milliseconds; a negative span had no duration.
+  /// 0.3.0's duration format took milliseconds; a negative span had no
+  /// duration.
   #[test]
   fn formats_durations_like_the_recorded_format_hms() {
     let golden: serde_json::Value =

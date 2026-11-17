@@ -21,7 +21,7 @@
 //! checkbox per track type, with a language filter for video, audio and
 //! subtitles) and File Name Templates (a template per track type, the
 //! placeholders below). Every control edits the active profile at once, as
-//! 0.3.0's `updateActiveProfile` does. The page has no Reset All; its Reset
+//! in 0.3.0. The page has no Reset All; its Reset
 //! puts the active profile back to a fresh profile of its name.
 
 use std::rc::Rc;

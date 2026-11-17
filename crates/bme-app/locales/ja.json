@@ -1,7 +1,4 @@
 {
-  "app": {
-    "dropHere": ".mkv ファイルまたはフォルダーをここにドロップ"
-  },
   "list": {
     "delete": "削除"
   },
@@ -61,13 +58,10 @@
   "tabs": {
     "fileList": "ファイル一覧",
     "queue": "キュー",
-    "settings": "設定",
     "about": "情報",
     "close": "閉じる"
   },
   "queue": {
-    "defaultDrive": "キュー",
-    "cancelAll": "すべてキャンセル",
     "resumeAll": "すべて再開",
     "clearCompleted": "完了を消去",
     "header": {
@@ -87,9 +81,7 @@
     },
     "resume": "再開",
     "quitWhenComplete": "完了時に終了",
-    "systemNotification": "システム通知",
     "systemNotificationTooltip": "完了時にシステム通知を表示します。",
-    "topmostNotification": "最前面通知",
     "topmostNotificationTooltip": "完了時に最前面の通知を表示します。",
     "warnings": "警告ありで完了:"
   },
@@ -122,13 +114,11 @@
     "themeForest": "フォレスト",
     "themeEmerald": "エメラルド",
     "language": "言語",
-    "mkv": "MKV",
     "integration": "統合",
     "mkvToolNixPath": "MKVToolNix のパス",
     "betterMediaInfoPath": "BetterMediaInfo のパス",
     "browse": "参照",
     "detect": "検出",
-    "clear": "クリア",
     "mkvToolNixFound": "MKVToolNix のパスに mkvmerge と mkvextract が見つかりました。",
     "mkvToolNixNotFound": "MKVToolNix のパスに mkvmerge または mkvextract が見つかりません。",
     "betterMediaInfoFound": "BetterMediaInfo が見つかりました",
@@ -152,7 +142,6 @@
     "autoSelectOnDropForLanguages": "追加時に言語で自動選択",
     "defaultGroupMode": "既定のグループモード",
     "templatePlaceholdersHint": "プレースホルダー: {file_name}, {track_id}, {track_number}, {language}, {codec_name}, {track_name}",
-    "resetTemplates": "デフォルトに戻す",
     "mkvToolNix": "MKVToolNix",
     "betterMediaInfo": "BetterMediaInfo",
     "reset": "リセット",
@@ -160,7 +149,6 @@
     "fileNameTemplates": "ファイル名テンプレート"
   },
   "about": {
-    "title": "情報",
     "tagline": "mkvextract のバッチ GUI",
     "author": "作者",
     "github": "GitHub"

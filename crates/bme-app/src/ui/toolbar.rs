@@ -82,7 +82,7 @@ impl ToolbarAction {
   }
 }
 
-/// The session's default output directory (`setGlobalOutputDir`); clearing
+/// The session's default output directory (the global output path); clearing
 /// the field resets it, so each file goes to its own folder again.
 fn open_global_output_dialog(stores: &Stores, window: &mut Window, cx: &mut App) {
   let files = stores.files.clone();

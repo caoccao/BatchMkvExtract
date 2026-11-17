@@ -17,7 +17,7 @@
 
 //! Group Mode: files of one directory with the same number of tracks of each
 //! type share one group card, whose track selection applies to all of them
-//! (0.3.0's `FileList.tsx`).
+//! (0.3.0's file list).
 
 use std::collections::HashMap;
 

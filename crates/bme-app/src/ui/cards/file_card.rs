@@ -126,7 +126,7 @@ impl FileCard {
   }
 
   /// Set Output Path: the dialog starts from the card's own folder, else the
-  /// session's, else the file's folder (`handleOpenOutputDialog`).
+  /// session's, else the file's folder.
   fn open_output_dialog(&mut self, window: &mut Window, cx: &mut Context<Self>) {
     let files = self.stores.files.read(cx);
     let initial = resolve_output_dir(&self.file, files.output_dir(&self.file), files.global_output_dir());

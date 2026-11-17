@@ -1,7 +1,4 @@
 {
-  "app": {
-    "dropHere": "Rilascia qui i file .mkv o una cartella"
-  },
   "list": {
     "delete": "Elimina"
   },
@@ -61,13 +58,10 @@
   "tabs": {
     "fileList": "Elenco file",
     "queue": "Coda",
-    "settings": "Impostazioni",
     "about": "Info programma",
     "close": "Chiudi"
   },
   "queue": {
-    "defaultDrive": "Coda",
-    "cancelAll": "Interrompi tutto",
     "resumeAll": "Riprendi tutto",
     "clearCompleted": "Cancella completati",
     "header": {
@@ -87,9 +81,7 @@
     },
     "resume": "Riprendi",
     "quitWhenComplete": "Esci al termine",
-    "systemNotification": "Notifica di sistema",
     "systemNotificationTooltip": "Mostra una notifica di sistema al termine.",
-    "topmostNotification": "Notifica in primo piano",
     "topmostNotificationTooltip": "Mostra una notifica in primo piano al termine.",
     "warnings": "Completato con avvisi:"
   },
@@ -122,13 +114,11 @@
     "themeForest": "Foresta",
     "themeEmerald": "Smeraldo",
     "language": "Lingua",
-    "mkv": "MKV",
     "integration": "Integrazione",
     "mkvToolNixPath": "Percorso MKVToolNix",
     "betterMediaInfoPath": "Percorso BetterMediaInfo",
     "browse": "Sfoglia",
     "detect": "Rileva",
-    "clear": "Cancella",
     "mkvToolNixFound": "mkvmerge e mkvextract trovati nel percorso MKVToolNix.",
     "mkvToolNixNotFound": "mkvmerge o mkvextract non trovati nel percorso MKVToolNix.",
     "betterMediaInfoFound": "BetterMediaInfo trovato",
@@ -152,7 +142,6 @@
     "autoSelectOnDropForLanguages": "Seleziona automaticamente ad aggiunta file per lingua",
     "defaultGroupMode": "Modo gruppo predefinito",
     "templatePlaceholdersHint": "Segnaposti: {file_name}, {track_id}, {track_number}, {language}, {codec_name}, {track_name}",
-    "resetTemplates": "Ripristina predefiniti",
     "mkvToolNix": "MKVToolNix",
     "betterMediaInfo": "BetterMediaInfo",
     "reset": "Ripristina",
@@ -160,7 +149,6 @@
     "fileNameTemplates": "Modelli di nome file"
   },
   "about": {
-    "title": "Info programma",
     "tagline": "GUI Batch per mkvextract",
     "author": "Autore",
     "github": "GitHub"

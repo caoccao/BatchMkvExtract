@@ -1,7 +1,4 @@
 {
-  "app": {
-    "dropHere": "Drop .mkv files or a folder here"
-  },
   "list": {
     "delete": "Delete"
   },
@@ -61,13 +58,10 @@
   "tabs": {
     "fileList": "File List",
     "queue": "Queue",
-    "settings": "Settings",
     "about": "About",
     "close": "Close"
   },
   "queue": {
-    "defaultDrive": "Queue",
-    "cancelAll": "Cancel All",
     "resumeAll": "Resume All",
     "clearCompleted": "Clear Completed",
     "header": {
@@ -87,9 +81,7 @@
     },
     "resume": "Resume",
     "quitWhenComplete": "Quit when complete",
-    "systemNotification": "System Notification",
     "systemNotificationTooltip": "Show system notification when complete.",
-    "topmostNotification": "Topmost Notification",
     "topmostNotificationTooltip": "Show topmost notification when complete",
     "warnings": "Completed with warnings:"
   },
@@ -122,13 +114,11 @@
     "themeForest": "Forest",
     "themeEmerald": "Emerald",
     "language": "Language",
-    "mkv": "MKV",
     "integration": "Integration",
     "mkvToolNixPath": "MKVToolNix Path",
     "betterMediaInfoPath": "BetterMediaInfo Path",
     "browse": "Browse",
     "detect": "Detect",
-    "clear": "Clear",
     "mkvToolNixFound": "mkvmerge and mkvextract found under MKVToolNix path.",
     "mkvToolNixNotFound": "mkvmerge or mkvextract not found under MKVToolNix path.",
     "betterMediaInfoFound": "BetterMediaInfo found",
@@ -152,7 +142,6 @@
     "autoSelectOnDropForLanguages": "Auto-select on file add for languages",
     "defaultGroupMode": "Default group mode",
     "templatePlaceholdersHint": "Placeholders: {file_name}, {track_id}, {track_number}, {language}, {codec_name}, {track_name}",
-    "resetTemplates": "Reset to Defaults",
     "mkvToolNix": "MKVToolNix",
     "betterMediaInfo": "BetterMediaInfo",
     "reset": "Reset",
@@ -160,7 +149,6 @@
     "fileNameTemplates": "File Name Templates"
   },
   "about": {
-    "title": "About",
     "tagline": "Batch GUI for mkvextract",
     "author": "Author",
     "github": "GitHub"

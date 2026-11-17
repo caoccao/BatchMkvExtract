@@ -20,7 +20,7 @@
 //!
 //! A group card's table shows its first file's tracks, and its selection is
 //! every member's: a checkbox writes the first file's selection, changed, to
-//! all of them (`GroupCard.tsx`'s `setGroupSelectedIds`). Rows are keyed by
+//! all of them, as 0.3.0's group card did. Rows are keyed by
 //! [`MkvTrack::key`], `"{type}:{id}"`.
 
 use bme_core::protocol::MkvTrack;

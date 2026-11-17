@@ -187,7 +187,7 @@ impl ConfigProfile {
     true
   }
 
-  /// A fresh profile called `name` (0.3.0's `createDefaultProfile`): the
+  /// A fresh profile called `name`, as 0.3.0 made one: the
   /// Default profile's templates and language filters, auto-selecting
   /// subtitle tracks and starting in Group Mode only when it is the Default
   /// profile itself.

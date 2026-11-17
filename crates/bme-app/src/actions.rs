@@ -24,7 +24,7 @@
 //! executor the output directory is created and the `mkvextract` arguments
 //! are built; then each file that is not waiting or extracting is listed as
 //! waiting and handed to the extract queue, in order, so a drive's queue
-//! follows the file list (0.3.0's `enqueueSelectedTracksForFile`). A
+//! follows the file list, as in 0.3.0. A
 //! directory that cannot be created is named in a toast, and that file is
 //! not queued.
 

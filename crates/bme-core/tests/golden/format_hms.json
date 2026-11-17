@@ -1,5 +1,5 @@
 {
-  "description": "formatHMS of 0.3.0's src/extract-utils.ts, recorded under Deno: milliseconds to HH:MM:SS.",
+  "description": "0.3.0's duration format, recorded under Deno: milliseconds to HH:MM:SS.",
   "cases": [
     {
       "ms": 0,

@@ -1,7 +1,4 @@
 {
-  "app": {
-    "dropHere": "Suelta archivos .mkv o una carpeta aquí"
-  },
   "list": {
     "delete": "Eliminar"
   },
@@ -61,13 +58,10 @@
   "tabs": {
     "fileList": "Lista de archivos",
     "queue": "Cola",
-    "settings": "Ajustes",
     "about": "Acerca de",
     "close": "Cerrar"
   },
   "queue": {
-    "defaultDrive": "Cola",
-    "cancelAll": "Cancelar todo",
     "resumeAll": "Reanudar todo",
     "clearCompleted": "Eliminar completados",
     "header": {
@@ -87,9 +81,7 @@
     },
     "resume": "Reanudar",
     "quitWhenComplete": "Salir al finalizar",
-    "systemNotification": "Notificación del sistema",
     "systemNotificationTooltip": "Mostrar una notificación del sistema al finalizar.",
-    "topmostNotification": "Notificación en primer plano",
     "topmostNotificationTooltip": "Mostrar una notificación en primer plano al finalizar.",
     "warnings": "Completado con advertencias:"
   },
@@ -122,13 +114,11 @@
     "themeForest": "Bosque",
     "themeEmerald": "Esmeralda",
     "language": "Idioma",
-    "mkv": "MKV",
     "integration": "Integración",
     "mkvToolNixPath": "Ruta de MKVToolNix",
     "betterMediaInfoPath": "Ruta de BetterMediaInfo",
     "browse": "Examinar",
     "detect": "Detectar",
-    "clear": "Limpiar",
     "mkvToolNixFound": "mkvmerge y mkvextract encontrados en la ruta de MKVToolNix.",
     "mkvToolNixNotFound": "mkvmerge o mkvextract no encontrado en la ruta de MKVToolNix.",
     "betterMediaInfoFound": "BetterMediaInfo encontrado",
@@ -152,7 +142,6 @@
     "autoSelectOnDropForLanguages": "Seleccionar automáticamente al añadir para idiomas",
     "defaultGroupMode": "Modo de grupo predeterminado",
     "templatePlaceholdersHint": "Marcadores: {file_name}, {track_id}, {track_number}, {language}, {codec_name}, {track_name}",
-    "resetTemplates": "Restablecer valores predeterminados",
     "mkvToolNix": "MKVToolNix",
     "betterMediaInfo": "BetterMediaInfo",
     "reset": "Restablecer",
@@ -160,7 +149,6 @@
     "fileNameTemplates": "Plantillas de nombre de archivo"
   },
   "about": {
-    "title": "Acerca de",
     "tagline": "GUI por lotes para mkvextract",
     "author": "Autor",
     "github": "GitHub"

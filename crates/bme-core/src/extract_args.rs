@@ -15,13 +15,13 @@
 *   limitations under the License.
 */
 
-//! The `mkvextract` command of one source file, ported from 0.3.0's
-//! `extract-utils.ts`: the profile's auto-selection of a file's rows, the
-//! output file name of each selected row (the profile's template for the row
-//! type, then the extension of its codec), the arguments `tracks
-//! <id>:<path>… chapters <path> attachments <id>:<path>…`, and the copyable
-//! command. The golden test `tests/extract_args_golden.rs` holds these
-//! functions to the values the TypeScript produced.
+//! The `mkvextract` command of one source file, as 0.3.0 built it: the
+//! profile's auto-selection of a file's rows, the output file name of each
+//! selected row (the profile's template for the row type, then the extension
+//! of its codec), the arguments `tracks <id>:<path>… chapters <path>
+//! attachments <id>:<path>…`, and the copyable command. The golden test
+//! `tests/extract_args_golden.rs` holds these functions to the values
+//! recorded from 0.3.0.
 
 use std::borrow::Cow;
 use std::collections::HashSet;
@@ -145,8 +145,8 @@ pub fn pick_template_for_track_type<'a>(profile: &'a ConfigProfile, track_type: 
   }
 }
 
-/// The profile's auto-selection of a file's rows (0.3.0's
-/// `makeTrackSelector`). A video, audio or subtitle track is selected when
+/// The profile's auto-selection of a file's rows, as in 0.3.0. A video,
+/// audio or subtitle track is selected when
 /// its type's checkbox is on and its language is in the type's
 /// comma-separated list, compared without case; an empty list matches every
 /// language. The chapters row and attachments are selected exactly when their
@@ -328,8 +328,8 @@ pub fn resolve_output_dir(file: &str, override_dir: Option<&str>, global_dir: Op
     .unwrap_or_default()
 }
 
-/// The file `name` inside the directory `dir`, joined as 0.3.0 joined them
-/// (Tauri 2's `path.join`): the two are concatenated with a separator, then
+/// The file `name` inside the directory `dir`, joined as 0.3.0 joined them:
+/// the two are concatenated with a separator, then
 /// the path is normalised without looking at the disk ([`normalize_path`]). A
 /// name that starts with a separator therefore stays inside `dir`, where
 /// [`Path::join`] would replace `dir` with it. An empty result is `.`.
@@ -349,11 +349,11 @@ pub fn join_output_path(dir: &str, name: &str) -> String {
   }
 }
 
-/// Tauri 2's `normalize_path_no_absolute`: the path's components with `.`
-/// and empty ones dropped and each `..` removing the component before it (not
-/// past the root), joined with the platform's separator. Tauri also strips a
-/// Windows `\\?\` prefix where it can (`dunce::simplified`); paths here never
-/// carry one, so that step is left out.
+/// 0.3.0's path normalisation: the path's components with `.` and empty
+/// ones dropped and each `..` removing the component before it (not past the
+/// root), joined with the platform's separator. 0.3.0 also stripped a Windows
+/// `\\?\` prefix where it could; paths here never carry one, so that step is
+/// left out.
 fn normalize_path(path: &Path) -> PathBuf {
   let mut normalized = PathBuf::new();
   for component in path.components() {

@@ -46,8 +46,8 @@ impl MkvTrack {
   pub const TYPE_CHAPTERS: &'static str = "chapters";
   pub const TYPE_ATTACHMENT: &'static str = "attachment";
 
-  /// The row's key in a file's selection, `"{type}:{id}"` (0.3.0's
-  /// `trackKey`): the type keeps a track, the chapters row and an attachment
+  /// The row's key in a file's selection, `"{type}:{id}"` (0.3.0's key):
+  /// the type keeps a track, the chapters row and an attachment
   /// with the same id apart.
   pub fn key(&self) -> String {
     format!("{}:{}", self.track_type, self.id)

@@ -1,5 +1,5 @@
 {
-  "description": "renderTemplate of 0.3.0's src/extract-utils.ts, recorded under Deno: each template against each context.",
+  "description": "0.3.0's template renderer, recorded under Deno: each template against each context.",
   "contexts": [
     {
       "fileName": "Movie",

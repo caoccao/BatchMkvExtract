@@ -1,5 +1,5 @@
 {
-  "description": "getTrackExtension of 0.3.0's src/extract-utils.ts, recorded under Deno: every codec id against every track type.",
+  "description": "0.3.0's track file extensions, recorded under Deno: every codec id against every track type.",
   "types": [
     "video",
     "audio",

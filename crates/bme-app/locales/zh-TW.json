@@ -1,7 +1,4 @@
 {
-  "app": {
-    "dropHere": "將 .mkv 檔案或資料夾拖曳至此"
-  },
   "list": {
     "delete": "刪除"
   },
@@ -61,13 +58,10 @@
   "tabs": {
     "fileList": "檔案清單",
     "queue": "佇列",
-    "settings": "設定",
     "about": "關於",
     "close": "關閉"
   },
   "queue": {
-    "defaultDrive": "佇列",
-    "cancelAll": "全部取消",
     "resumeAll": "全部恢復",
     "clearCompleted": "清除已完成",
     "header": {
@@ -87,9 +81,7 @@
     },
     "resume": "恢復",
     "quitWhenComplete": "完成後結束",
-    "systemNotification": "系統通知",
     "systemNotificationTooltip": "完成時顯示系統通知。",
-    "topmostNotification": "置頂通知",
     "topmostNotificationTooltip": "完成時顯示置頂通知。",
     "warnings": "已完成，有警告:"
   },
@@ -122,13 +114,11 @@
     "themeForest": "森林",
     "themeEmerald": "翡翠",
     "language": "語言",
-    "mkv": "MKV",
     "integration": "整合",
     "mkvToolNixPath": "MKVToolNix 路徑",
     "betterMediaInfoPath": "BetterMediaInfo 路徑",
     "browse": "瀏覽",
     "detect": "偵測",
-    "clear": "清除",
     "mkvToolNixFound": "已在 MKVToolNix 路徑下找到 mkvmerge 和 mkvextract。",
     "mkvToolNixNotFound": "在 MKVToolNix 路徑下未找到 mkvmerge 或 mkvextract。",
     "betterMediaInfoFound": "已找到 BetterMediaInfo",
@@ -152,7 +142,6 @@
     "autoSelectOnDropForLanguages": "加入檔案時依語言自動選取",
     "defaultGroupMode": "預設分組模式",
     "templatePlaceholdersHint": "佔位符: {file_name}, {track_id}, {track_number}, {language}, {codec_name}, {track_name}",
-    "resetTemplates": "還原預設值",
     "mkvToolNix": "MKVToolNix",
     "betterMediaInfo": "BetterMediaInfo",
     "reset": "重設",
@@ -160,7 +149,6 @@
     "fileNameTemplates": "檔案名稱範本"
   },
   "about": {
-    "title": "關於",
     "tagline": "mkvextract 批次圖形介面",
     "author": "作者",
     "github": "GitHub"

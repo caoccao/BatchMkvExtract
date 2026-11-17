@@ -1,9 +1,6 @@
 [workspace]
 resolver = "3"
 members = ["crates/bme-core", "crates/bme-platform", "crates/bme-app"]
-# The Tauri app is kept as unbuilt porting reference until the migration
-# removes it; it is not part of the workspace.
-exclude = ["src-tauri"]
 
 # Dependencies shared by more than one member.
 [workspace.dependencies]

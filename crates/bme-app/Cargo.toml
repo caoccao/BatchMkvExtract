@@ -1,6 +1,6 @@
 [package]
 name = "BatchMkvExtract"
-version = "0.3.0"
+version = "1.0.0"
 description = "A tool to batch extract tracks from MKV files using mkvextract."
 authors = ["Sam Cao"]
 edition = "2024"
@@ -79,7 +79,7 @@ minimum-system-version = "12.0"
 info-plist-path = "packaging/macos/Info.plist"
 
 [package.metadata.packager.nsis]
-# Per-user, like 0.3.0 (Tauri's default): %LOCALAPPDATA%\BatchMkvExtract and
+# Per-user, like 0.3.0's NSIS installer: %LOCALAPPDATA%\BatchMkvExtract and
 # HKCU\...\Uninstall\BatchMkvExtract. cargo-packager 0.11.8 accepts
 # `installMode` or `installer-mode` here, not `install-mode`.
 installMode = "currentUser"

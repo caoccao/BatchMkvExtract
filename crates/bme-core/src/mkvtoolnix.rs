@@ -321,7 +321,7 @@ fn source_problem(file: &str) -> Option<String> {
   }
 }
 
-/// The tracks of `file` from `mkvmerge -J` (0.3.0's `get_mkv_tracks`): its
+/// The tracks of `file` from `mkvmerge -J`, as 0.3.0 listed them: its
 /// tracks, then one `chapters` row when its first chapter edition has
 /// entries, then one row per attachment. Blocking; the caller moves it off
 /// its UI thread.

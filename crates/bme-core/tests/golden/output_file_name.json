@@ -1,5 +1,5 @@
 {
-  "description": "buildOutputFileName of 0.3.0's src/extract-utils.ts, recorded under Deno: every row of the movie, for each profile and file name.",
+  "description": "0.3.0's output file names, recorded under Deno: every row of the movie, for each profile and file name.",
   "tracks": [
     {
       "id": 0,

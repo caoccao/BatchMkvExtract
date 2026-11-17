@@ -32,7 +32,7 @@ use crate::theme::THEMES;
 use crate::ui::{hex, text_button};
 
 /// The nine languages with their config codes and own names (0.3.0's
-/// `LANGUAGE_LABELS`).
+/// labels).
 pub const LANGUAGES: [(Language, &str, &str); 9] = [
   (Language::De, "de", "Deutsch"),
   (Language::EnUS, "en-US", "English (US)"),

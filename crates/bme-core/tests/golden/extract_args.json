@@ -1,5 +1,5 @@
 {
-  "description": "buildExtractArgs of 0.3.0's src/extract-utils.ts, recorded under Deno with a stand-in for Tauri's path API that follows Tauri 2.12.5's Rust code on a `/` platform (file stem, and join = concatenate, then resolve `.`, empty and `..` components). Checked on platforms whose separator is `/`.",
+  "description": "The mkvextract arguments 0.3.0 built, recorded under Deno with a stand-in for its path functions that follows their behaviour on a `/` platform (file stem, and join = concatenate, then resolve `.`, empty and `..` components). Checked on platforms whose separator is `/`.",
   "cases": [
     {
       "description": "Default profile: the subtitles it auto-selects, written next to the source.",

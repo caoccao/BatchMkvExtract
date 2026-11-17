@@ -1,5 +1,5 @@
 {
-  "description": "getParentDir, getFileName and getDriveKey of 0.3.0's src/extract-utils.ts, recorded under Deno.",
+  "description": "0.3.0's parent directory, file name and drive key of a path, recorded under Deno.",
   "cases": [
     {
       "path": "/media/Movie.mkv",

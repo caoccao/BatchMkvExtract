@@ -159,7 +159,7 @@ impl GroupCard {
     ElementId::Name(format!("group:{key}").into())
   }
 
-  /// The output directory every file shares, if any (`groupOutputDir`).
+  /// The output directory every file shares, if any.
   fn group_output_dir(&self, cx: &App) -> Option<String> {
     let files = self.stores.files.read(cx);
     let first = files.output_dir(&self.files[0]).filter(|dir| !dir.is_empty())?;

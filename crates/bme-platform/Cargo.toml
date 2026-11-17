@@ -1,6 +1,6 @@
 [package]
 name = "bme-platform"
-version = "0.3.0"
+version = "1.0.0"
 description = "Per-OS integrations of BatchMkvExtract that GPUI does not provide: taskbar and dock progress, the display of a window."
 authors = ["Sam Cao"]
 edition = "2024"

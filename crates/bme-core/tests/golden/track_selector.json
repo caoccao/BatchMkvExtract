@@ -1,5 +1,5 @@
 {
-  "description": "makeTrackSelector and trackKey of 0.3.0's src/extract-utils.ts, recorded under Deno: the keys each profile selects, in table order.",
+  "description": "0.3.0's profile auto-selection and row keys, recorded under Deno: the keys each profile selects, in table order.",
   "tracks": [
     {
       "id": 0,

@@ -132,8 +132,8 @@ impl ConfigStore {
   }
 
   /// Edits the profile the Settings show: the active one, else the first. An
-  /// edit of its `defaultGroupMode` also sets Group Mode, as 0.3.0's
-  /// `updateActiveProfile` with that field in the patch does.
+  /// edit of its `defaultGroupMode` also sets Group Mode, as an edit of that
+  /// field did in 0.3.0.
   pub fn update_active_profile(&mut self, cx: &mut Context<Self>, edit: impl FnOnce(&mut ConfigProfile)) {
     let Some(index) = active_profile_index(&self.config) else {
       return;
