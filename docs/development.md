@@ -11,9 +11,9 @@ The Tauri app this document describes is being replaced by a native [gpui-kit](h
 
 The new application is a Cargo workspace at the repository root (one `Cargo.lock`, one `target/`); `src-tauri/` is excluded from it:
 
-- `crates/bme-core` — the UI-free core: config file, per-drive extract queue, MKVToolNix (`mkvmerge -J` track listing, `mkvextract` launch), file intake, BetterMediaInfo, update check.
+- `crates/bme-core` — the UI-free core: config file, per-drive extract queue, the `mkvextract` arguments and output file names (`extract_args.rs`, ported from `extract-utils.ts`), MKVToolNix (`mkvmerge -J` track listing, `mkvextract` launch), file intake, BetterMediaInfo, update check. `tests/extract_args_golden.rs` checks `extract_args` against `tests/golden/*.json`, recorded from the TypeScript.
 - `crates/bme-platform` — per-OS integrations GPUI lacks (taskbar / Dock / launcher progress, the display of a window).
-- `crates/bme-app` — the gpui-kit application, package `BatchMkvExtract` (library `batch_mkvextract` and a three-line binary), with the packaging metadata and `packaging/`. For now it opens one window with the app's name and version.
+- `crates/bme-app` — the gpui-kit application, package `BatchMkvExtract` (library `batch_mkvextract` and a three-line binary), with the packaging metadata and `packaging/`. For now it opens one window with the app's name and version; `src/domain/` already holds the queue status rules, Group Mode's grouping, the labels and word navigation.
 
 The Rust toolchain is pinned in `rust-toolchain.toml` at the repository root (1.100.0; gpui-kit needs 1.92 or newer). The workspace commands:
 

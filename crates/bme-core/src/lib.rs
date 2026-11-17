@@ -17,9 +17,10 @@
 
 //! UI-free core of BatchMkvExtract.
 //!
-//! The config file, the per-drive extract queue, MKVToolNix detection, the
-//! `mkvmerge -J` track listing and the `mkvextract` launch, file intake and
-//! BetterMediaInfo, and the update check. Nothing in this crate depends on a
+//! The config file, the per-drive extract queue, the `mkvextract` arguments
+//! and output file names, MKVToolNix detection, the `mkvmerge -J` track
+//! listing and the `mkvextract` launch, file intake and BetterMediaInfo, and
+//! the update check. Nothing in this crate depends on a
 //! GUI toolkit or an async runtime: long-running work (extractions, update
 //! checks) runs on plain threads, and callers that need it off their UI
 //! thread move the call there themselves.
@@ -27,6 +28,7 @@
 pub mod config;
 pub mod constants;
 pub mod extract;
+pub mod extract_args;
 pub mod mkvtoolnix;
 pub mod protocol;
 pub mod services;

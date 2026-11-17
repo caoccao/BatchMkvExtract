@@ -20,12 +20,18 @@ path = "src/main.rs"
 
 [dependencies]
 bme-core = { path = "../bme-core" }
+# The queue's Start and End clock times in local time.
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 gpui-kit = "=0.10.0"
 log.workspace = true
+# Word navigation steps over UAX #29 word segments.
+unicode-segmentation = "1"
 
-# Headless test windows use gpui-kit's `test-support` feature.
+# Headless test windows use gpui-kit's `test-support` feature; serde_json
+# reads the golden values of bme-core/tests/golden.
 [dev-dependencies]
 gpui-kit = { version = "=0.10.0", features = ["test-support"] }
+serde_json.workspace = true
 
 [build-dependencies]
 # GPUI embeds its own Windows manifest, so this resource must not carry one.

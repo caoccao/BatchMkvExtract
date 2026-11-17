@@ -1,0 +1,402 @@
+{
+  "description": "buildOutputFileName of 0.3.0's src/extract-utils.ts, recorded under Deno: every row of the movie, for each profile and file name.",
+  "tracks": [
+    {
+      "id": 0,
+      "number": 1,
+      "type": "video",
+      "codec": "AVC/H.264/MPEG-4p10",
+      "codecId": "V_MPEG4/ISO/AVC",
+      "trackName": "Main Feature",
+      "language": "eng"
+    },
+    {
+      "id": 1,
+      "number": 2,
+      "type": "audio",
+      "codec": "AC-3",
+      "codecId": "A_AC3",
+      "trackName": "English 5.1",
+      "language": "eng"
+    },
+    {
+      "id": 2,
+      "number": 3,
+      "type": "audio",
+      "codec": "AAC",
+      "codecId": "A_AAC",
+      "trackName": "Commentary: \"Director\" <cut>",
+      "language": "JPN"
+    },
+    {
+      "id": 3,
+      "number": 4,
+      "type": "subtitles",
+      "codec": "SubRip/SRT",
+      "codecId": "S_TEXT/UTF8",
+      "trackName": "Full",
+      "language": "eng"
+    },
+    {
+      "id": 4,
+      "number": 5,
+      "type": "subtitles",
+      "codec": "HDMV PGS",
+      "codecId": "S_HDMV/PGS",
+      "trackName": "Signs/Songs?",
+      "language": "chi"
+    },
+    {
+      "id": 5,
+      "number": 6,
+      "type": "subtitles",
+      "codec": "SubStationAlpha",
+      "codecId": "S_TEXT/ASS",
+      "trackName": "",
+      "language": "und"
+    },
+    {
+      "id": 6,
+      "number": 7,
+      "type": "subtitles",
+      "codec": "VobSub",
+      "codecId": "S_VOBSUB",
+      "trackName": "Forced|*",
+      "language": "fre"
+    },
+    {
+      "id": 7,
+      "number": 8,
+      "type": "buttons",
+      "codec": "VobButtons",
+      "codecId": "B_VOBBTN",
+      "trackName": "",
+      "language": "und"
+    },
+    {
+      "id": 0,
+      "number": 0,
+      "type": "chapters",
+      "codec": "xml",
+      "codecId": "xml",
+      "trackName": "",
+      "language": ""
+    },
+    {
+      "id": 1,
+      "number": 0,
+      "type": "attachment",
+      "codec": "ttf",
+      "codecId": "ttf",
+      "trackName": "DejaVuSans.ttf",
+      "language": ""
+    },
+    {
+      "id": 2,
+      "number": 0,
+      "type": "attachment",
+      "codec": "jpeg",
+      "codecId": "jpeg",
+      "trackName": "cover",
+      "language": ""
+    },
+    {
+      "id": 8,
+      "number": 9,
+      "type": "audio",
+      "codec": "Opus",
+      "codecId": "A_OPUS",
+      "trackName": "",
+      "language": "ENG"
+    },
+    {
+      "id": 9,
+      "number": 10,
+      "type": "subtitles",
+      "codec": "SubRip/SRT",
+      "codecId": "S_TEXT/UTF8",
+      "trackName": "",
+      "language": "Eng"
+    },
+    {
+      "id": 10,
+      "number": 11,
+      "type": "video",
+      "codec": "HEVC",
+      "codecId": "V_MPEGH/ISO/HEVC",
+      "trackName": "",
+      "language": "und"
+    },
+    {
+      "id": 11,
+      "number": 12,
+      "type": "subtitles",
+      "codec": "SubRip/SRT",
+      "codecId": "S_TEXT/UTF8",
+      "trackName": "",
+      "language": ""
+    },
+    {
+      "id": 12,
+      "number": 13,
+      "type": "images",
+      "codec": "",
+      "codecId": "",
+      "trackName": "",
+      "language": "eng"
+    }
+  ],
+  "profiles": [
+    {
+      "name": "Default",
+      "videoTemplate": "{file_name}.{track_id}.{language}",
+      "audioTemplate": "{file_name}.{track_id}.{language}",
+      "subtitleTemplate": "{file_name}.{track_id}.{language}",
+      "chaptersTemplate": "{file_name}.{track_id}",
+      "attachmentsTemplate": "{file_name}.{track_id}",
+      "selectVideo": false,
+      "selectAudio": false,
+      "selectSubtitle": true,
+      "selectChapters": false,
+      "selectAttachments": false,
+      "videoLanguages": "",
+      "audioLanguages": "",
+      "subtitleLanguages": "eng, chi, spa, ger, fre, jpn",
+      "defaultGroupMode": true
+    },
+    {
+      "name": "Templated",
+      "videoTemplate": "{file_name}.video",
+      "audioTemplate": "{file_name}.{track_number}.{language}.{codec_name}",
+      "subtitleTemplate": "{file_name}.{track_name}",
+      "chaptersTemplate": "{file_name}.chapters",
+      "attachmentsTemplate": "{track_name}",
+      "selectVideo": false,
+      "selectAudio": false,
+      "selectSubtitle": false,
+      "selectChapters": false,
+      "selectAttachments": false,
+      "videoLanguages": "",
+      "audioLanguages": "",
+      "subtitleLanguages": "eng, chi, spa, ger, fre, jpn",
+      "defaultGroupMode": false
+    },
+    {
+      "name": "Empty",
+      "videoTemplate": "",
+      "audioTemplate": "",
+      "subtitleTemplate": "",
+      "chaptersTemplate": "",
+      "attachmentsTemplate": "",
+      "selectVideo": false,
+      "selectAudio": false,
+      "selectSubtitle": false,
+      "selectChapters": false,
+      "selectAttachments": false,
+      "videoLanguages": "",
+      "audioLanguages": "",
+      "subtitleLanguages": "eng, chi, spa, ger, fre, jpn",
+      "defaultGroupMode": false
+    }
+  ],
+  "cases": [
+    {
+      "profile": 0,
+      "fileNameWithoutExt": "Movie",
+      "expected": [
+        "Movie.0.eng.h264",
+        "Movie.1.eng.ac3",
+        "Movie.2.JPN.aac",
+        "Movie.3.eng.srt",
+        "Movie.4.chi.sup",
+        "Movie.5.und.ass",
+        "Movie.6.fre.sub",
+        "Movie.7.und.bin",
+        "Movie.0.xml",
+        "Movie.1.ttf",
+        "Movie.2.jpg",
+        "Movie.8.ENG.opus",
+        "Movie.9.Eng.srt",
+        "Movie.10.und.h265",
+        "Movie.11..srt",
+        "Movie.12.eng.bin"
+      ]
+    },
+    {
+      "profile": 0,
+      "fileNameWithoutExt": "My Movie.2024",
+      "expected": [
+        "My Movie.2024.0.eng.h264",
+        "My Movie.2024.1.eng.ac3",
+        "My Movie.2024.2.JPN.aac",
+        "My Movie.2024.3.eng.srt",
+        "My Movie.2024.4.chi.sup",
+        "My Movie.2024.5.und.ass",
+        "My Movie.2024.6.fre.sub",
+        "My Movie.2024.7.und.bin",
+        "My Movie.2024.0.xml",
+        "My Movie.2024.1.ttf",
+        "My Movie.2024.2.jpg",
+        "My Movie.2024.8.ENG.opus",
+        "My Movie.2024.9.Eng.srt",
+        "My Movie.2024.10.und.h265",
+        "My Movie.2024.11..srt",
+        "My Movie.2024.12.eng.bin"
+      ]
+    },
+    {
+      "profile": 0,
+      "fileNameWithoutExt": "映画",
+      "expected": [
+        "映画.0.eng.h264",
+        "映画.1.eng.ac3",
+        "映画.2.JPN.aac",
+        "映画.3.eng.srt",
+        "映画.4.chi.sup",
+        "映画.5.und.ass",
+        "映画.6.fre.sub",
+        "映画.7.und.bin",
+        "映画.0.xml",
+        "映画.1.ttf",
+        "映画.2.jpg",
+        "映画.8.ENG.opus",
+        "映画.9.Eng.srt",
+        "映画.10.und.h265",
+        "映画.11..srt",
+        "映画.12.eng.bin"
+      ]
+    },
+    {
+      "profile": 1,
+      "fileNameWithoutExt": "Movie",
+      "expected": [
+        "Movie.video.h264",
+        "Movie.2.eng.AC-3.ac3",
+        "Movie.3.JPN.AAC.aac",
+        "Movie.Full.srt",
+        "Movie.Signs_Songs_.sup",
+        "Movie..ass",
+        "Movie.Forced__.sub",
+        "Movie.video.bin",
+        "Movie.chapters.xml",
+        "DejaVuSans.ttf.ttf",
+        "cover.jpg",
+        "Movie.9.ENG.Opus.opus",
+        "Movie..srt",
+        "Movie.video.h265",
+        "Movie..srt",
+        "Movie.video.bin"
+      ]
+    },
+    {
+      "profile": 1,
+      "fileNameWithoutExt": "My Movie.2024",
+      "expected": [
+        "My Movie.2024.video.h264",
+        "My Movie.2024.2.eng.AC-3.ac3",
+        "My Movie.2024.3.JPN.AAC.aac",
+        "My Movie.2024.Full.srt",
+        "My Movie.2024.Signs_Songs_.sup",
+        "My Movie.2024..ass",
+        "My Movie.2024.Forced__.sub",
+        "My Movie.2024.video.bin",
+        "My Movie.2024.chapters.xml",
+        "DejaVuSans.ttf.ttf",
+        "cover.jpg",
+        "My Movie.2024.9.ENG.Opus.opus",
+        "My Movie.2024..srt",
+        "My Movie.2024.video.h265",
+        "My Movie.2024..srt",
+        "My Movie.2024.video.bin"
+      ]
+    },
+    {
+      "profile": 1,
+      "fileNameWithoutExt": "映画",
+      "expected": [
+        "映画.video.h264",
+        "映画.2.eng.AC-3.ac3",
+        "映画.3.JPN.AAC.aac",
+        "映画.Full.srt",
+        "映画.Signs_Songs_.sup",
+        "映画..ass",
+        "映画.Forced__.sub",
+        "映画.video.bin",
+        "映画.chapters.xml",
+        "DejaVuSans.ttf.ttf",
+        "cover.jpg",
+        "映画.9.ENG.Opus.opus",
+        "映画..srt",
+        "映画.video.h265",
+        "映画..srt",
+        "映画.video.bin"
+      ]
+    },
+    {
+      "profile": 2,
+      "fileNameWithoutExt": "Movie",
+      "expected": [
+        ".h264",
+        ".ac3",
+        ".aac",
+        ".srt",
+        ".sup",
+        ".ass",
+        ".sub",
+        ".bin",
+        ".xml",
+        ".ttf",
+        ".jpg",
+        ".opus",
+        ".srt",
+        ".h265",
+        ".srt",
+        ".bin"
+      ]
+    },
+    {
+      "profile": 2,
+      "fileNameWithoutExt": "My Movie.2024",
+      "expected": [
+        ".h264",
+        ".ac3",
+        ".aac",
+        ".srt",
+        ".sup",
+        ".ass",
+        ".sub",
+        ".bin",
+        ".xml",
+        ".ttf",
+        ".jpg",
+        ".opus",
+        ".srt",
+        ".h265",
+        ".srt",
+        ".bin"
+      ]
+    },
+    {
+      "profile": 2,
+      "fileNameWithoutExt": "映画",
+      "expected": [
+        ".h264",
+        ".ac3",
+        ".aac",
+        ".srt",
+        ".sup",
+        ".ass",
+        ".sub",
+        ".bin",
+        ".xml",
+        ".ttf",
+        ".jpg",
+        ".opus",
+        ".srt",
+        ".h265",
+        ".srt",
+        ".bin"
+      ]
+    }
+  ]
+}

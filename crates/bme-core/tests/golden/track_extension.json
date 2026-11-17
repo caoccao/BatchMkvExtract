@@ -1,0 +1,990 @@
+{
+  "description": "getTrackExtension of 0.3.0's src/extract-utils.ts, recorded under Deno: every codec id against every track type.",
+  "types": [
+    "video",
+    "audio",
+    "subtitles",
+    "buttons",
+    "chapters",
+    "attachment",
+    "images",
+    ""
+  ],
+  "cases": [
+    {
+      "codecId": "V_MPEGH/ISO/HEVC",
+      "expected": [
+        "h265",
+        "h265",
+        "h265",
+        "h265",
+        "h265",
+        "h265",
+        "h265",
+        "h265"
+      ]
+    },
+    {
+      "codecId": "V_MPEG4/ISO/AVC",
+      "expected": [
+        "h264",
+        "h264",
+        "h264",
+        "h264",
+        "h264",
+        "h264",
+        "h264",
+        "h264"
+      ]
+    },
+    {
+      "codecId": "V_MPEG1",
+      "expected": [
+        "mpg",
+        "mpg",
+        "mpg",
+        "mpg",
+        "mpg",
+        "mpg",
+        "mpg",
+        "mpg"
+      ]
+    },
+    {
+      "codecId": "V_MPEG2",
+      "expected": [
+        "mpg",
+        "mpg",
+        "mpg",
+        "mpg",
+        "mpg",
+        "mpg",
+        "mpg",
+        "mpg"
+      ]
+    },
+    {
+      "codecId": "V_MPEG4/ISO/SP",
+      "expected": [
+        "mpeg4",
+        "mpeg4",
+        "mpeg4",
+        "mpeg4",
+        "mpeg4",
+        "mpeg4",
+        "mpeg4",
+        "mpeg4"
+      ]
+    },
+    {
+      "codecId": "V_MPEG4/ISO/ASP",
+      "expected": [
+        "mpeg4",
+        "mpeg4",
+        "mpeg4",
+        "mpeg4",
+        "mpeg4",
+        "mpeg4",
+        "mpeg4",
+        "mpeg4"
+      ]
+    },
+    {
+      "codecId": "V_MPEG4/ISO/AP",
+      "expected": [
+        "mpeg4",
+        "mpeg4",
+        "mpeg4",
+        "mpeg4",
+        "mpeg4",
+        "mpeg4",
+        "mpeg4",
+        "mpeg4"
+      ]
+    },
+    {
+      "codecId": "V_MPEG4/MS/V3",
+      "expected": [
+        "mpeg4",
+        "mpeg4",
+        "mpeg4",
+        "mpeg4",
+        "mpeg4",
+        "mpeg4",
+        "mpeg4",
+        "mpeg4"
+      ]
+    },
+    {
+      "codecId": "V_MS/VFW/FOURCC",
+      "expected": [
+        "avi",
+        "avi",
+        "avi",
+        "avi",
+        "avi",
+        "avi",
+        "avi",
+        "avi"
+      ]
+    },
+    {
+      "codecId": "V_VP8",
+      "expected": [
+        "ivf",
+        "ivf",
+        "ivf",
+        "ivf",
+        "ivf",
+        "ivf",
+        "ivf",
+        "ivf"
+      ]
+    },
+    {
+      "codecId": "V_VP9",
+      "expected": [
+        "ivf",
+        "ivf",
+        "ivf",
+        "ivf",
+        "ivf",
+        "ivf",
+        "ivf",
+        "ivf"
+      ]
+    },
+    {
+      "codecId": "V_AV1",
+      "expected": [
+        "ivf",
+        "ivf",
+        "ivf",
+        "ivf",
+        "ivf",
+        "ivf",
+        "ivf",
+        "ivf"
+      ]
+    },
+    {
+      "codecId": "V_THEORA",
+      "expected": [
+        "ogg",
+        "ogg",
+        "ogg",
+        "ogg",
+        "ogg",
+        "ogg",
+        "ogg",
+        "ogg"
+      ]
+    },
+    {
+      "codecId": "V_PRORES",
+      "expected": [
+        "prores",
+        "prores",
+        "prores",
+        "prores",
+        "prores",
+        "prores",
+        "prores",
+        "prores"
+      ]
+    },
+    {
+      "codecId": "V_FFV1",
+      "expected": [
+        "ffv1",
+        "ffv1",
+        "ffv1",
+        "ffv1",
+        "ffv1",
+        "ffv1",
+        "ffv1",
+        "ffv1"
+      ]
+    },
+    {
+      "codecId": "V_REAL/RV40",
+      "expected": [
+        "rm",
+        "rm",
+        "rm",
+        "rm",
+        "rm",
+        "rm",
+        "rm",
+        "rm"
+      ]
+    },
+    {
+      "codecId": "V_REAL/",
+      "expected": [
+        "rm",
+        "rm",
+        "rm",
+        "rm",
+        "rm",
+        "rm",
+        "rm",
+        "rm"
+      ]
+    },
+    {
+      "codecId": "V_UNCOMPRESSED",
+      "expected": [
+        "bin",
+        "bin",
+        "bin",
+        "bin",
+        "bin",
+        "bin",
+        "bin",
+        "bin"
+      ]
+    },
+    {
+      "codecId": "V_",
+      "expected": [
+        "bin",
+        "bin",
+        "bin",
+        "bin",
+        "bin",
+        "bin",
+        "bin",
+        "bin"
+      ]
+    },
+    {
+      "codecId": "v_vp9",
+      "expected": [
+        "bin",
+        "bin",
+        "srt",
+        "bin",
+        "xml",
+        "v_vp9",
+        "bin",
+        "bin"
+      ]
+    },
+    {
+      "codecId": "A_AC3",
+      "expected": [
+        "ac3",
+        "ac3",
+        "ac3",
+        "ac3",
+        "ac3",
+        "ac3",
+        "ac3",
+        "ac3"
+      ]
+    },
+    {
+      "codecId": "A_AC3/BSID9",
+      "expected": [
+        "ac3",
+        "ac3",
+        "ac3",
+        "ac3",
+        "ac3",
+        "ac3",
+        "ac3",
+        "ac3"
+      ]
+    },
+    {
+      "codecId": "A_AC3/BSID10",
+      "expected": [
+        "ac3",
+        "ac3",
+        "ac3",
+        "ac3",
+        "ac3",
+        "ac3",
+        "ac3",
+        "ac3"
+      ]
+    },
+    {
+      "codecId": "A_EAC3",
+      "expected": [
+        "eac3",
+        "eac3",
+        "eac3",
+        "eac3",
+        "eac3",
+        "eac3",
+        "eac3",
+        "eac3"
+      ]
+    },
+    {
+      "codecId": "A_TRUEHD",
+      "expected": [
+        "thd",
+        "thd",
+        "thd",
+        "thd",
+        "thd",
+        "thd",
+        "thd",
+        "thd"
+      ]
+    },
+    {
+      "codecId": "A_MLP",
+      "expected": [
+        "mlp",
+        "mlp",
+        "mlp",
+        "mlp",
+        "mlp",
+        "mlp",
+        "mlp",
+        "mlp"
+      ]
+    },
+    {
+      "codecId": "A_MPEG/L1",
+      "expected": [
+        "mp1",
+        "mp1",
+        "mp1",
+        "mp1",
+        "mp1",
+        "mp1",
+        "mp1",
+        "mp1"
+      ]
+    },
+    {
+      "codecId": "A_MPEG/L2",
+      "expected": [
+        "mp2",
+        "mp2",
+        "mp2",
+        "mp2",
+        "mp2",
+        "mp2",
+        "mp2",
+        "mp2"
+      ]
+    },
+    {
+      "codecId": "A_MPEG/L3",
+      "expected": [
+        "mp3",
+        "mp3",
+        "mp3",
+        "mp3",
+        "mp3",
+        "mp3",
+        "mp3",
+        "mp3"
+      ]
+    },
+    {
+      "codecId": "A_FLAC",
+      "expected": [
+        "flac",
+        "flac",
+        "flac",
+        "flac",
+        "flac",
+        "flac",
+        "flac",
+        "flac"
+      ]
+    },
+    {
+      "codecId": "A_VORBIS",
+      "expected": [
+        "ogg",
+        "ogg",
+        "ogg",
+        "ogg",
+        "ogg",
+        "ogg",
+        "ogg",
+        "ogg"
+      ]
+    },
+    {
+      "codecId": "A_OPUS",
+      "expected": [
+        "opus",
+        "opus",
+        "opus",
+        "opus",
+        "opus",
+        "opus",
+        "opus",
+        "opus"
+      ]
+    },
+    {
+      "codecId": "A_WAVPACK4",
+      "expected": [
+        "wv",
+        "wv",
+        "wv",
+        "wv",
+        "wv",
+        "wv",
+        "wv",
+        "wv"
+      ]
+    },
+    {
+      "codecId": "A_TTA1",
+      "expected": [
+        "tta",
+        "tta",
+        "tta",
+        "tta",
+        "tta",
+        "tta",
+        "tta",
+        "tta"
+      ]
+    },
+    {
+      "codecId": "A_ALAC",
+      "expected": [
+        "caf",
+        "caf",
+        "caf",
+        "caf",
+        "caf",
+        "caf",
+        "caf",
+        "caf"
+      ]
+    },
+    {
+      "codecId": "A_PCM/INT/LIT",
+      "expected": [
+        "wav",
+        "wav",
+        "wav",
+        "wav",
+        "wav",
+        "wav",
+        "wav",
+        "wav"
+      ]
+    },
+    {
+      "codecId": "A_PCM/FLOAT/IEEE",
+      "expected": [
+        "wav",
+        "wav",
+        "wav",
+        "wav",
+        "wav",
+        "wav",
+        "wav",
+        "wav"
+      ]
+    },
+    {
+      "codecId": "A_PCM",
+      "expected": [
+        "bin",
+        "bin",
+        "bin",
+        "bin",
+        "bin",
+        "bin",
+        "bin",
+        "bin"
+      ]
+    },
+    {
+      "codecId": "A_AAC",
+      "expected": [
+        "aac",
+        "aac",
+        "aac",
+        "aac",
+        "aac",
+        "aac",
+        "aac",
+        "aac"
+      ]
+    },
+    {
+      "codecId": "A_AAC/MPEG4/LC/SBR",
+      "expected": [
+        "aac",
+        "aac",
+        "aac",
+        "aac",
+        "aac",
+        "aac",
+        "aac",
+        "aac"
+      ]
+    },
+    {
+      "codecId": "A_DTS",
+      "expected": [
+        "dts",
+        "dts",
+        "dts",
+        "dts",
+        "dts",
+        "dts",
+        "dts",
+        "dts"
+      ]
+    },
+    {
+      "codecId": "A_DTS/EXPRESS",
+      "expected": [
+        "dts",
+        "dts",
+        "dts",
+        "dts",
+        "dts",
+        "dts",
+        "dts",
+        "dts"
+      ]
+    },
+    {
+      "codecId": "A_REAL/COOK",
+      "expected": [
+        "rm",
+        "rm",
+        "rm",
+        "rm",
+        "rm",
+        "rm",
+        "rm",
+        "rm"
+      ]
+    },
+    {
+      "codecId": "A_MS/ACM",
+      "expected": [
+        "bin",
+        "bin",
+        "bin",
+        "bin",
+        "bin",
+        "bin",
+        "bin",
+        "bin"
+      ]
+    },
+    {
+      "codecId": "A_",
+      "expected": [
+        "bin",
+        "bin",
+        "bin",
+        "bin",
+        "bin",
+        "bin",
+        "bin",
+        "bin"
+      ]
+    },
+    {
+      "codecId": "S_TEXT/UTF8",
+      "expected": [
+        "srt",
+        "srt",
+        "srt",
+        "srt",
+        "srt",
+        "srt",
+        "srt",
+        "srt"
+      ]
+    },
+    {
+      "codecId": "S_TEXT/ASCII",
+      "expected": [
+        "srt",
+        "srt",
+        "srt",
+        "srt",
+        "srt",
+        "srt",
+        "srt",
+        "srt"
+      ]
+    },
+    {
+      "codecId": "S_TEXT/ASS",
+      "expected": [
+        "ass",
+        "ass",
+        "ass",
+        "ass",
+        "ass",
+        "ass",
+        "ass",
+        "ass"
+      ]
+    },
+    {
+      "codecId": "S_ASS",
+      "expected": [
+        "ass",
+        "ass",
+        "ass",
+        "ass",
+        "ass",
+        "ass",
+        "ass",
+        "ass"
+      ]
+    },
+    {
+      "codecId": "S_TEXT/SSA",
+      "expected": [
+        "ssa",
+        "ssa",
+        "ssa",
+        "ssa",
+        "ssa",
+        "ssa",
+        "ssa",
+        "ssa"
+      ]
+    },
+    {
+      "codecId": "S_SSA",
+      "expected": [
+        "ssa",
+        "ssa",
+        "ssa",
+        "ssa",
+        "ssa",
+        "ssa",
+        "ssa",
+        "ssa"
+      ]
+    },
+    {
+      "codecId": "S_TEXT/WEBVTT",
+      "expected": [
+        "vtt",
+        "vtt",
+        "vtt",
+        "vtt",
+        "vtt",
+        "vtt",
+        "vtt",
+        "vtt"
+      ]
+    },
+    {
+      "codecId": "S_TEXT/USF",
+      "expected": [
+        "usf",
+        "usf",
+        "usf",
+        "usf",
+        "usf",
+        "usf",
+        "usf",
+        "usf"
+      ]
+    },
+    {
+      "codecId": "S_VOBSUB",
+      "expected": [
+        "sub",
+        "sub",
+        "sub",
+        "sub",
+        "sub",
+        "sub",
+        "sub",
+        "sub"
+      ]
+    },
+    {
+      "codecId": "S_HDMV/PGS",
+      "expected": [
+        "sup",
+        "sup",
+        "sup",
+        "sup",
+        "sup",
+        "sup",
+        "sup",
+        "sup"
+      ]
+    },
+    {
+      "codecId": "S_HDMV/TEXTST",
+      "expected": [
+        "textst",
+        "textst",
+        "textst",
+        "textst",
+        "textst",
+        "textst",
+        "textst",
+        "textst"
+      ]
+    },
+    {
+      "codecId": "S_KATE",
+      "expected": [
+        "ogg",
+        "ogg",
+        "ogg",
+        "ogg",
+        "ogg",
+        "ogg",
+        "ogg",
+        "ogg"
+      ]
+    },
+    {
+      "codecId": "S_DVBSUB",
+      "expected": [
+        "bin",
+        "bin",
+        "bin",
+        "bin",
+        "bin",
+        "bin",
+        "bin",
+        "bin"
+      ]
+    },
+    {
+      "codecId": "S_TEXT/UTF16",
+      "expected": [
+        "bin",
+        "bin",
+        "bin",
+        "bin",
+        "bin",
+        "bin",
+        "bin",
+        "bin"
+      ]
+    },
+    {
+      "codecId": "S_",
+      "expected": [
+        "bin",
+        "bin",
+        "bin",
+        "bin",
+        "bin",
+        "bin",
+        "bin",
+        "bin"
+      ]
+    },
+    {
+      "codecId": "B_VOBBTN",
+      "expected": [
+        "bin",
+        "bin",
+        "srt",
+        "bin",
+        "xml",
+        "b_vobbtn",
+        "bin",
+        "bin"
+      ]
+    },
+    {
+      "codecId": "xml",
+      "expected": [
+        "bin",
+        "bin",
+        "srt",
+        "bin",
+        "xml",
+        "xml",
+        "bin",
+        "bin"
+      ]
+    },
+    {
+      "codecId": "",
+      "expected": [
+        "bin",
+        "bin",
+        "srt",
+        "bin",
+        "xml",
+        "bin",
+        "bin",
+        "bin"
+      ]
+    },
+    {
+      "codecId": "ttf",
+      "expected": [
+        "bin",
+        "bin",
+        "srt",
+        "bin",
+        "xml",
+        "ttf",
+        "bin",
+        "bin"
+      ]
+    },
+    {
+      "codecId": "jpeg",
+      "expected": [
+        "bin",
+        "bin",
+        "srt",
+        "bin",
+        "xml",
+        "jpg",
+        "bin",
+        "bin"
+      ]
+    },
+    {
+      "codecId": "JPEG",
+      "expected": [
+        "bin",
+        "bin",
+        "srt",
+        "bin",
+        "xml",
+        "jpg",
+        "bin",
+        "bin"
+      ]
+    },
+    {
+      "codecId": "jpg",
+      "expected": [
+        "bin",
+        "bin",
+        "srt",
+        "bin",
+        "xml",
+        "jpg",
+        "bin",
+        "bin"
+      ]
+    },
+    {
+      "codecId": "png",
+      "expected": [
+        "bin",
+        "bin",
+        "srt",
+        "bin",
+        "xml",
+        "png",
+        "bin",
+        "bin"
+      ]
+    },
+    {
+      "codecId": "x-truetype-font",
+      "expected": [
+        "bin",
+        "bin",
+        "srt",
+        "bin",
+        "xml",
+        "ttf",
+        "bin",
+        "bin"
+      ]
+    },
+    {
+      "codecId": "X-TrueType-Font",
+      "expected": [
+        "bin",
+        "bin",
+        "srt",
+        "bin",
+        "xml",
+        "ttf",
+        "bin",
+        "bin"
+      ]
+    },
+    {
+      "codecId": "x-opentype-font",
+      "expected": [
+        "bin",
+        "bin",
+        "srt",
+        "bin",
+        "xml",
+        "otf",
+        "bin",
+        "bin"
+      ]
+    },
+    {
+      "codecId": "font-sfnt",
+      "expected": [
+        "bin",
+        "bin",
+        "srt",
+        "bin",
+        "xml",
+        "otf",
+        "bin",
+        "bin"
+      ]
+    },
+    {
+      "codecId": "otf",
+      "expected": [
+        "bin",
+        "bin",
+        "srt",
+        "bin",
+        "xml",
+        "otf",
+        "bin",
+        "bin"
+      ]
+    },
+    {
+      "codecId": "vnd.ms-opentype",
+      "expected": [
+        "bin",
+        "bin",
+        "srt",
+        "bin",
+        "xml",
+        "vnd.ms-opentype",
+        "bin",
+        "bin"
+      ]
+    },
+    {
+      "codecId": "ÄÖ",
+      "expected": [
+        "bin",
+        "bin",
+        "srt",
+        "bin",
+        "xml",
+        "äö",
+        "bin",
+        "bin"
+      ]
+    }
+  ]
+}

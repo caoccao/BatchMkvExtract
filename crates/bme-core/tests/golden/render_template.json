@@ -1,0 +1,247 @@
+{
+  "description": "renderTemplate of 0.3.0's src/extract-utils.ts, recorded under Deno: each template against each context.",
+  "contexts": [
+    {
+      "fileName": "Movie",
+      "trackId": 2,
+      "trackNumber": 3,
+      "language": "eng",
+      "codecName": "AVC/H.264/MPEG-4p10",
+      "trackName": "Full: \"Forced\" <signs>|?*\\"
+    },
+    {
+      "fileName": "a:b|c",
+      "trackId": 2,
+      "trackNumber": 3,
+      "language": "",
+      "codecName": "",
+      "trackName": ""
+    },
+    {
+      "fileName": "映画 (2024)",
+      "trackId": 0,
+      "trackNumber": 0,
+      "language": "eng",
+      "codecName": "x/y",
+      "trackName": "日本語: 字幕"
+    }
+  ],
+  "cases": [
+    {
+      "template": "{file_name}.{track_id}.{language}",
+      "expected": [
+        "Movie.2.eng",
+        "a:b|c.2.",
+        "映画 (2024).0.eng"
+      ]
+    },
+    {
+      "template": "{file_name}.{track_id}",
+      "expected": [
+        "Movie.2",
+        "a:b|c.2",
+        "映画 (2024).0"
+      ]
+    },
+    {
+      "template": "{file_name}_{track_id}_{track_number}_{language}_{codec_name}_{track_name}",
+      "expected": [
+        "Movie_2_3_eng_AVC_H.264_MPEG-4p10_Full_ _Forced_ _signs_____",
+        "a:b|c_2_3___",
+        "映画 (2024)_0_0_eng_x_y_日本語_ 字幕"
+      ]
+    },
+    {
+      "template": "{track_id}{track_id}{track_number}",
+      "expected": [
+        "223",
+        "223",
+        "000"
+      ]
+    },
+    {
+      "template": "",
+      "expected": [
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "template": "plain text",
+      "expected": [
+        "plain text",
+        "plain text",
+        "plain text"
+      ]
+    },
+    {
+      "template": "{{file_name}}",
+      "expected": [
+        "{file_name}",
+        "{file_name}",
+        "{file_name}"
+      ]
+    },
+    {
+      "template": "{{{file_name}}}",
+      "expected": [
+        "{Movie}",
+        "{a:b|c}",
+        "{映画 (2024)}"
+      ]
+    },
+    {
+      "template": "{{{{file_name}}}}",
+      "expected": [
+        "{{file_name}}",
+        "{{file_name}}",
+        "{{file_name}}"
+      ]
+    },
+    {
+      "template": "}}{{",
+      "expected": [
+        "}{",
+        "}{",
+        "}{"
+      ]
+    },
+    {
+      "template": "{{}}",
+      "expected": [
+        "{}",
+        "{}",
+        "{}"
+      ]
+    },
+    {
+      "template": "{}",
+      "expected": [
+        "{}",
+        "{}",
+        "{}"
+      ]
+    },
+    {
+      "template": "{ file_name }",
+      "expected": [
+        "{ file_name }",
+        "{ file_name }",
+        "{ file_name }"
+      ]
+    },
+    {
+      "template": "{FILE_NAME}.{unknown}.{language}",
+      "expected": [
+        "{FILE_NAME}.{unknown}.eng",
+        "{FILE_NAME}.{unknown}.",
+        "{FILE_NAME}.{unknown}.eng"
+      ]
+    },
+    {
+      "template": "{__proto__}.{constructor}.{toString}",
+      "expected": [
+        "{__proto__}.{constructor}.{toString}",
+        "{__proto__}.{constructor}.{toString}",
+        "{__proto__}.{constructor}.{toString}"
+      ]
+    },
+    {
+      "template": "{file_name",
+      "expected": [
+        "{file_name",
+        "{file_name",
+        "{file_name"
+      ]
+    },
+    {
+      "template": "{a{file_name}",
+      "expected": [
+        "{aMovie",
+        "{aa:b|c",
+        "{a映画 (2024)"
+      ]
+    },
+    {
+      "template": "a{",
+      "expected": [
+        "a{",
+        "a{",
+        "a{"
+      ]
+    },
+    {
+      "template": "{",
+      "expected": [
+        "{",
+        "{",
+        "{"
+      ]
+    },
+    {
+      "template": "}",
+      "expected": [
+        "}",
+        "}",
+        "}"
+      ]
+    },
+    {
+      "template": "a}b",
+      "expected": [
+        "a}b",
+        "a}b",
+        "a}b"
+      ]
+    },
+    {
+      "template": "{{",
+      "expected": [
+        "{",
+        "{",
+        "{"
+      ]
+    },
+    {
+      "template": "}{file_name}{",
+      "expected": [
+        "}Movie{",
+        "}a:b|c{",
+        "}映画 (2024){"
+      ]
+    },
+    {
+      "template": "{file_name}}",
+      "expected": [
+        "Movie}",
+        "a:b|c}",
+        "映画 (2024)}"
+      ]
+    },
+    {
+      "template": "{{file_name}",
+      "expected": [
+        "{file_name}",
+        "{file_name}",
+        "{file_name}"
+      ]
+    },
+    {
+      "template": "{file_name}.{language}/{track_name}",
+      "expected": [
+        "Movie.eng/Full_ _Forced_ _signs_____",
+        "a:b|c./",
+        "映画 (2024).eng/日本語_ 字幕"
+      ]
+    },
+    {
+      "template": "映画.{language}.字幕",
+      "expected": [
+        "映画.eng.字幕",
+        "映画..字幕",
+        "映画.eng.字幕"
+      ]
+    }
+  ]
+}

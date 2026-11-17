@@ -39,8 +39,49 @@ pub struct MkvTrack {
 }
 
 impl MkvTrack {
+  pub const TYPE_VIDEO: &'static str = "video";
+  pub const TYPE_AUDIO: &'static str = "audio";
+  pub const TYPE_SUBTITLES: &'static str = "subtitles";
+  pub const TYPE_BUTTONS: &'static str = "buttons";
   pub const TYPE_CHAPTERS: &'static str = "chapters";
   pub const TYPE_ATTACHMENT: &'static str = "attachment";
+
+  /// The row's key in a file's selection, `"{type}:{id}"` (0.3.0's
+  /// `trackKey`): the type keeps a track, the chapters row and an attachment
+  /// with the same id apart.
+  pub fn key(&self) -> String {
+    format!("{}:{}", self.track_type, self.id)
+  }
+}
+
+/// How many rows of each type a file has: what a card's summary shows and
+/// what Group Mode compares.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+pub struct TrackCounts {
+  pub video: usize,
+  pub audio: usize,
+  pub subtitles: usize,
+  pub chapters: usize,
+  pub attachments: usize,
+}
+
+impl TrackCounts {
+  /// The counts of `tracks`. Buttons and rows of an unknown type are not
+  /// counted.
+  pub fn of(tracks: &[MkvTrack]) -> Self {
+    let mut counts = Self::default();
+    for track in tracks {
+      match track.track_type.as_str() {
+        MkvTrack::TYPE_VIDEO => counts.video += 1,
+        MkvTrack::TYPE_AUDIO => counts.audio += 1,
+        MkvTrack::TYPE_SUBTITLES => counts.subtitles += 1,
+        MkvTrack::TYPE_CHAPTERS => counts.chapters += 1,
+        MkvTrack::TYPE_ATTACHMENT => counts.attachments += 1,
+        _ => {}
+      }
+    }
+    counts
+  }
 }
 
 /// Why a file's tracks could not be listed. The application keeps it per
@@ -92,6 +133,55 @@ pub struct UpdateCheckResult {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  fn row(track_type: &str, id: i64) -> MkvTrack {
+    MkvTrack {
+      id,
+      number: 0,
+      track_type: track_type.into(),
+      codec: String::new(),
+      codec_id: String::new(),
+      track_name: String::new(),
+      language: String::new(),
+    }
+  }
+
+  #[test]
+  fn keys_rows_by_type_and_id() {
+    assert_eq!(row(MkvTrack::TYPE_SUBTITLES, 3).key(), "subtitles:3");
+    assert_eq!(row(MkvTrack::TYPE_CHAPTERS, 0).key(), "chapters:0");
+    assert_ne!(
+      row(MkvTrack::TYPE_ATTACHMENT, 1).key(),
+      row(MkvTrack::TYPE_AUDIO, 1).key()
+    );
+  }
+
+  #[test]
+  fn counts_rows_per_type() {
+    assert_eq!(TrackCounts::of(&[]), TrackCounts::default());
+    let tracks = [
+      row(MkvTrack::TYPE_VIDEO, 0),
+      row(MkvTrack::TYPE_AUDIO, 1),
+      row(MkvTrack::TYPE_AUDIO, 2),
+      row(MkvTrack::TYPE_SUBTITLES, 3),
+      row(MkvTrack::TYPE_BUTTONS, 4),
+      row("images", 5),
+      row(MkvTrack::TYPE_CHAPTERS, 0),
+      row(MkvTrack::TYPE_ATTACHMENT, 1),
+      row(MkvTrack::TYPE_ATTACHMENT, 2),
+      row(MkvTrack::TYPE_ATTACHMENT, 3),
+    ];
+    assert_eq!(
+      TrackCounts::of(&tracks),
+      TrackCounts {
+        video: 1,
+        audio: 2,
+        subtitles: 1,
+        chapters: 1,
+        attachments: 3,
+      }
+    );
+  }
 
   #[test]
   fn track_list_errors_describe_themselves_for_logs() {

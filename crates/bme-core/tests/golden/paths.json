@@ -1,0 +1,101 @@
+{
+  "description": "getParentDir, getFileName and getDriveKey of 0.3.0's src/extract-utils.ts, recorded under Deno.",
+  "cases": [
+    {
+      "path": "/media/Movie.mkv",
+      "parentDir": "/media",
+      "fileName": "Movie.mkv",
+      "driveKey": "default"
+    },
+    {
+      "path": "/Movie.mkv",
+      "parentDir": "",
+      "fileName": "Movie.mkv",
+      "driveKey": "default"
+    },
+    {
+      "path": "Movie.mkv",
+      "parentDir": "",
+      "fileName": "Movie.mkv",
+      "driveKey": "default"
+    },
+    {
+      "path": "",
+      "parentDir": "",
+      "fileName": "",
+      "driveKey": "default"
+    },
+    {
+      "path": "/media/dir/",
+      "parentDir": "/media/dir",
+      "fileName": "",
+      "driveKey": "default"
+    },
+    {
+      "path": "C:\\Media\\Movie.mkv",
+      "parentDir": "C:\\Media",
+      "fileName": "Movie.mkv",
+      "driveKey": "C:"
+    },
+    {
+      "path": "C:/Media\\Sub/Movie.mkv",
+      "parentDir": "C:/Media\\Sub",
+      "fileName": "Movie.mkv",
+      "driveKey": "C:"
+    },
+    {
+      "path": "c:Movie.mkv",
+      "parentDir": "",
+      "fileName": "c:Movie.mkv",
+      "driveKey": "C:"
+    },
+    {
+      "path": "\\\\server\\share\\Media\\Movie.mkv",
+      "parentDir": "\\\\server\\share\\Media",
+      "fileName": "Movie.mkv",
+      "driveKey": "\\\\SERVER\\SHARE"
+    },
+    {
+      "path": "\\\\Server\\Share",
+      "parentDir": "\\\\Server",
+      "fileName": "Share",
+      "driveKey": "\\\\SERVER\\SHARE"
+    },
+    {
+      "path": "\\\\server/share/Movie.mkv",
+      "parentDir": "\\\\server/share",
+      "fileName": "Movie.mkv",
+      "driveKey": "\\\\SERVER/SHARE"
+    },
+    {
+      "path": "//server/share/Movie.mkv",
+      "parentDir": "//server/share",
+      "fileName": "Movie.mkv",
+      "driveKey": "default"
+    },
+    {
+      "path": "\\\\?\\C:\\Media\\Movie.mkv",
+      "parentDir": "\\\\?\\C:\\Media",
+      "fileName": "Movie.mkv",
+      "driveKey": "\\\\?\\C:"
+    },
+    {
+      "path": "\\\\?\\UNC\\server\\share\\Movie.mkv",
+      "parentDir": "\\\\?\\UNC\\server\\share",
+      "fileName": "Movie.mkv",
+      "driveKey": "\\\\?\\UNC"
+    },
+    {
+      "path": "1:/Media/Movie.mkv",
+      "parentDir": "1:/Media",
+      "fileName": "Movie.mkv",
+      "driveKey": "default"
+    },
+    {
+      "path": "/media/映画/字幕.mkv",
+      "parentDir": "/media/映画",
+      "fileName": "字幕.mkv",
+      "driveKey": "default"
+    }
+  ]
+}

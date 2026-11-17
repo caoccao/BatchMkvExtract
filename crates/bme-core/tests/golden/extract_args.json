@@ -1,0 +1,610 @@
+{
+  "description": "buildExtractArgs of 0.3.0's src/extract-utils.ts, recorded under Deno with a stand-in for Tauri's path API that follows Tauri 2.12.5's Rust code on a `/` platform (file stem, and join = concatenate, then resolve `.`, empty and `..` components). Checked on platforms whose separator is `/`.",
+  "cases": [
+    {
+      "description": "Default profile: the subtitles it auto-selects, written next to the source.",
+      "file": "/media/Movie.mkv",
+      "outputDir": "/media",
+      "tracks": [
+        {
+          "id": 3,
+          "number": 4,
+          "type": "subtitles",
+          "codec": "SubRip/SRT",
+          "codecId": "S_TEXT/UTF8",
+          "trackName": "Full",
+          "language": "eng"
+        },
+        {
+          "id": 4,
+          "number": 5,
+          "type": "subtitles",
+          "codec": "HDMV PGS",
+          "codecId": "S_HDMV/PGS",
+          "trackName": "Signs/Songs?",
+          "language": "chi"
+        },
+        {
+          "id": 6,
+          "number": 7,
+          "type": "subtitles",
+          "codec": "VobSub",
+          "codecId": "S_VOBSUB",
+          "trackName": "Forced|*",
+          "language": "fre"
+        },
+        {
+          "id": 9,
+          "number": 10,
+          "type": "subtitles",
+          "codec": "SubRip/SRT",
+          "codecId": "S_TEXT/UTF8",
+          "trackName": "",
+          "language": "Eng"
+        }
+      ],
+      "profile": {
+        "name": "Default",
+        "videoTemplate": "{file_name}.{track_id}.{language}",
+        "audioTemplate": "{file_name}.{track_id}.{language}",
+        "subtitleTemplate": "{file_name}.{track_id}.{language}",
+        "chaptersTemplate": "{file_name}.{track_id}",
+        "attachmentsTemplate": "{file_name}.{track_id}",
+        "selectVideo": false,
+        "selectAudio": false,
+        "selectSubtitle": true,
+        "selectChapters": false,
+        "selectAttachments": false,
+        "videoLanguages": "",
+        "audioLanguages": "",
+        "subtitleLanguages": "eng, chi, spa, ger, fre, jpn",
+        "defaultGroupMode": true
+      },
+      "expected": [
+        "tracks",
+        "3:/media/Movie.3.eng.srt",
+        "4:/media/Movie.4.chi.sup",
+        "6:/media/Movie.6.fre.sub",
+        "9:/media/Movie.9.Eng.srt"
+      ]
+    },
+    {
+      "description": "Every row type in table order: tracks first, then chapters, then attachments.",
+      "file": "/media/My Movie.2024.mkv",
+      "outputDir": "/out",
+      "tracks": [
+        {
+          "id": 0,
+          "number": 1,
+          "type": "video",
+          "codec": "AVC/H.264/MPEG-4p10",
+          "codecId": "V_MPEG4/ISO/AVC",
+          "trackName": "Main Feature",
+          "language": "eng"
+        },
+        {
+          "id": 1,
+          "number": 2,
+          "type": "audio",
+          "codec": "AC-3",
+          "codecId": "A_AC3",
+          "trackName": "English 5.1",
+          "language": "eng"
+        },
+        {
+          "id": 2,
+          "number": 3,
+          "type": "audio",
+          "codec": "AAC",
+          "codecId": "A_AAC",
+          "trackName": "Commentary: \"Director\" <cut>",
+          "language": "JPN"
+        },
+        {
+          "id": 3,
+          "number": 4,
+          "type": "subtitles",
+          "codec": "SubRip/SRT",
+          "codecId": "S_TEXT/UTF8",
+          "trackName": "Full",
+          "language": "eng"
+        },
+        {
+          "id": 7,
+          "number": 8,
+          "type": "buttons",
+          "codec": "VobButtons",
+          "codecId": "B_VOBBTN",
+          "trackName": "",
+          "language": "und"
+        },
+        {
+          "id": 0,
+          "number": 0,
+          "type": "chapters",
+          "codec": "xml",
+          "codecId": "xml",
+          "trackName": "",
+          "language": ""
+        },
+        {
+          "id": 1,
+          "number": 0,
+          "type": "attachment",
+          "codec": "ttf",
+          "codecId": "ttf",
+          "trackName": "DejaVuSans.ttf",
+          "language": ""
+        },
+        {
+          "id": 2,
+          "number": 0,
+          "type": "attachment",
+          "codec": "jpeg",
+          "codecId": "jpeg",
+          "trackName": "cover",
+          "language": ""
+        }
+      ],
+      "profile": {
+        "name": "Default",
+        "videoTemplate": "{file_name}.{track_id}.{language}",
+        "audioTemplate": "{file_name}.{track_id}.{language}",
+        "subtitleTemplate": "{file_name}.{track_id}.{language}",
+        "chaptersTemplate": "{file_name}.{track_id}",
+        "attachmentsTemplate": "{file_name}.{track_id}",
+        "selectVideo": false,
+        "selectAudio": false,
+        "selectSubtitle": true,
+        "selectChapters": false,
+        "selectAttachments": false,
+        "videoLanguages": "",
+        "audioLanguages": "",
+        "subtitleLanguages": "eng, chi, spa, ger, fre, jpn",
+        "defaultGroupMode": true
+      },
+      "expected": [
+        "tracks",
+        "0:/out/My Movie.2024.0.eng.h264",
+        "1:/out/My Movie.2024.1.eng.ac3",
+        "2:/out/My Movie.2024.2.JPN.aac",
+        "3:/out/My Movie.2024.3.eng.srt",
+        "7:/out/My Movie.2024.7.und.bin",
+        "chapters",
+        "/out/My Movie.2024.0.xml",
+        "attachments",
+        "1:/out/My Movie.2024.1.ttf",
+        "2:/out/My Movie.2024.2.jpg"
+      ]
+    },
+    {
+      "description": "Rows out of table order: each mode keeps the given order; only the first chapters row is used.",
+      "file": "/media/Movie.MKV",
+      "outputDir": "/out/",
+      "tracks": [
+        {
+          "id": 2,
+          "number": 0,
+          "type": "attachment",
+          "codec": "jpeg",
+          "codecId": "jpeg",
+          "trackName": "cover",
+          "language": ""
+        },
+        {
+          "id": 4,
+          "number": 5,
+          "type": "subtitles",
+          "codec": "HDMV PGS",
+          "codecId": "S_HDMV/PGS",
+          "trackName": "Signs/Songs?",
+          "language": "chi"
+        },
+        {
+          "id": 0,
+          "number": 0,
+          "type": "chapters",
+          "codec": "xml",
+          "codecId": "xml",
+          "trackName": "",
+          "language": ""
+        },
+        {
+          "id": 0,
+          "number": 1,
+          "type": "video",
+          "codec": "AVC/H.264/MPEG-4p10",
+          "codecId": "V_MPEG4/ISO/AVC",
+          "trackName": "Main Feature",
+          "language": "eng"
+        },
+        {
+          "id": 1,
+          "number": 0,
+          "type": "attachment",
+          "codec": "ttf",
+          "codecId": "ttf",
+          "trackName": "DejaVuSans.ttf",
+          "language": ""
+        },
+        {
+          "id": 0,
+          "number": 0,
+          "type": "chapters",
+          "codec": "xml",
+          "codecId": "xml",
+          "trackName": "second",
+          "language": ""
+        }
+      ],
+      "profile": {
+        "name": "Templated",
+        "videoTemplate": "{file_name}.video",
+        "audioTemplate": "{file_name}.{track_number}.{language}.{codec_name}",
+        "subtitleTemplate": "{file_name}.{track_name}",
+        "chaptersTemplate": "{file_name}.chapters",
+        "attachmentsTemplate": "{track_name}",
+        "selectVideo": false,
+        "selectAudio": false,
+        "selectSubtitle": false,
+        "selectChapters": false,
+        "selectAttachments": false,
+        "videoLanguages": "",
+        "audioLanguages": "",
+        "subtitleLanguages": "eng, chi, spa, ger, fre, jpn",
+        "defaultGroupMode": false
+      },
+      "expected": [
+        "tracks",
+        "4:/out/Movie.Signs_Songs_.sup",
+        "0:/out/Movie.video.h264",
+        "chapters",
+        "/out/Movie.chapters.xml",
+        "attachments",
+        "2:/out/cover.jpg",
+        "1:/out/DejaVuSans.ttf.ttf"
+      ]
+    },
+    {
+      "description": "Chapters only.",
+      "file": "/media/Movie.mkv",
+      "outputDir": "/out",
+      "tracks": [
+        {
+          "id": 0,
+          "number": 0,
+          "type": "chapters",
+          "codec": "xml",
+          "codecId": "xml",
+          "trackName": "",
+          "language": ""
+        }
+      ],
+      "profile": {
+        "name": "Default",
+        "videoTemplate": "{file_name}.{track_id}.{language}",
+        "audioTemplate": "{file_name}.{track_id}.{language}",
+        "subtitleTemplate": "{file_name}.{track_id}.{language}",
+        "chaptersTemplate": "{file_name}.{track_id}",
+        "attachmentsTemplate": "{file_name}.{track_id}",
+        "selectVideo": false,
+        "selectAudio": false,
+        "selectSubtitle": true,
+        "selectChapters": false,
+        "selectAttachments": false,
+        "videoLanguages": "",
+        "audioLanguages": "",
+        "subtitleLanguages": "eng, chi, spa, ger, fre, jpn",
+        "defaultGroupMode": true
+      },
+      "expected": [
+        "chapters",
+        "/out/Movie.0.xml"
+      ]
+    },
+    {
+      "description": "Attachments only.",
+      "file": "/media/Movie.mkv",
+      "outputDir": "/out",
+      "tracks": [
+        {
+          "id": 1,
+          "number": 0,
+          "type": "attachment",
+          "codec": "ttf",
+          "codecId": "ttf",
+          "trackName": "DejaVuSans.ttf",
+          "language": ""
+        },
+        {
+          "id": 2,
+          "number": 0,
+          "type": "attachment",
+          "codec": "jpeg",
+          "codecId": "jpeg",
+          "trackName": "cover",
+          "language": ""
+        }
+      ],
+      "profile": {
+        "name": "Templated",
+        "videoTemplate": "{file_name}.video",
+        "audioTemplate": "{file_name}.{track_number}.{language}.{codec_name}",
+        "subtitleTemplate": "{file_name}.{track_name}",
+        "chaptersTemplate": "{file_name}.chapters",
+        "attachmentsTemplate": "{track_name}",
+        "selectVideo": false,
+        "selectAudio": false,
+        "selectSubtitle": false,
+        "selectChapters": false,
+        "selectAttachments": false,
+        "videoLanguages": "",
+        "audioLanguages": "",
+        "subtitleLanguages": "eng, chi, spa, ger, fre, jpn",
+        "defaultGroupMode": false
+      },
+      "expected": [
+        "attachments",
+        "1:/out/DejaVuSans.ttf.ttf",
+        "2:/out/cover.jpg"
+      ]
+    },
+    {
+      "description": "Nothing selected.",
+      "file": "/media/Movie.mkv",
+      "outputDir": "/out",
+      "tracks": [],
+      "profile": {
+        "name": "Default",
+        "videoTemplate": "{file_name}.{track_id}.{language}",
+        "audioTemplate": "{file_name}.{track_id}.{language}",
+        "subtitleTemplate": "{file_name}.{track_id}.{language}",
+        "chaptersTemplate": "{file_name}.{track_id}",
+        "attachmentsTemplate": "{file_name}.{track_id}",
+        "selectVideo": false,
+        "selectAudio": false,
+        "selectSubtitle": true,
+        "selectChapters": false,
+        "selectAttachments": false,
+        "videoLanguages": "",
+        "audioLanguages": "",
+        "subtitleLanguages": "eng, chi, spa, ger, fre, jpn",
+        "defaultGroupMode": true
+      },
+      "expected": []
+    },
+    {
+      "description": "Templates with separators: a name is joined into the output directory and `.`, empty and `..` components are resolved without touching the disk, so a leading `/` stays inside the directory.",
+      "file": "/media/Movie.mkv",
+      "outputDir": "/out/./set/",
+      "tracks": [
+        {
+          "id": 0,
+          "number": 1,
+          "type": "video",
+          "codec": "AVC/H.264/MPEG-4p10",
+          "codecId": "V_MPEG4/ISO/AVC",
+          "trackName": "Main Feature",
+          "language": "eng"
+        },
+        {
+          "id": 1,
+          "number": 2,
+          "type": "audio",
+          "codec": "AC-3",
+          "codecId": "A_AC3",
+          "trackName": "English 5.1",
+          "language": "eng"
+        },
+        {
+          "id": 3,
+          "number": 4,
+          "type": "subtitles",
+          "codec": "SubRip/SRT",
+          "codecId": "S_TEXT/UTF8",
+          "trackName": "Full",
+          "language": "eng"
+        },
+        {
+          "id": 0,
+          "number": 0,
+          "type": "chapters",
+          "codec": "xml",
+          "codecId": "xml",
+          "trackName": "",
+          "language": ""
+        },
+        {
+          "id": 1,
+          "number": 0,
+          "type": "attachment",
+          "codec": "ttf",
+          "codecId": "ttf",
+          "trackName": "DejaVuSans.ttf",
+          "language": ""
+        }
+      ],
+      "profile": {
+        "name": "Sub-directories",
+        "videoTemplate": "/{file_name}.{track_id}",
+        "audioTemplate": "../{file_name}.{track_id}",
+        "subtitleTemplate": "subs/./{language}/{file_name}",
+        "chaptersTemplate": "{file_name}/",
+        "attachmentsTemplate": "fonts//{track_name}",
+        "selectVideo": false,
+        "selectAudio": false,
+        "selectSubtitle": false,
+        "selectChapters": false,
+        "selectAttachments": false,
+        "videoLanguages": "",
+        "audioLanguages": "",
+        "subtitleLanguages": "eng, chi, spa, ger, fre, jpn",
+        "defaultGroupMode": false
+      },
+      "expected": [
+        "tracks",
+        "0:/out/set/Movie.0.h264",
+        "1:/out/Movie.1.ac3",
+        "3:/out/set/subs/eng/Movie.srt",
+        "chapters",
+        "/out/set/Movie/.xml",
+        "attachments",
+        "1:/out/set/fonts/DejaVuSans.ttf.ttf"
+      ]
+    },
+    {
+      "description": "A relative output directory with a `..` component.",
+      "file": "Movie.mkv",
+      "outputDir": "out/../extracted",
+      "tracks": [
+        {
+          "id": 3,
+          "number": 4,
+          "type": "subtitles",
+          "codec": "SubRip/SRT",
+          "codecId": "S_TEXT/UTF8",
+          "trackName": "Full",
+          "language": "eng"
+        }
+      ],
+      "profile": {
+        "name": "Default",
+        "videoTemplate": "{file_name}.{track_id}.{language}",
+        "audioTemplate": "{file_name}.{track_id}.{language}",
+        "subtitleTemplate": "{file_name}.{track_id}.{language}",
+        "chaptersTemplate": "{file_name}.{track_id}",
+        "attachmentsTemplate": "{file_name}.{track_id}",
+        "selectVideo": false,
+        "selectAudio": false,
+        "selectSubtitle": true,
+        "selectChapters": false,
+        "selectAttachments": false,
+        "videoLanguages": "",
+        "audioLanguages": "",
+        "subtitleLanguages": "eng, chi, spa, ger, fre, jpn",
+        "defaultGroupMode": true
+      },
+      "expected": [
+        "tracks",
+        "3:extracted/Movie.3.eng.srt"
+      ]
+    },
+    {
+      "description": "An empty output directory: the bare file name.",
+      "file": "Movie.mkv",
+      "outputDir": "",
+      "tracks": [
+        {
+          "id": 3,
+          "number": 4,
+          "type": "subtitles",
+          "codec": "SubRip/SRT",
+          "codecId": "S_TEXT/UTF8",
+          "trackName": "Full",
+          "language": "eng"
+        },
+        {
+          "id": 0,
+          "number": 0,
+          "type": "chapters",
+          "codec": "xml",
+          "codecId": "xml",
+          "trackName": "",
+          "language": ""
+        }
+      ],
+      "profile": {
+        "name": "Default",
+        "videoTemplate": "{file_name}.{track_id}.{language}",
+        "audioTemplate": "{file_name}.{track_id}.{language}",
+        "subtitleTemplate": "{file_name}.{track_id}.{language}",
+        "chaptersTemplate": "{file_name}.{track_id}",
+        "attachmentsTemplate": "{file_name}.{track_id}",
+        "selectVideo": false,
+        "selectAudio": false,
+        "selectSubtitle": true,
+        "selectChapters": false,
+        "selectAttachments": false,
+        "videoLanguages": "",
+        "audioLanguages": "",
+        "subtitleLanguages": "eng, chi, spa, ger, fre, jpn",
+        "defaultGroupMode": true
+      },
+      "expected": [
+        "tracks",
+        "3:Movie.3.eng.srt",
+        "chapters",
+        "Movie.0.xml"
+      ]
+    },
+    {
+      "description": "Templates rendering to nothing.",
+      "file": "/media/映画 (2024).mkv",
+      "outputDir": "/out/映画",
+      "tracks": [
+        {
+          "id": 0,
+          "number": 1,
+          "type": "video",
+          "codec": "AVC/H.264/MPEG-4p10",
+          "codecId": "V_MPEG4/ISO/AVC",
+          "trackName": "Main Feature",
+          "language": "eng"
+        },
+        {
+          "id": 3,
+          "number": 4,
+          "type": "subtitles",
+          "codec": "SubRip/SRT",
+          "codecId": "S_TEXT/UTF8",
+          "trackName": "Full",
+          "language": "eng"
+        },
+        {
+          "id": 0,
+          "number": 0,
+          "type": "chapters",
+          "codec": "xml",
+          "codecId": "xml",
+          "trackName": "",
+          "language": ""
+        },
+        {
+          "id": 2,
+          "number": 0,
+          "type": "attachment",
+          "codec": "jpeg",
+          "codecId": "jpeg",
+          "trackName": "cover",
+          "language": ""
+        }
+      ],
+      "profile": {
+        "name": "Empty",
+        "videoTemplate": "",
+        "audioTemplate": "",
+        "subtitleTemplate": "",
+        "chaptersTemplate": "",
+        "attachmentsTemplate": "",
+        "selectVideo": false,
+        "selectAudio": false,
+        "selectSubtitle": false,
+        "selectChapters": false,
+        "selectAttachments": false,
+        "videoLanguages": "",
+        "audioLanguages": "",
+        "subtitleLanguages": "eng, chi, spa, ger, fre, jpn",
+        "defaultGroupMode": false
+      },
+      "expected": [
+        "tracks",
+        "0:/out/映画/.h264",
+        "3:/out/映画/.srt",
+        "chapters",
+        "/out/映画/.xml",
+        "attachments",
+        "2:/out/映画/.jpg"
+      ]
+    }
+  ]
+}

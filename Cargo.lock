@@ -7,8 +7,11 @@ name = "BatchMkvExtract"
 version = "0.3.0"
 dependencies = [
  "bme-core",
+ "chrono",
  "gpui-kit",
  "log",
+ "serde_json",
+ "unicode-segmentation",
  "winresource",
 ]
 

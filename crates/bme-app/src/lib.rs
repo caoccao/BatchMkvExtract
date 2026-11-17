@@ -20,9 +20,11 @@
 //! Everything lives in this library so that tests run against it; the binary
 //! only calls [`run`]. For now the application is a skeleton: one themed
 //! window with the app's icon, name and version, so that the packaging
-//! pipeline can be proven before the screens are ported.
+//! pipeline can be proven before the screens are ported. [`domain`] already
+//! holds the logic the screens will show.
 
 pub mod assets;
+pub mod domain;
 
 use gpui_kit::component::{ActiveTheme, Theme, v_flex};
 use gpui_kit::*;
