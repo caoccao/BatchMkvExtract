@@ -2,14 +2,37 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Build rules
+
+- **Always build and run the release profile. Never build a debug build.** Run a release build to validate changes before handing them off. Every cargo invocation in this repo, in docs and in CI carries `--release` (or `-r`): `cargo build --release`, `cargo run --release`, `cargo test --release`, `cargo check --release`, `cargo llvm-cov --release`. GPUI debug builds are slow to compile, slow to start and render at a fraction of release frame rates. Do not add `[profile.dev]` tuning as a workaround; use release.
+- **Installers are built with the `dist` profile**, which inherits `release` and adds LTO, `codegen-units = 1` and symbol stripping: `cargo packager --profile dist`, `cargo generate-rpm --profile dist`. `dist` is a release build with slower, tighter optimisation; it is used for packaging only, never for the edit-test loop.
+
+## Migration in progress
+
+The Tauri v2 + React/MUI shell is being replaced by a native [gpui-kit](https://crates.io/crates/gpui-kit) application on the `migrate-gpui-kit` branch, built by copying and adapting the solution of [BatchMkvMerge](https://github.com/caoccao/BatchMkvMerge). The maintainer keeps the migration plan (phases 0–8) outside the repository. Each phase lands as one Conventional Commit on that branch, so `git log` shows which phases are done. The work ends with a pull request into `main`; the branch creates no tags and no releases.
+
+The Tauri app is no longer built, run or tested. `src/` and `src-tauri/` stay in the tree as unbuilt porting reference (excluded from the Cargo workspace from Phase 1) and are deleted in Phase 8. Until then the sections below describe that Tauri app, not the target architecture.
+
+| Phase | Content |
+| --- | --- |
+| 0 | Ground rules (the Build rules above), branch |
+| 1 | Cargo workspace, `crates/bme-core`, `crates/bme-platform`, packaged gpui-kit skeleton on CI |
+| 2 | Extraction domain logic ported to Rust, with tests and a golden test |
+| 3 | Application shell |
+| 4 | State stores, track loading, extract events, actions |
+| 5 | File cards, track table, file list, output path dialog |
+| 6 | Queue, completion notifications, taskbar progress |
+| 7 | Settings dialog, profile menu and Group Mode toggle, update banner, numeric word navigation |
+| 8 | Parity audit, Tauri removal, version 1.0.0, docs, QA |
+
 ## Common commands
 
 ```bash
-pnpm install                     # install JS dependencies
-pnpm tauri dev                   # run the desktop app with frontend + Rust hot-reload
-pnpm tauri build                 # build installers for the current platform
-pnpm build                       # tsc + vite build (type-check + frontend bundle only)
-cd src-tauri && cargo check      # fast Rust type-check without linking
+pnpm install                             # install JS dependencies
+pnpm tauri dev --release                 # run the desktop app with frontend + Rust hot-reload (release Rust build)
+pnpm tauri build                         # build installers for the current platform
+pnpm build                               # tsc + vite build (type-check + frontend bundle only)
+cd src-tauri && cargo check --release    # fast Rust type-check without linking
 ```
 
 Version bumps are done with a Deno script — edit the two arguments at the bottom of `scripts/ts/change-version.ts` and run:
