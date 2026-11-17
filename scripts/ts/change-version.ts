@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-import * as fs from "https://deno.land/std/fs/mod.ts";
-import * as path from "https://deno.land/std/path/mod.ts";
+import * as fs from "https://deno.land/std@0.224.0/fs/mod.ts";
+import * as path from "https://deno.land/std@0.224.0/path/mod.ts";
 
 class ChangeVersion {
   private productionVersion: string;
@@ -52,7 +52,7 @@ class ChangeVersion {
     patterns.map((pattern) => {
       [...currentContent.matchAll(pattern)].map((match) => {
         const matchedString = match[0];
-        const currentVersion = match.groups["version"];
+        const currentVersion = match.groups!["version"];
         if (newVersion === currentVersion) {
           console.warn(`%c  Ignored ${matchedString}`, "color: yellow");
         } else {
@@ -83,10 +83,41 @@ class ChangeVersion {
     }
   }
 
+  /**
+   * Warns when the release notes have no section for the new version yet.
+   */
+  private _checkReleaseNotes(isSnapshot = true) {
+    const filePath = path.join(this.rootDirPath, "docs/release_notes.md");
+    const version = isSnapshot ? this.snapshotVersion : this.productionVersion;
+    const heading = new RegExp(`^## ${version.replaceAll(".", "\\.")}\\s*$`, "m");
+    if (heading.test(Deno.readTextFileSync(filePath))) {
+      console.info(`docs/release_notes.md has a section for ${version}.`);
+    } else {
+      console.warn(
+        `%cdocs/release_notes.md has no "## ${version}" section yet.`,
+        "color: yellow"
+      );
+    }
+  }
+
+  /**
+   * Records the new workspace versions in Cargo.lock.
+   */
+  private _updateCargoLock() {
+    console.info("Running cargo update -w.");
+    const { code, stderr } = new Deno.Command("cargo", {
+      args: ["update", "-w"],
+      cwd: this.rootDirPath,
+    }).outputSync();
+    if (code !== 0) {
+      console.error(
+        `%ccargo update -w failed: ${new TextDecoder().decode(stderr)}`,
+        "color: red"
+      );
+    }
+  }
+
   change() {
-    this._change("package.json", [
-      /^  "version":\s*"(?<version>\d+\.\d+\.\d+)"/gim,
-    ]);
     this._change(".github/workflows/linux_build.yml", [
       /^\s*BATCH_MKV_EXTRACT_VERSION:\s*(?<version>\d+\.\d+\.\d+)/gim,
     ]);
@@ -96,12 +127,20 @@ class ChangeVersion {
     this._change(".github/workflows/windows_build.yml", [
       /^\s*BATCH_MKV_EXTRACT_VERSION:\s*(?<version>\d+\.\d+\.\d+)/gim,
     ]);
-    this._change("src-tauri/Cargo.toml", [
+    this._change("crates/bme-app/Cargo.toml", [
       /^version\s*=\s*"(?<version>\d+\.\d+\.\d+)"/gim,
     ]);
-    this._change("src-tauri/tauri.conf.json", [
-      /^  "version":\s*"(?<version>\d+\.\d+\.\d+)"/gim,
+    this._change("crates/bme-core/Cargo.toml", [
+      /^version\s*=\s*"(?<version>\d+\.\d+\.\d+)"/gim,
     ]);
+    this._change("crates/bme-platform/Cargo.toml", [
+      /^version\s*=\s*"(?<version>\d+\.\d+\.\d+)"/gim,
+    ]);
+    this._change("crates/bme-app/packaging/macos/Info.plist", [
+      /<key>CFBundleVersion<\/key>\s*<string>(?<version>\d+\.\d+\.\d+)<\/string>/gim,
+    ]);
+    this._updateCargoLock();
+    this._checkReleaseNotes();
   }
 }
 

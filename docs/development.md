@@ -9,6 +9,23 @@
 
 The Tauri app this document describes is being replaced by a native [gpui-kit](https://crates.io/crates/gpui-kit) application on the `migrate-gpui-kit` branch. It is no longer built or run, and this document is rewritten when the migration ends; [`CLAUDE.md`](../CLAUDE.md) lists the phases.
 
+The new application is a Cargo workspace at the repository root (one `Cargo.lock`, one `target/`); `src-tauri/` is excluded from it:
+
+- `crates/bme-core` — the UI-free core: config file, per-drive extract queue, MKVToolNix (`mkvmerge -J` track listing, `mkvextract` launch), file intake, BetterMediaInfo, update check.
+- `crates/bme-platform` — per-OS integrations GPUI lacks (taskbar / Dock / launcher progress, the display of a window).
+- `crates/bme-app` — the gpui-kit application, package `BatchMkvExtract` (library `batch_mkvextract` and a three-line binary), with the packaging metadata and `packaging/`. For now it opens one window with the app's name and version.
+
+The Rust toolchain is pinned in `rust-toolchain.toml` at the repository root (1.100.0; gpui-kit needs 1.92 or newer). The workspace commands:
+
+```bash
+cargo run --release -p BatchMkvExtract                   # run the app
+cargo test --release --workspace                         # run every test
+cargo llvm-cov --release -p bme-core --summary-only --fail-under-lines 90   # the CI coverage gate
+cargo build --profile dist -p BatchMkvExtract            # installer build: release + thin LTO
+cargo packager --profile dist -p BatchMkvExtract -f app,dmg   # or nsis,wix / deb,appimage (cargo-packager 0.11.8)
+cargo generate-rpm --profile dist -p crates/bme-app      # .rpm on Linux (cargo-generate-rpm 0.21.1)
+```
+
 ## Tech Stack
 
 ### Frontend
@@ -95,6 +112,8 @@ scripts/ts/
 
 ## Commands
 
+The Tauri app's commands, kept for reference; the app is no longer built (the workspace commands are under "Migration in progress"):
+
 ```bash
 pnpm install               # install JS dependencies
 pnpm tauri dev --release   # run the app in development (hot-reload frontend + Rust, release Rust build)
@@ -103,7 +122,7 @@ pnpm dev                   # run only the Vite dev server (no Tauri window)
 pnpm build                 # type-check and build the frontend
 ```
 
-To bump the version across `package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`, and the three workflow files, edit both arguments at the bottom of `scripts/ts/change-version.ts` and run:
+To bump the version across the three crate manifests, the three workflow files and the `CFBundleVersion` of `crates/bme-app/packaging/macos/Info.plist`, edit both arguments at the bottom of `scripts/ts/change-version.ts` and run the script below. It then runs `cargo update -w`, so `Cargo.lock` records the new workspace versions, and warns when `docs/release_notes.md` has no `## <version>` section yet.
 
 ```bash
 cd scripts/ts
@@ -158,10 +177,10 @@ Supported placeholders: `{file_name}`, `{track_id}`, `{track_number}`, `{languag
 
 ## CI
 
-Three GitHub Actions workflows build release bundles on push/PR:
+Three GitHub Actions workflows test the workspace and build the installers of the gpui-kit application on push/PR, with no Node, pnpm or Tauri step:
 
-- `linux_build.yml` — `.deb`, `.rpm`, `.AppImage`
-- `macos_build.yml` — `.dmg` (x86_64 and arm64 via matrix)
-- `windows_build.yml` — `.msi`, `.exe` (NSIS)
+- `linux_build.yml` (`ubuntu-22.04`, for a low glibc floor) — GPUI's build packages and Mesa's Vulkan drivers, `cargo test --release --workspace --locked --exclude bme-core`, the `bme-core` coverage gate (`cargo llvm-cov --release -p bme-core --locked --summary-only --fail-under-lines 90`), then `.deb` and `.AppImage` (cargo-packager) and `.rpm` (cargo-generate-rpm); a non-blocking `lint` job runs `cargo fmt --all --check` and clippy on `bme-core`.
+- `macos_build.yml` — `.dmg` for x86_64 (`macos-15-intel`) and arm64 (`macos-15`).
+- `windows_build.yml` — one `.msi` per language and the NSIS `.exe`.
 
-Each installs Node 24, pnpm 10, and the stable Rust toolchain, then runs `cargo test -r` followed by `pnpm tauri build`.
+Each installs the toolchain pinned in `rust-toolchain.toml` (`actions-rust-lang/setup-rust-toolchain` without a `toolchain:` input, with `build-warnings: warn` so warnings do not fail the build), runs the tests, builds with `--profile dist` and uploads seven artifacts in all under the 0.3.0 artifact names. The workflows run with `permissions: contents: read` and pin every action to a commit SHA; `.github/dependabot.yml` proposes updates.

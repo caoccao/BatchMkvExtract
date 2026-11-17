@@ -1,5 +1,5 @@
 {
   "tasks": {
-    "change-version": "deno run --allow-read --allow-write change-version.ts"
+    "change-version": "deno run --allow-read --allow-write --allow-run=cargo change-version.ts"
   }
 }

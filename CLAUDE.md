@@ -25,14 +25,35 @@ The Tauri app is no longer built, run or tested. `src/` and `src-tauri/` stay in
 | 7 | Settings dialog, profile menu and Group Mode toggle, update banner, numeric word navigation |
 | 8 | Parity audit, Tauri removal, version 1.0.0, docs, QA |
 
+### The new workspace (from Phase 1)
+
+The gpui-kit application is a Cargo workspace at the repository root (root `Cargo.toml`, one `Cargo.lock`, one `target/`; `exclude = ["src-tauri"]`):
+
+- `crates/bme-core` — UI-free: the config file (0.3.0's schema plus `window.display`, on a loader that keeps an unreadable file as `*.json.bad` and saves atomically), the per-drive extract queue (`extract.rs`: `ExtractQueue` with an injectable launcher, `ExtractEvent::{Started, Progress, Finished}` into a sink, `mkvextract --gui-mode`, exit 1 completes with warnings), `mkvtoolnix.rs` (tool resolution and detection without config writes, `list_tracks` = `mkvmerge -J` + the pure `parse_identify_json`, `spawn_mkvextract` with stdout and stderr in one pipe), `services.rs` (`.mkv` intake with skipped paths, output directory checks and `ensure_output_path`, BetterMediaInfo), `update.rs` (GitHub `/releases/latest`, the startup policy) and `protocol.rs` (`MkvTrack`, `TrackListError`, the tool statuses). No GUI toolkit and no async runtime. Tested through fake launchers, fake tool scripts (Unix) and a local HTTP stub; the whole crate is held to ≥ 90 % line coverage.
+- `crates/bme-platform` — BatchMkvMerge's per-OS integrations: taskbar / Dock / launcher progress, the display of a window.
+- `crates/bme-app` — package `BatchMkvExtract`, library `batch_mkvextract` plus a three-line binary (`#![windows_subsystem = "windows"]` unconditionally). gpui-kit is pinned at `=0.10.0` (its `test-support` feature only as a dev-dependency). Until Phase 3 it is a skeleton window titled `BatchMkvExtract v<version>`. Packaging metadata is in its `Cargo.toml` (`[package.metadata.packager]`, `[package.metadata.generate-rpm]`) and `packaging/` (icons, desktop file, `Info.plist`, the WiX template pinning 0.3.0's UpgradeCode).
+
+The toolchain is pinned in the root `rust-toolchain.toml` (1.100.0); `.rustfmt.toml` sits at the root too. The CI workflows build only the workspace: `actions-rust-lang/setup-rust-toolchain` without a `toolchain:` input (so the pin is used) and with `build-warnings: warn`, tests, the `bme-core` coverage gate on Linux, `--profile dist` builds and the seven installers; every action is pinned to a commit SHA.
+
+```bash
+cargo run --release -p BatchMkvExtract                   # run the app
+cargo check --release --workspace                        # fast Rust type-check without linking
+cargo test --release --workspace                         # run the whole test suite
+cargo llvm-cov --release -p bme-core --summary-only --fail-under-lines 90   # the CI coverage gate
+cargo build --profile dist -p BatchMkvExtract            # installer build: release + thin LTO
+cargo packager --profile dist -p BatchMkvExtract -f app,dmg   # or nsis,wix / deb,appimage (cargo-packager 0.11.8)
+cargo generate-rpm --profile dist -p crates/bme-app      # .rpm on Linux (cargo-generate-rpm 0.21.1)
+```
+
 ## Common commands
+
+The Tauri app's commands, kept for reference; the app is no longer built:
 
 ```bash
 pnpm install                             # install JS dependencies
 pnpm tauri dev --release                 # run the desktop app with frontend + Rust hot-reload (release Rust build)
 pnpm tauri build                         # build installers for the current platform
 pnpm build                               # tsc + vite build (type-check + frontend bundle only)
-cd src-tauri && cargo check --release    # fast Rust type-check without linking
 ```
 
 Version bumps are done with a Deno script — edit the two arguments at the bottom of `scripts/ts/change-version.ts` and run:
@@ -41,9 +62,7 @@ Version bumps are done with a Deno script — edit the two arguments at the bott
 cd scripts/ts && deno task change-version
 ```
 
-That rewrites `package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`, and all three `.github/workflows/*.yml` files.
-
-There is no test runner wired up; the CI workflows run `cargo test -r` but the crate has no tests yet. `pnpm build` is the primary smoke test while iterating.
+That rewrites `crates/bme-app/Cargo.toml`, `crates/bme-core/Cargo.toml`, `crates/bme-platform/Cargo.toml`, all three `.github/workflows/*.yml` files and the `CFBundleVersion` of `crates/bme-app/packaging/macos/Info.plist`. It then runs `cargo update -w` (so `Cargo.lock` records the new workspace versions) and warns when `docs/release_notes.md` has no `## <version>` section yet.
 
 ## Platform-specific notes
 

@@ -17,13 +17,19 @@ on:
       - "**.md"
       - "docs/**"
 
+# Every job only reads the repository; artifacts upload with the runner's
+# own token.
+permissions:
+  contents: read
+
 env:
   BATCH_MKV_EXTRACT_VERSION: 0.3.0
 
 jobs:
   build_package:
     name: Build for Linux x86_64
-    runs-on: ubuntu-latest
+    # 22.04 keeps the glibc floor of the binary low.
+    runs-on: ubuntu-22.04
 
     steps:
     - name: Set git to use LF
@@ -32,50 +38,104 @@ jobs:
         git config --global core.eol lf
 
     - name: Checkout the code
-      uses: actions/checkout@v6
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v6
-      with:
-        node-version: 24
-
-    - name: Upgrade Ubuntu
+    - name: Install system packages
+      # Build dependencies of GPUI (gpui-kit's install script) plus Mesa's
+      # Vulkan drivers for the headless UI tests, and the tools cargo-packager
+      # needs for the AppImage.
       run: |
         sudo apt-get update
-        sudo apt-get install -y libsoup-3.0-dev libjavascriptcoregtk-4.1-dev libwebkit2gtk-4.1-dev librsvg2-dev
+        sudo apt-get install -y gcc g++ clang pkg-config libzstd-dev libfontconfig-dev libfreetype-dev \
+          libwayland-dev libxkbcommon-dev libxkbcommon-x11-dev libx11-xcb-dev libxcb1-dev libssl-dev \
+          libvulkan-dev libvulkan1 mesa-vulkan-drivers patchelf squashfs-tools file
 
     - name: Setup Rust
-      uses: actions-rust-lang/setup-rust-toolchain@v1
+      uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+      # No `toolchain:` input: the action then installs the toolchain pinned in
+      # rust-toolchain.toml. Passing `toolchain: stable` would also run
+      # `rustup override set stable` on the repository root, which outranks the
+      # pin in rust-toolchain.toml there.
       with:
-        toolchain: stable
+        # llvm-tools-preview is needed by cargo-llvm-cov for the coverage gate;
+        # it is added to the pinned toolchain.
+        components: llvm-tools-preview
+        # The action sets CARGO_BUILD_WARNINGS=deny by default, which turns
+        # every rustc warning into a CI failure. `warn` lets warnings stay
+        # warnings; CI fails on errors and failing checks only.
+        build-warnings: warn
 
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v5
+    # bme-core's tests run once, under the coverage gate below.
+    - name: Run Rust tests
+      run: cargo test --release --workspace --locked --exclude bme-core
+
+    # Coverage gate: the UI-free bme-core crate (config, extract queue,
+    # MKVToolNix, services, update check) is held to >= 90% line coverage.
+    - name: Install cargo-llvm-cov
+      uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
       with:
-        version: 11
+        tool: cargo-llvm-cov
 
-    - name: Build BatchMkvExtract
-      run: |
-        pnpm install --frozen-lockfile
-        pnpm tauri build
+    - name: Test bme-core with the coverage gate (>= 90%)
+      run: cargo llvm-cov --release -p bme-core --locked --summary-only --fail-under-lines 90
+
+    - name: Install packaging tools
+      uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
+      with:
+        tool: cargo-packager@0.11.8,cargo-generate-rpm@0.21.1
+
+    # Installers come from the dist profile: release + thin LTO, one codegen
+    # unit, stripped symbols.
+    - name: Build BatchMkvExtract (dist profile)
+      run: cargo build --profile dist -p BatchMkvExtract --locked
+
+    - name: Package the deb and the AppImage
+      run: cargo packager --profile dist -p BatchMkvExtract -f deb,appimage
+
+    - name: Package the rpm
+      run: cargo generate-rpm --profile dist -p crates/bme-app
 
     - name: Upload the deb
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: BatchMkvExtract-linux-x86_64-${{ env.BATCH_MKV_EXTRACT_VERSION }}-deb
         path: |
-          src-tauri/target/release/bundle/deb/*.deb
+          target/packager/*.deb
 
     - name: Upload the rpm
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: BatchMkvExtract-linux-x86_64-${{ env.BATCH_MKV_EXTRACT_VERSION }}-rpm
         path: |
-          src-tauri/target/release/bundle/rpm/*.rpm
+          target/generate-rpm/*.rpm
 
     - name: Upload the AppImage
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: BatchMkvExtract-linux-x86_64-${{ env.BATCH_MKV_EXTRACT_VERSION }}-AppImage
         path: |
-          src-tauri/target/release/bundle/appimage/*.AppImage
+          target/packager/*.AppImage
+
+  lint:
+    name: Lint (reports only)
+    runs-on: ubuntu-22.04
+    # Shows formatting and clippy findings on every run without blocking it;
+    # warnings stay warnings, as in the build.
+    continue-on-error: true
+
+    steps:
+    - name: Checkout the code
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+    - name: Setup Rust
+      uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+      # The pinned toolchain from rust-toolchain.toml, with clippy and rustfmt.
+      with:
+        build-warnings: warn
+
+    - name: Check formatting
+      run: cargo fmt --all --check
+
+    # bme-core needs none of GPUI's system packages to build.
+    - name: Clippy (bme-core)
+      run: cargo clippy --release -p bme-core --all-targets --locked

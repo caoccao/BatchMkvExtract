@@ -1,0 +1,135 @@
+[package]
+name = "BatchMkvExtract"
+version = "0.3.0"
+description = "A tool to batch extract tracks from MKV files using mkvextract."
+authors = ["Sam Cao"]
+edition = "2024"
+license = "Apache-2.0"
+repository = "https://github.com/caoccao/BatchMkvExtract"
+publish = false
+default-run = "BatchMkvExtract"
+
+# All code and tests live in the library; the binary only calls `run()`.
+[lib]
+name = "batch_mkvextract"
+path = "src/lib.rs"
+
+[[bin]]
+name = "BatchMkvExtract"
+path = "src/main.rs"
+
+[dependencies]
+bme-core = { path = "../bme-core" }
+gpui-kit = "=0.10.0"
+log.workspace = true
+
+# Headless test windows use gpui-kit's `test-support` feature.
+[dev-dependencies]
+gpui-kit = { version = "=0.10.0", features = ["test-support"] }
+
+[build-dependencies]
+# GPUI embeds its own Windows manifest, so this resource must not carry one.
+winresource = "0.1"
+
+# Installers: `cargo packager --profile dist -p BatchMkvExtract -f <formats>`
+# (app, dmg, nsis, wix, deb, appimage). Every identity below must match the
+# 0.3.0 installers so the new ones upgrade an old install in place.
+[package.metadata.packager]
+product-name = "BatchMkvExtract"
+identifier = "com.caoccao.batch-mkvextract"
+# 0.3.0's MSI used "caoccao" (cargo-packager derives the same from the
+# identifier); it names the HKCU\Software\caoccao\BatchMkvExtract key.
+publisher = "caoccao"
+category = "Video"
+homepage = "https://github.com/caoccao/BatchMkvExtract"
+copyright = "Copyright (c) 2026. caoccao.com Sam Cao"
+# No `license-file`: it would make the .dmg ask to agree to the license
+# before it opens and add a license page to the NSIS and MSI installers;
+# 0.3.0 had neither.
+icons = [
+  "packaging/icons/32x32.png",
+  "packaging/icons/128x128.png",
+  "packaging/icons/128x128@2x.png",
+  "packaging/icons/icon.icns",
+  "packaging/icons/icon.ico",
+]
+out-dir = "../../target/packager"
+
+[package.metadata.packager.macos]
+# GPUI's Metal shaders are compiled for macOS 12.
+minimum-system-version = "12.0"
+# Merged over the generated Info.plist: CFBundleVersion is the version, as in
+# 0.3.0, instead of cargo-packager's build timestamp.
+info-plist-path = "packaging/macos/Info.plist"
+
+[package.metadata.packager.nsis]
+# Per-user, like 0.3.0 (Tauri's default): %LOCALAPPDATA%\BatchMkvExtract and
+# HKCU\...\Uninstall\BatchMkvExtract. cargo-packager 0.11.8 accepts
+# `installMode` or `installer-mode` here, not `install-mode`.
+installMode = "currentUser"
+languages = ["English", "German", "Spanish", "French", "Italian", "Japanese", "SimpChinese", "TradChinese"]
+display-language-selector = true
+
+[package.metadata.packager.wix]
+# One MSI per language, as 0.3.0 shipped. The template pins 0.3.0's UpgradeCode.
+languages = ["en-US", "de-DE", "es-ES", "fr-FR", "it-IT", "ja-JP", "zh-CN", "zh-TW"]
+template = "packaging/wix/main.wxs"
+
+[package.metadata.packager.deb]
+# cargo-packager derives "batch-mkv-extract" from the product name, which is
+# 0.3.0's package name; set explicitly so a rename cannot break upgrades.
+package-name = "batch-mkv-extract"
+depends = [
+  # dpkg-shlibdeps on the ubuntu-22.04 dist binary: the libraries it links.
+  "libc6 (>= 2.35)",
+  "libgcc-s1 (>= 4.2)",
+  "libxcb1 (>= 1.12)",
+  "libxkbcommon0 (>= 0.5.0)",
+  "libxkbcommon-x11-0 (>= 0.5.0)",
+  # Loaded at run time, so dpkg-shlibdeps cannot see them: the Vulkan loader
+  # and the Wayland client (GPUI), EGL and wayland-egl for wgpu's GL fallback.
+  "libvulkan1",
+  "libwayland-client0",
+  "libegl1",
+  "libwayland-egl1",
+  # GPUI finds fonts through /etc/fonts/fonts.conf (a pure-Rust reader, no
+  # libfontconfig), and draws colour emoji (the track-type icons) only from
+  # Noto Color Emoji.
+  "fontconfig-config",
+  "fonts-noto-color-emoji",
+]
+desktop-template = "packaging/BatchMkvExtract.desktop"
+
+[package.metadata.packager.appimage]
+# The Vulkan loader and fontconfig come from the host.
+libs = ["libxkbcommon-x11.so.0", "libxkbcommon.so.0", "libwayland-client.so.0"]
+
+# `cargo generate-rpm --profile dist -p crates/bme-app`; cargo-packager has no RPM support.
+[package.metadata.generate-rpm]
+# 0.3.0's RPM package name.
+name = "batch-mkv-extract"
+summary = "A tool to batch extract tracks from MKV files using mkvextract."
+license = "Apache-2.0"
+assets = [
+  { source = "target/release/BatchMkvExtract", dest = "/usr/bin/BatchMkvExtract", mode = "755" },
+  { source = "packaging/BatchMkvExtract.desktop", dest = "/usr/share/applications/BatchMkvExtract.desktop", mode = "644" },
+  { source = "packaging/icons/32x32.png", dest = "/usr/share/icons/hicolor/32x32/apps/BatchMkvExtract.png", mode = "644" },
+  { source = "packaging/icons/128x128.png", dest = "/usr/share/icons/hicolor/128x128/apps/BatchMkvExtract.png", mode = "644" },
+  { source = "packaging/icons/128x128@2x.png", dest = "/usr/share/icons/hicolor/256x256/apps/BatchMkvExtract.png", mode = "644" },
+]
+
+# rpm adds the linked libraries itself (`libc.so.6(GLIBC_2.34)(64bit)`, …);
+# these are the ones the deb lists by hand, as capabilities rather than
+# package names so that they resolve on Fedora and openSUSE alike.
+[package.metadata.generate-rpm.requires]
+# Loaded at run time: the Vulkan loader and the Wayland client (GPUI), EGL
+# and wayland-egl for wgpu's GL fallback.
+"libvulkan.so.1()(64bit)" = "*"
+"libwayland-client.so.0()(64bit)" = "*"
+"libEGL.so.1()(64bit)" = "*"
+"libwayland-egl.so.1()(64bit)" = "*"
+# GPUI finds fonts through /etc/fonts/fonts.conf, and draws colour emoji (the
+# track-type icons) only from Noto Color Emoji; Fedora's and openSUSE's
+# packages of it both provide this font capability.
+fontconfig = "*"
+"font(notocoloremoji)" = "*"

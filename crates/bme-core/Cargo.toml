@@ -1,0 +1,17 @@
+[package]
+name = "bme-core"
+version = "0.3.0"
+description = "UI-free core of BatchMkvExtract: config, extract queue, MKVToolNix, file intake and update services."
+authors = ["Sam Cao"]
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+log.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sys-locale = "0.3.2"
+sysinfo = { version = "0.32", default-features = false, features = ["system"] }
+ureq = { version = "2", features = ["json"] }
