@@ -15,7 +15,7 @@
 *   limitations under the License.
 */
 
-//! Headless tests of the application shell and the file list's plain boxes.
+//! Headless tests of the application shell.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -110,6 +110,9 @@ impl Shell {
     let progress = taskbar.clone();
     let (handle, view, stores) = cx.update(|cx| {
       gpui_kit::init(cx);
+      // The test platform records system notifications only for an app with
+      // an identity, as macOS posts them only from a bundle.
+      cx.set_app_identity(crate::APP_IDENTIFIER, crate::APP_NAME);
       crate::theme::install(cx);
       let config = Config {
         language: Language::EnUS,
@@ -310,7 +313,7 @@ fn the_shell_mounts_with_the_welcome_page_while_empty(cx: &mut TestAppContext) {
   shell.press(cx, "ctrl-2");
   shell.window(cx, |window, cx| {
     window.render_frame(cx);
-    window.find("queue-empty");
+    window.find("queue");
     assert!(window.try_find("welcome").is_none());
   });
 }
@@ -332,10 +335,11 @@ fn the_welcome_page_fills_the_tab_in_a_tall_window(cx: &mut TestAppContext) {
     assert_eq!(cancel.left() - resume.right(), px(2.0));
     // The tab starts after the strip's 2 px top margin and 1 px top border.
     assert_eq!(file_tab.top() - toolbar.bottom(), px(3.0));
-    assert_eq!(welcome.top() - file_tab.bottom(), px(2.0));
-    assert_eq!(welcome.left() - root.left(), px(2.0));
-    assert_eq!(root.right() - welcome.right(), px(2.0));
-    assert_eq!(status_bar.top() - welcome.bottom(), px(2.0));
+    // The tab body's 1 px padding on every side, inside the 2 px margin.
+    assert_eq!(welcome.top() - file_tab.bottom(), px(1.0));
+    assert_eq!(welcome.left() - root.left(), px(3.0));
+    assert_eq!(root.right() - welcome.right(), px(3.0));
+    assert_eq!(status_bar.top() - welcome.bottom(), px(1.0));
   });
 }
 
@@ -1133,6 +1137,32 @@ fn the_cards_follow_loading_and_extracting(cx: &mut TestAppContext) {
     ));
   });
   assert_eq!(shell.enqueued(), [a], "a file whose tracks failed has no selection");
+}
+
+/// The tab body's 1 px padding and each card's 1 px margin: cards are 2 px
+/// apart and 2 px from the tab body's top and sides.
+#[gpui_kit::test]
+fn cards_are_two_pixels_apart_and_from_the_tab_body(cx: &mut TestAppContext) {
+  use crate::ui::cards::FileCard;
+  let files = ["/media/a.mkv", "/media/b.mkv", "/media/c.mkv"];
+  let shell = Shell::with_files(cx, movies(&files));
+  shell.add_files(cx, &files);
+  shell.window(cx, |window, cx| {
+    window.render_frame(cx);
+    let body = window.find("panel-file-list").bounds();
+    let cards: Vec<_> = files
+      .iter()
+      .map(|file| window.find(FileCard::element_id(file)).bounds())
+      .collect();
+    assert_eq!(cards[0].top() - body.top(), px(2.0));
+    for pair in cards.windows(2) {
+      assert_eq!(pair[1].top() - pair[0].bottom(), px(2.0), "{pair:?}");
+    }
+    for card in &cards {
+      assert_eq!(card.left() - body.left(), px(2.0));
+      assert_eq!(body.right() - card.right(), px(2.0));
+    }
+  });
 }
 
 #[gpui_kit::test]

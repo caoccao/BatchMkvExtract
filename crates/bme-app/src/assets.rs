@@ -84,7 +84,7 @@ wrapped_icons!(CARD_ICONS, "cards"; "output-folder", "copy-command", "delete");
 
 // Lucide icons the UI needs that are not part of gpui-kit's default 106-icon
 // bundle; every icon is in the `IconName` enum, only the SVGs are opt-in.
-icon_assets!(ExtraIcons, [ChevronsRight, Clock, LogOut, Scissors, X]);
+icon_assets!(ExtraIcons, [ChevronsRight, Clock, LogOut, RotateCcw, Scissors, X]);
 
 /// The asset source registered with the application.
 pub struct AppAssets;
@@ -144,6 +144,66 @@ mod tests {
     let toolbar = AppAssets.list("icons/toolbar/").unwrap();
     assert!(toolbar.contains(&SharedString::new_static("icons/toolbar/extract-all.svg")));
     assert!(toolbar.contains(&SharedString::new_static("icons/toolbar/group-mode.svg")));
+  }
+
+  /// Every Lucide icon named in `src/` is served, from gpui-kit's bundle or
+  /// the extra icons above; a missing one draws nothing and only logs.
+  #[test]
+  fn every_icon_the_sources_name_is_bundled() {
+    fn sources(directory: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+      for entry in std::fs::read_dir(directory).unwrap() {
+        let path = entry.unwrap().path();
+        if path.is_dir() {
+          sources(&path, out);
+        } else if path.extension().is_some_and(|extension| extension == "rs") {
+          out.push(path);
+        }
+      }
+    }
+    // Lucide's file name of an `IconName` variant: `RotateCcw` is
+    // `rotate-ccw`, `Settings2` is `settings-2`.
+    fn file_name(variant: &str) -> String {
+      let mut name = String::new();
+      let mut previous: Option<char> = None;
+      for c in variant.chars() {
+        let boundary = previous.is_some_and(|previous| {
+          (c.is_ascii_uppercase() && (previous.is_ascii_lowercase() || previous.is_ascii_digit()))
+            || (c.is_ascii_digit() && previous.is_ascii_alphabetic())
+        });
+        if boundary {
+          name.push('-');
+        }
+        name.push(c.to_ascii_lowercase());
+        previous = Some(c);
+      }
+      format!("icons/{name}.svg")
+    }
+    assert_eq!(file_name("RotateCcw"), "icons/rotate-ccw.svg");
+    assert_eq!(file_name("Settings2"), "icons/settings-2.svg");
+    let mut files = Vec::new();
+    sources(
+      &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src"),
+      &mut files,
+    );
+    let marker = "IconName::";
+    let mut named = std::collections::BTreeSet::new();
+    for file in files {
+      let text = std::fs::read_to_string(&file).unwrap();
+      for (start, _) in text.match_indices(marker) {
+        let rest = &text[start + marker.len()..];
+        let end = rest.find(|c: char| !c.is_ascii_alphanumeric()).unwrap_or(rest.len());
+        if rest[..end].starts_with(|c: char| c.is_ascii_uppercase()) {
+          named.insert(rest[..end].to_string());
+        }
+      }
+    }
+    assert!(named.contains("RotateCcw") && named.contains("CircleX"), "{named:?}");
+    let missing: Vec<String> = named
+      .iter()
+      .map(|variant| file_name(variant))
+      .filter(|path| !matches!(AppAssets.load(path), Ok(Some(_))))
+      .collect();
+    assert!(missing.is_empty(), "not bundled: {missing:?}");
   }
 
   #[test]

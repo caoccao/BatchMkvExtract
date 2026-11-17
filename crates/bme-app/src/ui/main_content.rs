@@ -15,8 +15,7 @@
 *   limitations under the License.
 */
 
-//! The File List and Queue tabs, plus the closable About tab. The Queue tab
-//! stays empty until its view exists.
+//! The File List and Queue tabs, plus the closable About tab.
 
 use gpui_kit::assets::IconName;
 use gpui_kit::base::TestSupportExt;
@@ -27,11 +26,13 @@ use gpui_kit::*;
 
 use super::about::About;
 use super::file_list::FileList;
+use super::queue::QueueView;
 use crate::state::{Stores, TabType};
 
 pub struct MainContent {
   stores: Stores,
   file_list: Entity<FileList>,
+  queue: Entity<QueueView>,
   _subscriptions: Vec<Subscription>,
 }
 
@@ -40,6 +41,7 @@ impl MainContent {
     let subscriptions = vec![cx.observe(&stores.ui, |_, _, cx| cx.notify())];
     Self {
       file_list: cx.new(|cx| FileList::new(stores.clone(), cx)),
+      queue: cx.new(|cx| QueueView::new(stores.clone(), cx)),
       stores,
       _subscriptions: subscriptions,
     }
@@ -47,6 +49,10 @@ impl MainContent {
 
   pub fn file_list(&self) -> &Entity<FileList> {
     &self.file_list
+  }
+
+  pub fn queue(&self) -> &Entity<QueueView> {
+    &self.queue
   }
 
   fn tab(&self, tab: TabType, cx: &mut Context<Self>) -> Tab {
@@ -77,7 +83,7 @@ impl Render for MainContent {
     let tab_elements: Vec<Tab> = tabs.iter().map(|tab| self.tab(*tab, cx)).collect();
     let content = match active {
       TabType::FileList => self.file_list.clone().into_any_element(),
-      TabType::Queue => div().id("queue-empty").test_support().into_any_element(),
+      TabType::Queue => self.queue.clone().into_any_element(),
       TabType::About => About.into_any_element(),
     };
     let theme = cx.theme();
@@ -104,10 +110,11 @@ impl Render for MainContent {
       .child(
         v_flex()
           .id(SharedString::from(format!("panel-{}", active.name())))
+          .test_support()
           .flex_1()
           .min_h_0()
           .w_full()
-          .py(super::SHELL_MARGIN)
+          .p(super::TAB_PADDING)
           .overflow_y_scroll()
           .child(content),
       )

@@ -17,7 +17,8 @@
 
 //! The window content: update banner, toolbar, tabs and status bar, plus what
 //! belongs to the whole window: OS file drop, toasts, geometry persistence,
-//! the title with the queue count and the taskbar progress, live language and
+//! the title with the queue count and the taskbar progress, the OS
+//! notification and the topmost window of a drained queue, live language and
 //! theme changes, and the close request.
 
 use std::time::Duration;
@@ -31,11 +32,12 @@ use gpui_kit::*;
 use super::main_content::MainContent;
 use super::status_bar::AppStatusBar;
 use super::toolbar::Toolbar;
+use super::topmost::TopmostWindow;
 use super::update_banner::UpdateBanner;
 use crate::platform::taskbar::{self, ProgressFn};
 use crate::platform::window as main_window;
 use crate::state::queue::QueueEvent;
-use crate::state::ui::{NotificationKind, UiEvent};
+use crate::state::ui::{Completion, NotificationKind, UiEvent};
 use crate::state::{ConfigStore, Stores, files};
 
 /// How long the window must stay still before its geometry is saved.
@@ -54,6 +56,7 @@ pub struct AppView {
   /// The taskbar, Dock or launcher progress of the window, and its value.
   taskbar: ProgressFn,
   progress: Option<u8>,
+  topmost: TopmostWindow,
   save_geometry: Option<Task<()>>,
   _subscriptions: Vec<Subscription>,
 }
@@ -101,8 +104,16 @@ impl AppView {
             .title(toast.file.clone())
             .placement(Anchor::TopCenter),
           UiEvent::Snackbar(snackbar) => notification(snackbar.kind, &snackbar.message).placement(Anchor::BottomCenter),
-          // The Settings dialog and the drained queue's notices come later.
-          UiEvent::OpenSettings | UiEvent::Completion(_) | UiEvent::QuitAfterCompletion => return,
+          UiEvent::Completion(completion) => {
+            this.complete(completion, window, cx);
+            return;
+          }
+          UiEvent::QuitAfterCompletion => {
+            this.quit_after_completion(window, cx);
+            return;
+          }
+          // The Settings dialog comes later.
+          UiEvent::OpenSettings => return,
         };
         window.push_notification(notification, cx);
       }),
@@ -122,6 +133,7 @@ impl AppView {
       main: cx.new(|cx| MainContent::new(stores.clone(), cx)),
       taskbar: stores.taskbar.attach(window),
       progress: None,
+      topmost: TopmostWindow::default(),
       stores,
       language,
       theme,
@@ -143,12 +155,51 @@ impl AppView {
     &self.toolbar
   }
 
+  /// The topmost completion window.
+  pub fn topmost(&self) -> &TopmostWindow {
+    &self.topmost
+  }
+
   /// Shows the queue's progress on the taskbar if it changed.
   fn update_progress(&mut self, progress: Option<u8>) {
     if progress != self.progress {
       self.progress = progress;
       (self.taskbar)(progress);
     }
+  }
+
+  /// A drained queue's notice: an OS notification (`.system()`: the OS
+  /// notification centre only, the title, and the two lines as its body)
+  /// and/or the topmost window. If the topmost window is shown, it owns
+  /// the decision to quit.
+  fn complete(&mut self, completion: &Completion, window: &mut Window, cx: &mut Context<Self>) {
+    let notice = &completion.notice;
+    if completion.system {
+      let body = format!("{}\n{}", notice.line, notice.detail);
+      let notification = if notice.failed {
+        Notification::error(body)
+      } else {
+        Notification::success(body)
+      };
+      window.push_notification(notification.title(notice.title.clone()).system(), cx);
+    }
+    if completion.topmost {
+      let quit = completion.quit.then(|| self.stores.ui.downgrade());
+      self.topmost.show(notice.clone(), quit, window, cx);
+    } else if completion.quit {
+      self.quit_after_completion(window, cx);
+    }
+  }
+
+  fn quit_after_completion(&self, window: &mut Window, cx: &mut Context<Self>) {
+    // A new batch may have started while the topmost window was open.
+    if self.stores.has_active_extracts(cx) {
+      return;
+    }
+    main_window::save_geometry(&self.stores, window, cx);
+    self.stores.ui.update(cx, |ui, _| ui.set_closing());
+    // The application's main-window close handler quits the app.
+    window.remove_window();
   }
 
   /// Applies a changed language, theme or display mode at once.

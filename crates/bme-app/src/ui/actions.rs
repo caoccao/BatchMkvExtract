@@ -84,6 +84,7 @@ pub fn bind_keys(cx: &mut App) {
     KeyBinding::new("ctrl-8", SelectTab8, None),
     KeyBinding::new("ctrl-9", SelectTab9, None),
   ]);
+  super::topmost::bind_keys(cx);
 }
 
 /// Registers the global handlers of the actions above (except Quit, which

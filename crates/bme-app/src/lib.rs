@@ -114,7 +114,8 @@ pub fn run() {
     // Bring the app to the front also when started from a terminal; GPUI
     // delivers focus events only to the active window.
     cx.activate(true);
-    // The app ends with its main window.
+    // The app ends with its main window; an open topmost notification does
+    // not keep it running.
     let main = handle.window_id();
     cx.on_window_closed(move |cx, closed| {
       if closed == main || cx.windows().is_empty() {

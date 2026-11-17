@@ -190,6 +190,8 @@ impl Render for FileList {
           .id(("file-entry", index))
           .test_support()
           .w_full()
+          // The card's margin, outside the height its cached view measures.
+          .p(super::CARD_MARGIN)
           .child(self.cards[&CardKey::of(entry)].element(cache, cx))
           .into_any_element()
       })
@@ -204,13 +206,7 @@ impl Render for FileList {
           .restrict_scroll_to_axis()
           .track_scroll(&self.scroll)
           .text_size(super::text::body2())
-          .child(
-            v_flex()
-              .w_full()
-              .pb(super::SHELL_MARGIN)
-              .gap(super::space(1.0))
-              .children(elements),
-          ),
+          .child(v_flex().w_full().children(elements)),
       )
       .vertical_scrollbar(&self.scroll)
       .into_any_element()

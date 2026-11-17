@@ -26,10 +26,12 @@ pub mod cards;
 pub mod file_list;
 pub mod main_content;
 pub mod output_dialog;
+pub mod queue;
 pub mod root;
 pub mod selectable_path;
 pub mod status_bar;
 pub mod toolbar;
+pub mod topmost;
 pub mod track_table;
 pub mod update_banner;
 pub mod welcome;
@@ -41,6 +43,11 @@ use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::{ElementId, Hsla, Pixels, Rgba, Styled, px};
 
 const SHELL_MARGIN: Pixels = px(2.0);
+/// The tab body's padding on every side. With each card's [`CARD_MARGIN`],
+/// cards are 2 px apart and 2 px from the tab body's edges.
+const TAB_PADDING: Pixels = px(1.0);
+/// The margin around each card of the file list.
+const CARD_MARGIN: Pixels = px(1.0);
 
 /// The standard minimum width for a button with a visible text label.
 pub(crate) fn text_button(id: impl Into<ElementId>) -> Button {
