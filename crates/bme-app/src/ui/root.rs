@@ -16,8 +16,9 @@
 */
 
 //! The window content: update banner, toolbar, tabs and status bar, plus what
-//! belongs to the whole window: toasts, geometry persistence, live language
-//! and theme changes, and the close request.
+//! belongs to the whole window: OS file drop, toasts, geometry persistence,
+//! the title with the queue count and the taskbar progress, live language and
+//! theme changes, and the close request.
 
 use std::time::Duration;
 
@@ -31,9 +32,11 @@ use super::main_content::MainContent;
 use super::status_bar::AppStatusBar;
 use super::toolbar::Toolbar;
 use super::update_banner::UpdateBanner;
+use crate::platform::taskbar::{self, ProgressFn};
 use crate::platform::window as main_window;
+use crate::state::queue::QueueEvent;
 use crate::state::ui::{NotificationKind, UiEvent};
-use crate::state::{ConfigStore, Stores};
+use crate::state::{ConfigStore, Stores, files};
 
 /// How long the window must stay still before its geometry is saved.
 const GEOMETRY_SAVE_DELAY: Duration = Duration::from_millis(500);
@@ -46,6 +49,11 @@ pub struct AppView {
   /// The applied language, theme and display mode, to act only on changes.
   language: Language,
   theme: (ThemeName, DisplayMode),
+  /// The title last set on the window.
+  title: String,
+  /// The taskbar, Dock or launcher progress of the window, and its value.
+  taskbar: ProgressFn,
+  progress: Option<u8>,
   save_geometry: Option<Task<()>>,
   _subscriptions: Vec<Subscription>,
 }
@@ -63,6 +71,20 @@ impl AppView {
         }
       }),
       cx.observe_window_bounds(window, |this, window, cx| this.schedule_geometry_save(window, cx)),
+      // Done and total change only with a status, which notifies.
+      cx.observe_in(&stores.queue, window, |this, queue, window, cx| {
+        let title = main_window::title(&queue.read(cx).summary());
+        if title != this.title {
+          window.set_window_title(&title);
+          this.title = title;
+        }
+      }),
+      // The progress moves with every extract event, not only on a status.
+      cx.subscribe_in(&stores.queue, window, |this, queue, event: &QueueEvent, _, cx| {
+        if let QueueEvent::ItemChanged { .. } = event {
+          this.update_progress(taskbar::progress(&queue.read(cx).summary()));
+        }
+      }),
       cx.subscribe_in(&stores.ui, window, |this, _, event: &UiEvent, window, cx| {
         let notification = |kind: NotificationKind, message: &str| match kind {
           NotificationKind::Success => Notification::success(message.to_string()),
@@ -79,8 +101,7 @@ impl AppView {
             .title(toast.file.clone())
             .placement(Anchor::TopCenter),
           UiEvent::Snackbar(snackbar) => notification(snackbar.kind, &snackbar.message).placement(Anchor::BottomCenter),
-          // The Settings dialog and the queue's completion notices are not
-          // part of the shell.
+          // The Settings dialog and the drained queue's notices come later.
           UiEvent::OpenSettings | UiEvent::Completion(_) | UiEvent::QuitAfterCompletion => return,
         };
         window.push_notification(notification, cx);
@@ -99,9 +120,12 @@ impl AppView {
       banner: cx.new(|cx| UpdateBanner::new(stores.clone(), cx)),
       toolbar: cx.new(|cx| Toolbar::new(stores.clone(), cx)),
       main: cx.new(|cx| MainContent::new(stores.clone(), cx)),
+      taskbar: stores.taskbar.attach(window),
+      progress: None,
       stores,
       language,
       theme,
+      title: crate::window_title().to_string(),
       save_geometry: None,
       _subscriptions: subscriptions,
     }
@@ -117,6 +141,14 @@ impl AppView {
 
   pub fn toolbar(&self) -> &Entity<Toolbar> {
     &self.toolbar
+  }
+
+  /// Shows the queue's progress on the taskbar if it changed.
+  fn update_progress(&mut self, progress: Option<u8>) {
+    if progress != self.progress {
+      self.progress = progress;
+      (self.taskbar)(progress);
+    }
   }
 
   /// Applies a changed language, theme or display mode at once.
@@ -154,6 +186,14 @@ impl Render for AppView {
       .size_full()
       .bg(cx.theme().background)
       .text_color(cx.theme().foreground)
+      .on_drop(cx.listener(|this, paths: &ExternalPaths, _, cx| {
+        let paths = paths
+          .paths()
+          .iter()
+          .map(|path| path.to_string_lossy().into_owned())
+          .collect();
+        files::add_paths(&this.stores.files, Some(&this.stores.ui), paths, cx);
+      }))
       .child(
         v_flex()
           .flex_1()

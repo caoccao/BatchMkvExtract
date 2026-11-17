@@ -16,16 +16,29 @@
 */
 
 //! The window and the OS around it: window geometry, the close guard, the
-//! macOS menus and Quit.
+//! macOS menus, file dialogs, launch arguments and the taskbar progress.
 
 pub mod close_guard;
+pub mod dialogs;
 pub mod menus;
+pub mod taskbar;
 pub mod window;
 
 use gpui_kit::{AnyWindowHandle, App};
 
-use crate::state::Stores;
+use crate::state::{Stores, files};
 use crate::ui::actions::Quit;
+
+/// Adds the `.mkv` files and folders named on the command line
+/// (`get_launch_args`).
+pub fn ingest_launch_args(stores: &Stores, cx: &mut App) {
+  files::add_paths(
+    &stores.files,
+    Some(&stores.ui),
+    bme_core::services::get_launch_args(),
+    cx,
+  );
+}
 
 /// Quit (Cmd+Q on macOS) asks like closing the main window does: the window
 /// geometry is saved and an active extraction needs a confirmation first.

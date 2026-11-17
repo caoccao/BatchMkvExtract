@@ -20,9 +20,11 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow.workspace = true
+# Extract events and auto-detected MKVToolNix paths from worker threads to the
+# foreground executor.
+async-channel = "2"
 bme-core = { path = "../bme-core" }
-# The display a window is on (Windows); later the taskbar, Dock and launcher
-# progress.
+# The taskbar, Dock and launcher progress, the display a window is on.
 bme-platform = { path = "../bme-platform" }
 # The queue's Start and End clock times in local time, the log's timestamps.
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }

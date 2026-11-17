@@ -16,8 +16,8 @@
 */
 
 //! The File List and Queue tabs, plus the closable About tab. The File List
-//! shows the Welcome page while it has no files, which is always until the
-//! file store exists; the Queue tab stays empty until its view exists.
+//! shows the Welcome page while it has no files; the Queue tab stays empty
+//! until its view exists.
 
 use gpui_kit::assets::IconName;
 use gpui_kit::base::TestSupportExt;
@@ -27,11 +27,12 @@ use gpui_kit::component::{ActiveTheme, Sizable, v_flex};
 use gpui_kit::*;
 
 use super::about::About;
-use super::welcome::Welcome;
+use super::file_list::FileList;
 use crate::state::{Stores, TabType};
 
 pub struct MainContent {
   stores: Stores,
+  file_list: Entity<FileList>,
   _subscriptions: Vec<Subscription>,
 }
 
@@ -39,6 +40,7 @@ impl MainContent {
   pub fn new(stores: Stores, cx: &mut Context<Self>) -> Self {
     let subscriptions = vec![cx.observe(&stores.ui, |_, _, cx| cx.notify())];
     Self {
+      file_list: cx.new(|cx| FileList::new(stores.clone(), cx)),
       stores,
       _subscriptions: subscriptions,
     }
@@ -71,7 +73,7 @@ impl Render for MainContent {
     let (tabs, active, index) = (ui.tabs(), ui.active_tab(), ui.active_index());
     let tab_elements: Vec<Tab> = tabs.iter().map(|tab| self.tab(*tab, cx)).collect();
     let content = match active {
-      TabType::FileList => v_flex().size_full().child(Welcome).into_any_element(),
+      TabType::FileList => self.file_list.clone().into_any_element(),
       TabType::Queue => div().id("queue-empty").test_support().into_any_element(),
       TabType::About => About.into_any_element(),
     };

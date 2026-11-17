@@ -22,6 +22,7 @@
 
 pub mod about;
 pub mod actions;
+pub mod file_list;
 pub mod main_content;
 pub mod root;
 pub mod status_bar;

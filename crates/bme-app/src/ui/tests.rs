@@ -15,13 +15,17 @@
 *   limitations under the License.
 */
 
-//! Headless smoke tests of the application shell.
+//! Headless tests of the application shell and the file list's plain boxes.
 
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::rc::Rc;
 use std::sync::{Arc, Mutex, MutexGuard};
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 
 use bme_core::config::{Config, ConfigWindow, DisplayMode, Language, Theme as ThemeName};
-use bme_core::protocol::UpdateCheckResult;
+use bme_core::extract::{ExtractError, ExtractEvent, ExtractEventSink, ExtractOutcome};
+use bme_core::protocol::{MkvTrack, UpdateCheckResult};
 use core::prelude::v1::test;
 use gpui_kit::component::{ActiveTheme, WindowExt};
 use gpui_kit::test::{TestQueryExt, TestWindowExt};
@@ -29,19 +33,39 @@ use gpui_kit::*;
 
 use super::actions;
 use super::root::AppView;
+use crate::domain::status::QueueItemStatus;
+use crate::extract_events::{self, ExtractBackend};
 use crate::i18n::tests::LOCALE_LOCK;
 use crate::platform::close_guard;
+use crate::platform::taskbar::Taskbar;
+use crate::state::files::tests::{TempDir, all, fixture_source, movie};
 use crate::state::ui::{NotificationKind, ToolbarMenu};
 use crate::state::{Persistence, Services, Stores, TabType};
+use crate::tools::ToolDetector;
+
+/// What the shell's extract queue was asked to do.
+#[derive(Default)]
+pub(super) struct ExtractCalls {
+  pub(super) enqueued: Vec<(String, Vec<String>)>,
+  pub(super) cancelled: Vec<String>,
+}
 
 /// The shell in a test window, in English. The locale is process-wide, and a
 /// test switching it would change the text width under another test's click,
 /// so every shell test holds the locale lock while it runs.
+///
+/// Tracks are listed from fixtures; extractions are recorded, and their
+/// events are sent by the test through [`Self::send`] into the same channel
+/// the app uses.
 pub(super) struct Shell {
   pub(super) handle: AnyWindowHandle,
   pub(super) stores: Stores,
   /// Every config the store wrote, in order.
   pub(super) written: Arc<Mutex<Vec<Config>>>,
+  pub(super) extracts: Arc<Mutex<ExtractCalls>>,
+  /// Every value the window's taskbar progress was set to.
+  pub(super) taskbar: Rc<RefCell<Vec<Option<u8>>>>,
+  events: ExtractEventSink,
   _locale: MutexGuard<'static, ()>,
 }
 
@@ -52,10 +76,37 @@ impl Shell {
 
   /// The shell with `config` (its language is set to English).
   pub(super) fn with_config(cx: &mut TestAppContext, config: Config) -> Self {
+    Self::build(cx, config, HashMap::new())
+  }
+
+  /// The shell over track fixtures, with Group Mode off.
+  pub(super) fn with_files(cx: &mut TestAppContext, fixtures: HashMap<String, Vec<MkvTrack>>) -> Self {
+    let mut config = Config::default();
+    config.profiles[0].default_group_mode = false;
+    Self::build(cx, config, fixtures)
+  }
+
+  fn build(cx: &mut TestAppContext, config: Config, fixtures: HashMap<String, Vec<MkvTrack>>) -> Self {
     let locale = LOCALE_LOCK.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
     crate::i18n::set_language(Language::EnUS);
     let written = Arc::new(Mutex::new(Vec::new()));
     let sink = written.clone();
+    let extracts = Arc::new(Mutex::new(ExtractCalls::default()));
+    let (enqueue_calls, cancel_calls) = (extracts.clone(), extracts.clone());
+    let backend = ExtractBackend::new(
+      move |file, args| {
+        enqueue_calls.lock().unwrap().enqueued.push((file, args));
+        Ok(())
+      },
+      move |file| {
+        cancel_calls.lock().unwrap().cancelled.push(file.to_string());
+        Ok(())
+      },
+    );
+    let (events, receiver) = extract_events::channel();
+    let (tracks, _) = fixture_source(fixtures);
+    let taskbar: Rc<RefCell<Vec<Option<u8>>>> = Rc::default();
+    let progress = taskbar.clone();
     let (handle, stores) = cx.update(|cx| {
       gpui_kit::init(cx);
       crate::theme::install(cx);
@@ -66,8 +117,16 @@ impl Shell {
       crate::theme::apply(&config, cx.window_appearance(), cx);
       let services = Services {
         persistence: Persistence::new(move |config| sink.lock().unwrap().push(config)),
+        tracks,
+        extracts: backend,
+        taskbar: Taskbar::new(move |_| {
+          let progress = progress.clone();
+          Box::new(move |percent| progress.borrow_mut().push(percent))
+        }),
+        tools: ToolDetector::system(),
       };
       let stores = Stores::new(config, services, cx);
+      extract_events::start(&stores, receiver, cx);
       actions::bind_keys(cx);
       actions::install(&stores, cx);
       let options = WindowOptions {
@@ -88,10 +147,59 @@ impl Shell {
       handle,
       stores,
       written,
+      extracts,
+      taskbar,
+      events,
       _locale: locale,
     };
     shell.window(cx, |window, cx| window.render_frame(cx));
     shell
+  }
+
+  /// Sends an extract event as a worker thread of the core would.
+  pub(super) fn send(&self, cx: &mut TestAppContext, event: ExtractEvent) {
+    (self.events)(event);
+    cx.run_until_parked();
+  }
+
+  /// The title the window shows.
+  pub(super) fn title(&self, cx: &mut TestAppContext) -> String {
+    VisualTestContext::from_window(self.handle, cx)
+      .window_title()
+      .unwrap_or_else(|| crate::window_title().to_string())
+  }
+
+  pub(super) fn toasts(&self, cx: &mut TestAppContext) -> usize {
+    self.window(cx, |window, cx| window.notifications(cx).len())
+  }
+
+  /// Adds files and lets their tracks load and the profile select them. The
+  /// fixtures' folders do not exist, so the outputs go to the system's
+  /// temporary directory, which does.
+  pub(super) fn add_files(&self, cx: &mut TestAppContext, files: &[&str]) {
+    let files: Vec<String> = files.iter().map(|file| (*file).to_owned()).collect();
+    self.stores.files.update(cx, |store, cx| {
+      store.add_files(files, cx);
+      store.set_global_output_dir(std::env::temp_dir().to_string_lossy().into_owned(), cx);
+    });
+    cx.run_until_parked();
+    self.window(cx, |window, cx| window.render_frame(cx));
+  }
+
+  pub(super) fn enqueued(&self) -> Vec<String> {
+    let calls = self.extracts.lock().unwrap();
+    calls.enqueued.iter().map(|(file, _)| file.clone()).collect()
+  }
+
+  pub(super) fn cancelled(&self) -> Vec<String> {
+    self.extracts.lock().unwrap().cancelled.clone()
+  }
+
+  pub(super) fn status(&self, cx: &mut TestAppContext, file: &str) -> Option<QueueItemStatus> {
+    self
+      .stores
+      .queue
+      .read_with(cx, |queue, _| queue.item(file).map(|item| item.status))
   }
 
   /// Resizes the window's content and draws a frame.
@@ -185,9 +293,8 @@ fn the_shell_mounts_with_the_welcome_page_while_empty(cx: &mut TestAppContext) {
       "{cards:?}"
     );
   });
-  // The file list cannot take files yet.
-  assert!(shell.disabled(cx, "welcome-add-files"));
-  assert!(shell.disabled(cx, "welcome-add-folder"));
+  assert!(!shell.disabled(cx, "welcome-add-files"));
+  assert!(!shell.disabled(cx, "welcome-add-folder"));
   shell.window(cx, |window, _| {
     for id in [
       "welcome-card-batch-mkv-extract-github",
@@ -249,7 +356,7 @@ fn the_toolbar_opens_about_as_a_tab(cx: &mut TestAppContext) {
 }
 
 #[gpui_kit::test]
-fn the_toolbar_enables_only_what_the_shell_can_do(cx: &mut TestAppContext) {
+fn the_toolbar_enables_what_the_stores_allow(cx: &mut TestAppContext) {
   let shell = Shell::open(cx);
   for id in [
     "toolbar-global-output",
@@ -258,15 +365,15 @@ fn the_toolbar_enables_only_what_the_shell_can_do(cx: &mut TestAppContext) {
     "toolbar-cancel-all",
     "toolbar-clear-completed",
     "toolbar-clear",
-    "toolbar-group-mode",
     "toolbar-settings",
   ] {
-    assert!(shell.disabled(cx, id), "{id} waits for its store");
+    assert!(shell.disabled(cx, id), "{id} has nothing to act on");
   }
   for id in [
     "toolbar-quit-when-complete",
     "toolbar-system-notification",
     "toolbar-topmost-notification",
+    "toolbar-group-mode",
     "toolbar-profile",
     "toolbar-about",
   ] {
@@ -286,12 +393,13 @@ fn the_toolbar_enables_only_what_the_shell_can_do(cx: &mut TestAppContext) {
   assert_eq!(toggles, (true, true, true));
   shell.click(cx, "toolbar-system-notification");
   assert!(!shell.stores.ui.read_with(cx, |ui, _| ui.system_notification()));
-  // The shortcuts of the disabled buttons do nothing yet, and F10 opens no
-  // dialog before Settings exists.
-  for key in ["f3", "f4", "f8", "ctrl-q", "f10"] {
+  // Without files the shortcuts have nothing to do, and F10 opens no dialog
+  // before Settings exists.
+  for key in ["f3", "f4", "ctrl-q", "f10"] {
     shell.press(cx, key);
   }
   assert!(!shell.has_dialog(cx));
+  assert!(shell.enqueued().is_empty() && shell.cancelled().is_empty());
   assert_eq!(shell.active_tab(cx), TabType::FileList);
   assert!(shell.written.lock().unwrap().is_empty());
 }
@@ -723,4 +831,351 @@ fn a_failed_check_shows_nothing_and_records_nothing(cx: &mut TestAppContext) {
   let config = shell.stores.config.read_with(cx, |store, _| store.config().clone());
   assert_eq!(config.update.last_checked, 0, "the next start tries again");
   assert!(shell.written.lock().unwrap().is_empty());
+}
+
+pub(super) fn movies(files: &[&str]) -> HashMap<String, Vec<MkvTrack>> {
+  all(files, movie)
+}
+
+pub(super) fn started(file: &str) -> ExtractEvent {
+  ExtractEvent::Started {
+    file: file.to_string(),
+    at: SystemTime::now(),
+  }
+}
+
+pub(super) fn progress(file: &str, percent: u32) -> ExtractEvent {
+  ExtractEvent::Progress {
+    file: file.to_string(),
+    percent,
+  }
+}
+
+pub(super) fn finished(file: &str, outcome: ExtractOutcome, error: Option<&str>) -> ExtractEvent {
+  ExtractEvent::Finished {
+    file: file.to_string(),
+    outcome,
+    error: error.map(|message| ExtractError::Other(message.to_string())),
+    warnings: Vec::new(),
+    at: SystemTime::now(),
+  }
+}
+
+#[gpui_kit::test]
+fn dropping_files_and_folders_lists_their_mkv_files(cx: &mut TestAppContext) {
+  let dir = TempDir::new("shell-drop");
+  let movie = dir.file("movie.mkv");
+  dir.file("readme.txt");
+  let shell = Shell::open(cx);
+  let paths = ExternalPaths(vec![dir.path().to_path_buf()].into());
+  let position = point(px(500.0), px(400.0));
+  shell.window(cx, |window, cx| {
+    window.dispatch_event(PlatformInput::FileDrop(FileDropEvent::Entered { position, paths }), cx);
+    window.dispatch_event(PlatformInput::FileDrop(FileDropEvent::Submit { position }), cx);
+  });
+  cx.run_until_parked();
+  shell
+    .stores
+    .files
+    .read_with(cx, |files, _| assert_eq!(files.files(), [movie]));
+  shell.window(cx, |window, cx| {
+    window.render_frame(cx);
+    window.find(("file-entry", 0usize));
+    assert!(window.try_find(("file-entry", 1usize)).is_none());
+    assert!(window.try_find("welcome").is_none());
+  });
+}
+
+/// Add Files and Add Folder open the file dialog, and what is chosen goes
+/// through the same `.mkv` filter as a drop.
+#[gpui_kit::test]
+fn add_files_and_add_folder_take_what_the_dialog_returns(cx: &mut TestAppContext) {
+  let dir = TempDir::new("shell-dialog");
+  let (a, b) = (dir.file("a.mkv"), dir.file("b.mkv"));
+  let ignored = dir.file("c.mp4");
+  let shell = Shell::open(cx);
+  shell.click(cx, "welcome-add-files");
+  assert!(cx.did_prompt_for_paths());
+  let chosen = vec![b.clone().into(), ignored.into()];
+  cx.simulate_path_prompt_response(move |options| {
+    assert!(options.files && options.multiple && !options.directories);
+    Some(chosen)
+  });
+  cx.run_until_parked();
+  assert_eq!(
+    shell.stores.files.read_with(cx, |files, _| files.files().to_vec()),
+    std::slice::from_ref(&b)
+  );
+  shell.stores.files.update(cx, |files, cx| files.clear_files(cx));
+  shell.window(cx, |window, cx| window.render_frame(cx));
+  shell.click(cx, "welcome-add-folder");
+  let folder = dir.path().to_path_buf();
+  cx.simulate_path_prompt_response(move |options| {
+    assert!(options.directories && !options.files);
+    Some(vec![folder])
+  });
+  cx.run_until_parked();
+  assert_eq!(
+    shell.stores.files.read_with(cx, |files, _| files.files().to_vec()),
+    [a, b]
+  );
+  // A cancelled dialog adds nothing.
+  shell.stores.files.update(cx, |files, cx| files.clear_files(cx));
+  shell.window(cx, |window, cx| window.render_frame(cx));
+  shell.click(cx, "welcome-add-files");
+  cx.simulate_path_prompt_response(|_| None);
+  cx.run_until_parked();
+  assert!(!shell.stores.files.read_with(cx, |files, _| files.has_files()));
+}
+
+#[gpui_kit::test]
+fn clear_empties_the_list_from_the_toolbar_and_ctrl_q(cx: &mut TestAppContext) {
+  let shell = Shell::open(cx);
+  shell.add_files(cx, &["/media/a.mkv"]);
+  assert!(!shell.disabled(cx, "toolbar-clear"));
+  // Nothing loaded, so nothing selected, and nothing extracts.
+  assert!(shell.disabled(cx, "toolbar-extract-all"));
+  assert!(shell.disabled(cx, "toolbar-cancel-all"));
+  shell.click(cx, "toolbar-clear");
+  assert!(!shell.stores.files.read_with(cx, |files, _| files.has_files()));
+  shell.add_files(cx, &["/media/b.mkv"]);
+  shell.press(cx, "ctrl-q");
+  assert!(!shell.stores.files.read_with(cx, |files, _| files.has_files()));
+  assert!(shell.shows(cx, "Add Files"), "the Welcome page is back");
+}
+
+/// Group Mode starts as the profile's `defaultGroupMode`; the toolbar button
+/// and F8 switch it for the session and the file list regroups.
+#[gpui_kit::test]
+fn group_mode_toggles_from_the_toolbar_and_f8(cx: &mut TestAppContext) {
+  let (a, b) = ("/media/a.mkv", "/media/b.mkv");
+  let shell = Shell::with_files(cx, movies(&[a, b]));
+  let group_mode =
+    |shell: &Shell, cx: &mut TestAppContext| shell.stores.files.read_with(cx, |files, _| files.group_mode());
+  assert!(!group_mode(&shell, cx));
+  shell.add_files(cx, &[a, b]);
+  let entries =
+    |shell: &Shell, cx: &mut TestAppContext| shell.stores.files.read_with(cx, |files, _| files.entries().len());
+  assert_eq!(entries(&shell, cx), 2);
+  shell.click(cx, "toolbar-group-mode");
+  assert!(group_mode(&shell, cx));
+  assert_eq!(entries(&shell, cx), 1, "one group card");
+  let checked = shell.window(cx, |window, cx| {
+    window.render_frame(cx);
+    window.find("toolbar-group-mode").checked()
+  });
+  assert_eq!(checked, Some(true));
+  shell.window(cx, |window, _| {
+    window.find(("file-entry", 0usize));
+    assert!(window.try_find(("file-entry", 1usize)).is_none());
+  });
+  shell.press(cx, "f8");
+  assert!(!group_mode(&shell, cx));
+  assert_eq!(entries(&shell, cx), 2);
+  // A profile operation sets it again (Default's value is off here).
+  shell.press(cx, "f8");
+  shell
+    .stores
+    .config
+    .update(cx, |config, cx| config.set_active_profile("Default", cx));
+  cx.run_until_parked();
+  assert!(!group_mode(&shell, cx));
+  assert!(
+    shell
+      .written
+      .lock()
+      .unwrap()
+      .iter()
+      .all(|config| !config.profiles[0].default_group_mode)
+  );
+}
+
+#[gpui_kit::test]
+fn extract_all_enqueues_every_file_and_the_title_counts_the_queue(cx: &mut TestAppContext) {
+  let (a, b) = ("/media/a.mkv", "/media/b.mkv");
+  let shell = Shell::with_files(cx, movies(&[a, b]));
+  let base = crate::window_title().to_string();
+  assert!(shell.disabled(cx, "toolbar-extract-all"));
+  shell.add_files(cx, &[a, b]);
+  assert!(
+    !shell.disabled(cx, "toolbar-extract-all"),
+    "the profile selected tracks"
+  );
+  shell.click(cx, "toolbar-extract-all");
+  assert_eq!(shell.enqueued(), [a, b], "in file list order");
+  let args = shell.extracts.lock().unwrap().enqueued[0].1.clone();
+  assert_eq!(args[0], "tracks");
+  assert!(
+    args[1].starts_with("3:") && args[1].ends_with("a.3.eng.srt"),
+    "{args:?}"
+  );
+  assert_eq!(shell.status(cx, a), Some(QueueItemStatus::Waiting));
+  assert_eq!(shell.title(cx), format!("{base} - 0/2"));
+  assert!(!shell.disabled(cx, "toolbar-cancel-all"));
+  assert!(
+    shell.disabled(cx, "toolbar-clear"),
+    "no clearing while extractions wait"
+  );
+  assert_eq!(shell.taskbar.borrow().last(), Some(&Some(0)));
+
+  shell.send(cx, started(a));
+  shell.send(cx, progress(a, 50));
+  assert_eq!(
+    shell.taskbar.borrow().last(),
+    Some(&Some(25)),
+    "the whole queue's progress"
+  );
+  shell.send(cx, finished(a, ExtractOutcome::Completed, None));
+  assert_eq!(shell.title(cx), format!("{base} - 1/2"));
+  assert_eq!(shell.toasts(cx), 1, "a success toast");
+
+  shell.send(cx, started(b));
+  shell.send(
+    cx,
+    finished(b, ExtractOutcome::Failed, Some("mkvextract exited with code 2")),
+  );
+  assert_eq!(shell.status(cx, b), Some(QueueItemStatus::Failed));
+  assert_eq!(shell.title(cx), base, "the plain title once nothing is active");
+  assert_eq!(shell.toasts(cx), 2, "an error toast");
+  assert_eq!(
+    shell.taskbar.borrow().last(),
+    Some(&None),
+    "hidden once nothing is active"
+  );
+  assert!(!shell.disabled(cx, "toolbar-clear"));
+  assert!(shell.disabled(cx, "toolbar-cancel-all"));
+}
+
+#[gpui_kit::test]
+fn f3_extracts_once_and_f4_cancels(cx: &mut TestAppContext) {
+  let a = "/media/a.mkv";
+  let shell = Shell::with_files(cx, movies(&[a]));
+  shell.press(cx, "f3");
+  assert!(shell.enqueued().is_empty(), "nothing listed yet");
+  shell.add_files(cx, &[a]);
+  shell.press(cx, "f3");
+  shell.press(cx, "f3");
+  assert_eq!(shell.enqueued(), [a], "a waiting file is not enqueued again");
+  shell.press(cx, "ctrl-q");
+  assert!(
+    shell.stores.files.read_with(cx, |files, _| files.has_files()),
+    "Ctrl+Q waits too"
+  );
+  shell.press(cx, "f4");
+  assert_eq!(shell.cancelled(), [a]);
+  let requested = shell
+    .stores
+    .queue
+    .read_with(cx, |queue, _| queue.item(a).map(|item| item.cancel_requested));
+  assert_eq!(requested, Some(true));
+  shell.send(cx, finished(a, ExtractOutcome::Cancelled, None));
+  assert_eq!(shell.status(cx, a), Some(QueueItemStatus::Cancelled));
+  assert_eq!(shell.toasts(cx), 0, "a cancelled extraction shows no toast");
+  shell.press(cx, "f4");
+  assert_eq!(shell.cancelled(), [a], "nothing active to cancel");
+  shell.press(cx, "ctrl-q");
+  assert!(!shell.stores.files.read_with(cx, |files, _| files.has_files()));
+  assert_eq!(shell.status(cx, a), None, "clearing empties the queue too");
+}
+
+/// Resume All and Clear Completed act on the queue's finished rows.
+#[gpui_kit::test]
+fn resume_all_and_clear_completed_from_the_toolbar(cx: &mut TestAppContext) {
+  let (a, b) = ("/media/a.mkv", "/media/b.mkv");
+  let shell = Shell::with_files(cx, movies(&[a, b]));
+  shell.add_files(cx, &[a, b]);
+  shell.click(cx, "toolbar-extract-all");
+  shell.send(cx, finished(a, ExtractOutcome::Completed, None));
+  shell.send(cx, finished(b, ExtractOutcome::Failed, Some("broken")));
+  assert!(!shell.disabled(cx, "toolbar-resume-all"));
+  assert!(!shell.disabled(cx, "toolbar-clear-completed"));
+  shell.click(cx, "toolbar-resume-all");
+  assert_eq!(shell.enqueued(), [a, b, b], "only the failed file again");
+  assert!(shell.disabled(cx, "toolbar-resume-all"));
+  shell.click(cx, "toolbar-clear-completed");
+  assert_eq!(shell.status(cx, a), None);
+  assert_eq!(shell.status(cx, b), Some(QueueItemStatus::Waiting));
+  assert!(shell.disabled(cx, "toolbar-clear-completed"));
+}
+
+/// The plain boxes follow loading and extracting: a box per file, a failed
+/// listing keeps its box, and a progress event repaints without a new list.
+#[gpui_kit::test]
+fn the_boxes_follow_loading_and_extracting(cx: &mut TestAppContext) {
+  let (a, bad) = ("/media/a.mkv", "/media/bad.mkv");
+  let shell = Shell::with_files(cx, movies(&[a]));
+  shell.stores.files.update(cx, |files, cx| {
+    files.add_files(vec![a.into(), bad.into()], cx);
+    files.set_global_output_dir(std::env::temp_dir().to_string_lossy().into_owned(), cx);
+  });
+  shell.window(cx, |window, cx| {
+    window.render_frame(cx);
+    window.find(("file-entry", 0usize));
+    window.find(("file-entry", 1usize));
+  });
+  cx.run_until_parked();
+  shell.press(cx, "f3");
+  shell.send(cx, started(a));
+  shell.send(cx, progress(a, 42));
+  shell.window(cx, |window, cx| {
+    window.render_frame(cx);
+    window.find(("file-entry", 1usize));
+  });
+  shell.stores.files.read_with(cx, |files, _| {
+    assert!(matches!(files.load_state(a), crate::state::files::LoadState::Loaded));
+    assert!(matches!(
+      files.load_state(bad),
+      crate::state::files::LoadState::Failed(_)
+    ));
+  });
+  assert_eq!(shell.enqueued(), [a], "a file whose tracks failed has no selection");
+}
+
+#[gpui_kit::test]
+fn closing_while_an_extraction_runs_asks_and_yes_cancels_it(cx: &mut TestAppContext) {
+  let a = "/media/a.mkv";
+  let shell = Shell::with_files(cx, movies(&[a]));
+  shell.add_files(cx, &[a]);
+  shell.press(cx, "f3");
+  shell.send(cx, started(a));
+  let stores = shell.stores.clone();
+  let closes = shell.window(cx, |window, cx| {
+    crate::platform::window::close_requested(&stores, window, cx)
+  });
+  assert!(!closes);
+  cx.run_until_parked();
+  shell.window(cx, |window, cx| window.render_frame(cx));
+  shell.click(cx, "exit-yes");
+  assert_eq!(shell.cancelled(), [a]);
+  assert!(
+    cx.update_window(shell.handle, |_, _, _| ()).is_err(),
+    "the window closed"
+  );
+}
+
+/// Quit by keyboard (macOS Cmd+Q) while an extraction runs asks first, like
+/// the title bar: the key is dispatched while its window is being updated.
+#[gpui_kit::test]
+fn quitting_by_keyboard_while_an_extraction_runs_asks_first(cx: &mut TestAppContext) {
+  let a = "/media/a.mkv";
+  let shell = Shell::with_files(cx, movies(&[a]));
+  cx.update(|cx| {
+    cx.bind_keys([KeyBinding::new("cmd-q", actions::Quit, None)]);
+    crate::platform::install_quit(shell.handle, &shell.stores, cx);
+  });
+  shell.add_files(cx, &[a]);
+  shell.press(cx, "f3");
+  shell.send(cx, started(a));
+  shell.press(cx, "cmd-q");
+  assert!(
+    shell.window(cx, |window, cx| window.has_active_dialog(cx)),
+    "the exit confirmation is open"
+  );
+  shell.window(cx, |window, cx| window.render_frame(cx));
+  shell.click(cx, "exit-no");
+  assert!(shell.cancelled().is_empty());
+  assert!(
+    cx.update_window(shell.handle, |_, _, _| ()).is_ok(),
+    "No keeps the window"
+  );
 }

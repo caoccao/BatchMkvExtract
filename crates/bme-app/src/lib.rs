@@ -27,14 +27,17 @@ macro_rules! tr {
   };
 }
 
+pub mod actions;
 pub mod assets;
 pub mod domain;
+pub mod extract_events;
 pub mod i18n;
 pub mod logging;
 pub mod notifications;
 pub mod platform;
 pub mod state;
 pub mod theme;
+pub mod tools;
 pub mod ui;
 pub mod updates;
 
@@ -83,10 +86,19 @@ pub fn run() {
     i18n::set_language(config.language);
     theme::install(cx);
     theme::apply(&config, cx.window_appearance(), cx);
+    let (extract_sink, extract_events) = extract_events::channel();
+    let (detected_sink, detected_paths) = tools::auto_detected_channel();
+    bme_core::mkvtoolnix::init_auto_detected(detected_sink);
     let services = state::Services {
       persistence: state::Persistence::disk(),
+      tracks: state::TrackSource::mkvmerge(),
+      extracts: extract_events::ExtractBackend::system(extract_sink),
+      taskbar: platform::taskbar::Taskbar::system(),
+      tools: tools::ToolDetector::system(),
     };
     let stores = state::Stores::new(config, services, cx);
+    extract_events::start(&stores, extract_events, cx);
+    tools::store_auto_detected(&stores.config, detected_paths, cx);
     ui::actions::bind_keys(cx);
     ui::actions::install(&stores, cx);
     platform::menus::install(cx);
@@ -96,6 +108,8 @@ pub fn run() {
     };
     platform::install_quit(handle, &stores, cx);
     notifications::report_unreadable_config(&stores, cx);
+    platform::ingest_launch_args(&stores, cx);
+    actions::watch_better_media_info(&stores, cx);
     updates::start(&stores, updates::UpdateSource::github(), cx);
     // Bring the app to the front also when started from a terminal; GPUI
     // delivers focus events only to the active window.

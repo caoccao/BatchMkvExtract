@@ -20,17 +20,18 @@
 //! Colours are fixed blues in light and dark, whatever the theme; only the
 //! headline uses the theme's primary colour (solid, not a gradient). GPUI has
 //! no radial gradient, so the page background is a diagonal linear one, and
-//! the hover lift of the cards is a deeper shadow. Add Files and Add Folder
-//! are disabled until the file list can take the files they pick.
+//! the hover lift of the cards is a deeper shadow.
 
 use gpui_kit::assets::IconName;
 use gpui_kit::base::TestSupportExt;
 use gpui_kit::component::button::{ButtonCustomVariant, ButtonVariants};
-use gpui_kit::component::{ActiveTheme, Disableable, Icon, Sizable, h_flex, v_flex};
+use gpui_kit::component::{ActiveTheme, Icon, Sizable, h_flex, v_flex};
 use gpui_kit::*;
 
 use super::{hex, rgba, space, text, text_button};
 use crate::assets::{APP_ICON, BATCH_MKV_MERGE_ICON, BD_MASTER_ICON, BETTER_MEDIA_INFO_ICON};
+use crate::platform::dialogs;
+use crate::state::Stores;
 
 const AUTHOR_NAME: &str = "Sam Cao";
 const AUTHOR_URL: &str = "https://github.com/caoccao/";
@@ -190,7 +191,15 @@ fn app_card(card: AppCard, palette: &Palette, cx: &App) -> impl IntoElement {
 }
 
 #[derive(IntoElement)]
-pub struct Welcome;
+pub struct Welcome {
+  stores: Stores,
+}
+
+impl Welcome {
+  pub fn new(stores: Stores) -> Self {
+    Self { stores }
+  }
+}
 
 impl RenderOnce for Welcome {
   fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
@@ -208,6 +217,7 @@ impl RenderOnce for Welcome {
       .hover(palette.folder_hover_background)
       .active(palette.folder_hover_background)
       .shadow(false);
+    let (files_stores, folder_stores) = (self.stores.clone(), self.stores);
     let link = |id: &'static str, label: SharedString, url: &'static str| {
       div()
         .id(id)
@@ -328,7 +338,7 @@ impl RenderOnce for Welcome {
                   .icon(Icon::new(IconName::FileText))
                   .label(tr!("welcome.addFiles"))
                   .font_weight(FontWeight::SEMIBOLD)
-                  .disabled(true),
+                  .on_click(move |_, _, cx| dialogs::add_files(&files_stores, cx)),
               )
               .child(
                 text_button("welcome-add-folder")
@@ -338,7 +348,7 @@ impl RenderOnce for Welcome {
                   .icon(Icon::new(IconName::Folder))
                   .label(tr!("welcome.addFolder"))
                   .font_weight(FontWeight::SEMIBOLD)
-                  .disabled(true),
+                  .on_click(move |_, _, cx| dialogs::add_folder(&folder_stores, cx)),
               ),
           )
           .child(

@@ -17,9 +17,7 @@
 
 //! Application actions and their shortcuts. The tab shortcuts are Ctrl on
 //! every platform (Cmd+W and Cmd+1 are not used on macOS). The handlers are
-//! global, so the keys work whatever has the focus. Extract All, Cancel All,
-//! Group Mode and Clear are bound already; their handlers come with the
-//! stores they act on.
+//! global, so the keys work whatever has the focus.
 
 use gpui_kit::{App, KeyBinding, actions};
 
@@ -116,6 +114,26 @@ pub fn install(stores: &Stores, cx: &mut App) {
         stores.ui.update(cx, |ui, cx| ui.show_menu(ToolbarMenu::Profile, cx));
       }
     }
+  });
+  cx.on_action({
+    let stores = stores.clone();
+    move |_: &ClearFiles, cx| crate::actions::clear_files(&stores, cx)
+  });
+  cx.on_action({
+    let stores = stores.clone();
+    move |_: &ExtractAll, cx| {
+      if crate::actions::can_extract_all(&stores, cx) {
+        crate::actions::extract_all(&stores, cx).detach();
+      }
+    }
+  });
+  cx.on_action({
+    let stores = stores.clone();
+    move |_: &CancelAll, cx| crate::actions::cancel_all(&stores, cx)
+  });
+  cx.on_action({
+    let files = stores.files.clone();
+    move |_: &ToggleGroupMode, cx| files.update(cx, |files, cx| files.toggle_group_mode(cx))
   });
   macro_rules! select_tab {
     ($($action:ident => $index:expr),*) => {

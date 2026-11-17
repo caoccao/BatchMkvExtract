@@ -15,8 +15,8 @@
 *   limitations under the License.
 */
 
-//! The main window: initial geometry from the config, geometry persistence
-//! and the close request.
+//! The main window: initial geometry from the config, geometry persistence,
+//! the title and the close request.
 //!
 //! Positions are logical pixels; sizes are the content size. GPUI's macOS
 //! window reports its frame (title bar included) but opens with a content
@@ -46,7 +46,9 @@ use gpui_kit::{
 };
 
 use super::close_guard;
+use crate::extract_events::SHUTDOWN_TIMEOUT;
 use crate::state::Stores;
+use crate::state::queue::QueueSummary;
 use crate::ui::root::AppView;
 
 /// The smallest window, and the smallest geometry that is saved.
@@ -241,21 +243,55 @@ pub fn save_geometry(stores: &Stores, window: &Window, cx: &mut App) {
     .update(cx, |config, cx| config.update(cx, |config| config.window = geometry));
 }
 
+/// The window title: `BatchMkvExtract v<version>`, followed by
+/// ` - done/total` while an extraction is waiting or running.
+pub fn title(summary: &QueueSummary) -> String {
+  if summary.active {
+    format!("{} - {}/{}", crate::window_title(), summary.done, summary.total)
+  } else {
+    crate::window_title().to_string()
+  }
+}
+
 /// A request to close the main window (title bar, Alt+F4, Quit): saves the
-/// geometry, then lets the close guard decide; its Yes stops every active
-/// extraction, without the completion notifications their end would send.
-/// `true` lets the window close.
+/// geometry, then lets the close guard decide; its Yes cancels every active
+/// extraction, without the completion notifications their end would send,
+/// and waits up to [`SHUTDOWN_TIMEOUT`] for the `mkvextract` processes to
+/// end. `true` lets the window close.
 pub fn close_requested(stores: &Stores, window: &mut Window, cx: &mut App) -> bool {
   save_geometry(stores, window, cx);
-  let closing = stores.ui.clone();
+  let cancel_stores = stores.clone();
   close_guard::should_close(stores.has_active_extracts(cx), window, cx, move |_, cx| {
-    closing.update(cx, |ui, _| ui.set_closing());
+    cancel_stores.ui.update(cx, |ui, _| ui.set_closing());
+    crate::actions::cancel_all(&cancel_stores, cx);
+    // Wait for the killed processes, so none outlives the app.
+    cancel_stores.extracts.shutdown(SHUTDOWN_TIMEOUT);
   })
 }
 
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  fn the_title_counts_finished_extractions_while_one_is_active() {
+    let base = crate::window_title().to_string();
+    assert_eq!(title(&QueueSummary::default()), base);
+    let summary = QueueSummary {
+      done: 1,
+      total: 3,
+      active: true,
+      percent: 40,
+    };
+    assert_eq!(title(&summary), format!("{base} - 1/3"));
+    let finished = QueueSummary {
+      done: 3,
+      total: 3,
+      active: false,
+      percent: 100,
+    };
+    assert_eq!(title(&finished), base);
+  }
 
   fn saved(x: i32, y: i32, width: u32, height: u32) -> ConfigWindow {
     ConfigWindow {

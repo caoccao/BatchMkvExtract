@@ -18,9 +18,8 @@
 //! The single-row toolbar and its menus. Actions that do not fit are shown
 //! in an overflow menu. Profile also opens with F9.
 //!
-//! Every button of the toolbar is drawn; those whose store does not exist yet
-//! (the global output path, the file list's and the queue's actions, Group
-//! Mode) and Settings are disabled until it does.
+//! Every button of the toolbar is drawn; the global output path (its dialog
+//! comes with the cards) and Settings are disabled until they exist.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -34,6 +33,7 @@ use gpui_kit::component::popover::Popover;
 use gpui_kit::component::{ActiveTheme, Disableable, Icon, Side, Sizable, h_flex};
 use gpui_kit::*;
 
+use crate::actions;
 use crate::assets::{OUTPUT_DIRECTORY_ICON_NAME, QUIT_ICON_NAME, toolbar_icon};
 use crate::state::ui::ToolbarMenu;
 use crate::state::{Stores, TabType};
@@ -64,20 +64,20 @@ enum ToolbarAction {
 impl ToolbarAction {
   fn run(self, stores: &Stores, _window: &mut Window, cx: &mut App) {
     match self {
+      Self::ExtractAll => actions::extract_all(stores, cx).detach(),
+      Self::ResumeAll => actions::resume_all(stores, cx).detach(),
+      Self::CancelAll => actions::cancel_all(stores, cx),
+      Self::ClearCompleted => actions::clear_completed(stores, cx),
+      Self::ClearFiles => actions::clear_files(stores, cx),
+      Self::GroupMode => stores.files.update(cx, |files, cx| files.toggle_group_mode(cx)),
       Self::QuitWhenComplete => stores.ui.update(cx, |ui, cx| ui.toggle_quit_when_complete(cx)),
       Self::SystemNotification => stores.ui.update(cx, |ui, cx| ui.toggle_system_notification(cx)),
       Self::TopmostNotification => stores.ui.update(cx, |ui, cx| ui.toggle_topmost_notification(cx)),
       Self::Settings => stores.ui.update(cx, |ui, cx| ui.open_settings(cx)),
       Self::About => stores.ui.update(cx, |ui, cx| ui.open_about(cx)),
       Self::Menu(menu) => stores.ui.update(cx, |ui, cx| ui.show_menu(menu, cx)),
-      // Disabled until their stores exist.
-      Self::OutputPath
-      | Self::ExtractAll
-      | Self::ResumeAll
-      | Self::CancelAll
-      | Self::ClearCompleted
-      | Self::ClearFiles
-      | Self::GroupMode => {}
+      // Disabled until the output path dialog exists.
+      Self::OutputPath => {}
     }
   }
 }
@@ -187,6 +187,8 @@ impl Toolbar {
   pub fn new(stores: Stores, cx: &mut Context<Self>) -> Self {
     let subscriptions = vec![
       cx.observe(&stores.config, |_, _, cx| cx.notify()),
+      cx.observe(&stores.files, |_, _, cx| cx.notify()),
+      cx.observe(&stores.queue, |_, _, cx| cx.notify()),
       cx.observe(&stores.ui, |this, ui, cx| {
         let open = ui.read(cx).open_menu();
         this.menus.borrow_mut().retain(|menu, _| Some(*menu) == open);
@@ -335,6 +337,13 @@ impl Render for Toolbar {
     let theme = cx.theme();
     let (primary, muted, success, danger) = (theme.primary, theme.muted_foreground, theme.success, theme.danger);
     let has_profiles = !self.stores.config.read(cx).config().profiles.is_empty();
+    let stores = &self.stores;
+    let can_extract_all = actions::can_extract_all(stores, cx);
+    let can_resume = actions::can_resume_all(stores, cx);
+    let can_cancel = stores.has_active_extracts(cx);
+    let can_clear_completed = actions::can_clear_completed(stores, cx);
+    let can_clear = actions::can_clear(stores, cx);
+    let group_mode = stores.files.read(cx).group_mode();
     let ui = self.stores.ui.read(cx);
     let active_tab = ui.active_tab();
     let quit = ui.quit_when_complete();
@@ -375,7 +384,7 @@ impl Render for Toolbar {
           "extract-all",
           extract_label,
           None,
-          false,
+          can_extract_all,
           ToolbarAction::ExtractAll,
         )
       }),
@@ -384,7 +393,7 @@ impl Render for Toolbar {
         "resume-all",
         tr!("queue.resumeAll"),
         Some(success),
-        false,
+        can_resume,
         ToolbarAction::ResumeAll,
       )),
       Some(item(
@@ -392,7 +401,7 @@ impl Render for Toolbar {
         "cancel-all",
         tr!("toolbar.cancelAll"),
         Some(danger),
-        false,
+        can_cancel,
         ToolbarAction::CancelAll,
       )),
       None,
@@ -401,7 +410,7 @@ impl Render for Toolbar {
         "clear-completed",
         tr!("queue.clearCompleted"),
         None,
-        false,
+        can_clear_completed,
         ToolbarAction::ClearCompleted,
       )),
       Some(item(
@@ -409,7 +418,7 @@ impl Render for Toolbar {
         "clear-list",
         tr!("toolbar.clear"),
         None,
-        false,
+        can_clear,
         ToolbarAction::ClearFiles,
       )),
       None,
@@ -448,13 +457,13 @@ impl Render for Toolbar {
       }),
       None,
       Some(ToolbarButton {
-        checked: Some(false),
+        checked: Some(group_mode),
         ..item(
           "toolbar-group-mode",
           "group-mode",
           tr!("toolbar.groupByFile"),
-          None,
-          false,
+          highlight(group_mode),
+          true,
           ToolbarAction::GroupMode,
         )
       }),
