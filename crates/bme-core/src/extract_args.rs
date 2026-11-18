@@ -747,9 +747,11 @@ mod tests {
     attachment.codec = attachment.codec_id.clone();
     let name = build_output_file_name("Movie", &attachment, &profile);
     assert_eq!(name, "Movie.1..._.._.._.._tmp_evil");
+    // Compared as paths: on Windows the joined path spells the root `\`,
+    // while `Path::join` keeps the `/` of `/home/me/out` as written.
     assert_eq!(
-      join_output_path("/home/me/out", &name),
-      Path::new("/home/me/out").join(&name).to_string_lossy()
+      Path::new(&join_output_path("/home/me/out", &name)),
+      Path::new("/home/me/out").join(&name)
     );
     let mut subtitles = row(MkvTrack::TYPE_SUBTITLES, 3, "S_TEXT/UTF8", r"..\..\x");
     subtitles.codec = "SubRip/SRT".into();

@@ -212,13 +212,16 @@ fn add_paths_lists_the_mkv_files_of_files_and_folders(cx: &mut TestAppContext) {
   let other = TempDir::new("add-paths-other");
   let single = other.file("single.mkv");
   let ignored = other.file("ignored.mp4");
+  // A full path on every OS: `get_mkv_files` makes a path without a drive a
+  // full one, so on Windows `/does/not/exist.mkv` would gain the current drive.
+  let missing = other.path().join("missing.mkv");
   let (source, _) = fixture_source(HashMap::new());
   let store = cx.new(|_| FileStore::with_profile(Some(&profile(false)), source));
   let paths = vec![
     dir.path().to_path_buf(),
     PathBuf::from(&single),
     PathBuf::from(ignored),
-    PathBuf::from("/does/not/exist.mkv"),
+    missing.clone(),
   ];
   let ui = cx.new(|_| UiState::new());
   let snackbars = Rc::new(RefCell::new(Vec::new()));
@@ -241,7 +244,10 @@ fn add_paths_lists_the_mkv_files_of_files_and_folders(cx: &mut TestAppContext) {
   store.read_with(cx, |store, _| assert_eq!(store.files(), [first, second, single]));
   assert_eq!(
     *snackbars.borrow(),
-    ["1 item(s) could not be read and were skipped: /does/not/exist.mkv"]
+    [format!(
+      "1 item(s) could not be read and were skipped: {}",
+      missing.display()
+    )]
   );
 }
 
