@@ -17,8 +17,13 @@ on:
       - "**.md"
       - "docs/**"
 
+# Every job only reads the repository; artifacts upload with the runner's
+# own token.
+permissions:
+  contents: read
+
 env:
-  BATCH_MKV_EXTRACT_VERSION: 0.3.0
+  BATCH_MKV_EXTRACT_VERSION: 1.0.0
 
 jobs:
   build_package:
@@ -42,31 +47,39 @@ jobs:
         git config --global core.eol lf
 
     - name: Checkout the code
-      uses: actions/checkout@v6
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v6
-      with:
-        node-version: 24
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
     - name: Setup Rust
-      uses: actions-rust-lang/setup-rust-toolchain@v1
+      uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+      # No `toolchain:` input: the action then installs the toolchain pinned in
+      # rust-toolchain.toml. Passing `toolchain: stable` would also run
+      # `rustup override set stable` on the repository root, which outranks the
+      # pin in rust-toolchain.toml there.
       with:
-        toolchain: stable
+        # The action sets CARGO_BUILD_WARNINGS=deny by default, which turns
+        # every rustc warning into a CI failure. `warn` lets warnings stay
+        # warnings; CI fails on errors and failing checks only.
+        build-warnings: warn
 
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v5
+    - name: Run Rust tests
+      run: cargo test --release --workspace --locked
+
+    - name: Install cargo-packager
+      uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
       with:
-        version: 11
+        tool: cargo-packager@0.11.8
 
-    - name: Build BatchMkvExtract
-      run: |
-        pnpm install --frozen-lockfile
-        pnpm tauri build
+    # Installers come from the dist profile: release + thin LTO, one codegen
+    # unit, stripped symbols.
+    - name: Build BatchMkvExtract (dist profile)
+      run: cargo build --profile dist -p BatchMkvExtract --locked
+
+    - name: Package the app and the dmg
+      run: cargo packager --profile dist -p BatchMkvExtract -f app,dmg
 
     - name: Upload the Artifact
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: BatchMkvExtract-${{ matrix.os }}-${{ matrix.arch }}-${{ env.BATCH_MKV_EXTRACT_VERSION }}
         path: |
-          src-tauri/target/release/bundle/dmg/*.dmg
+          target/packager/*.dmg

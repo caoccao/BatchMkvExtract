@@ -1,0 +1,353 @@
+{
+  "description": "0.3.0's profile auto-selection and row keys, recorded under Deno: the keys each profile selects, in table order.",
+  "tracks": [
+    {
+      "id": 0,
+      "number": 1,
+      "type": "video",
+      "codec": "AVC/H.264/MPEG-4p10",
+      "codecId": "V_MPEG4/ISO/AVC",
+      "trackName": "Main Feature",
+      "language": "eng"
+    },
+    {
+      "id": 1,
+      "number": 2,
+      "type": "audio",
+      "codec": "AC-3",
+      "codecId": "A_AC3",
+      "trackName": "English 5.1",
+      "language": "eng"
+    },
+    {
+      "id": 2,
+      "number": 3,
+      "type": "audio",
+      "codec": "AAC",
+      "codecId": "A_AAC",
+      "trackName": "Commentary: \"Director\" <cut>",
+      "language": "JPN"
+    },
+    {
+      "id": 3,
+      "number": 4,
+      "type": "subtitles",
+      "codec": "SubRip/SRT",
+      "codecId": "S_TEXT/UTF8",
+      "trackName": "Full",
+      "language": "eng"
+    },
+    {
+      "id": 4,
+      "number": 5,
+      "type": "subtitles",
+      "codec": "HDMV PGS",
+      "codecId": "S_HDMV/PGS",
+      "trackName": "Signs/Songs?",
+      "language": "chi"
+    },
+    {
+      "id": 5,
+      "number": 6,
+      "type": "subtitles",
+      "codec": "SubStationAlpha",
+      "codecId": "S_TEXT/ASS",
+      "trackName": "",
+      "language": "und"
+    },
+    {
+      "id": 6,
+      "number": 7,
+      "type": "subtitles",
+      "codec": "VobSub",
+      "codecId": "S_VOBSUB",
+      "trackName": "Forced|*",
+      "language": "fre"
+    },
+    {
+      "id": 7,
+      "number": 8,
+      "type": "buttons",
+      "codec": "VobButtons",
+      "codecId": "B_VOBBTN",
+      "trackName": "",
+      "language": "und"
+    },
+    {
+      "id": 0,
+      "number": 0,
+      "type": "chapters",
+      "codec": "xml",
+      "codecId": "xml",
+      "trackName": "",
+      "language": ""
+    },
+    {
+      "id": 1,
+      "number": 0,
+      "type": "attachment",
+      "codec": "ttf",
+      "codecId": "ttf",
+      "trackName": "DejaVuSans.ttf",
+      "language": ""
+    },
+    {
+      "id": 2,
+      "number": 0,
+      "type": "attachment",
+      "codec": "jpeg",
+      "codecId": "jpeg",
+      "trackName": "cover",
+      "language": ""
+    },
+    {
+      "id": 8,
+      "number": 9,
+      "type": "audio",
+      "codec": "Opus",
+      "codecId": "A_OPUS",
+      "trackName": "",
+      "language": "ENG"
+    },
+    {
+      "id": 9,
+      "number": 10,
+      "type": "subtitles",
+      "codec": "SubRip/SRT",
+      "codecId": "S_TEXT/UTF8",
+      "trackName": "",
+      "language": "Eng"
+    },
+    {
+      "id": 10,
+      "number": 11,
+      "type": "video",
+      "codec": "HEVC",
+      "codecId": "V_MPEGH/ISO/HEVC",
+      "trackName": "",
+      "language": "und"
+    },
+    {
+      "id": 11,
+      "number": 12,
+      "type": "subtitles",
+      "codec": "SubRip/SRT",
+      "codecId": "S_TEXT/UTF8",
+      "trackName": "",
+      "language": ""
+    },
+    {
+      "id": 12,
+      "number": 13,
+      "type": "images",
+      "codec": "",
+      "codecId": "",
+      "trackName": "",
+      "language": "eng"
+    }
+  ],
+  "cases": [
+    {
+      "profile": {
+        "name": "Default",
+        "videoTemplate": "{file_name}.{track_id}.{language}",
+        "audioTemplate": "{file_name}.{track_id}.{language}",
+        "subtitleTemplate": "{file_name}.{track_id}.{language}",
+        "chaptersTemplate": "{file_name}.{track_id}",
+        "attachmentsTemplate": "{file_name}.{track_id}",
+        "selectVideo": false,
+        "selectAudio": false,
+        "selectSubtitle": true,
+        "selectChapters": false,
+        "selectAttachments": false,
+        "videoLanguages": "",
+        "audioLanguages": "",
+        "subtitleLanguages": "eng, chi, spa, ger, fre, jpn",
+        "defaultGroupMode": true
+      },
+      "selected": [
+        "subtitles:3",
+        "subtitles:4",
+        "subtitles:6",
+        "subtitles:9"
+      ]
+    },
+    {
+      "profile": {
+        "name": "Fresh",
+        "videoTemplate": "{file_name}.{track_id}.{language}",
+        "audioTemplate": "{file_name}.{track_id}.{language}",
+        "subtitleTemplate": "{file_name}.{track_id}.{language}",
+        "chaptersTemplate": "{file_name}.{track_id}",
+        "attachmentsTemplate": "{file_name}.{track_id}",
+        "selectVideo": false,
+        "selectAudio": false,
+        "selectSubtitle": false,
+        "selectChapters": false,
+        "selectAttachments": false,
+        "videoLanguages": "",
+        "audioLanguages": "",
+        "subtitleLanguages": "eng, chi, spa, ger, fre, jpn",
+        "defaultGroupMode": false
+      },
+      "selected": []
+    },
+    {
+      "profile": {
+        "name": "Everything",
+        "videoTemplate": "{file_name}.{track_id}.{language}",
+        "audioTemplate": "{file_name}.{track_id}.{language}",
+        "subtitleTemplate": "{file_name}.{track_id}.{language}",
+        "chaptersTemplate": "{file_name}.{track_id}",
+        "attachmentsTemplate": "{file_name}.{track_id}",
+        "selectVideo": true,
+        "selectAudio": true,
+        "selectSubtitle": true,
+        "selectChapters": true,
+        "selectAttachments": true,
+        "videoLanguages": "",
+        "audioLanguages": "",
+        "subtitleLanguages": "",
+        "defaultGroupMode": false
+      },
+      "selected": [
+        "video:0",
+        "audio:1",
+        "audio:2",
+        "subtitles:3",
+        "subtitles:4",
+        "subtitles:5",
+        "subtitles:6",
+        "chapters:0",
+        "attachment:1",
+        "attachment:2",
+        "audio:8",
+        "subtitles:9",
+        "video:10",
+        "subtitles:11"
+      ]
+    },
+    {
+      "profile": {
+        "name": "Filters",
+        "videoTemplate": "{file_name}.{track_id}.{language}",
+        "audioTemplate": "{file_name}.{track_id}.{language}",
+        "subtitleTemplate": "{file_name}.{track_id}.{language}",
+        "chaptersTemplate": "{file_name}.{track_id}",
+        "attachmentsTemplate": "{file_name}.{track_id}",
+        "selectVideo": true,
+        "selectAudio": true,
+        "selectSubtitle": true,
+        "selectChapters": false,
+        "selectAttachments": false,
+        "videoLanguages": "UND",
+        "audioLanguages": " JPN , eng ,",
+        "subtitleLanguages": "CHI",
+        "defaultGroupMode": false
+      },
+      "selected": [
+        "audio:1",
+        "audio:2",
+        "subtitles:4",
+        "audio:8",
+        "video:10"
+      ]
+    },
+    {
+      "profile": {
+        "name": "Empty items",
+        "videoTemplate": "{file_name}.{track_id}.{language}",
+        "audioTemplate": "{file_name}.{track_id}.{language}",
+        "subtitleTemplate": "{file_name}.{track_id}.{language}",
+        "chaptersTemplate": "{file_name}.{track_id}",
+        "attachmentsTemplate": "{file_name}.{track_id}",
+        "selectVideo": false,
+        "selectAudio": true,
+        "selectSubtitle": true,
+        "selectChapters": false,
+        "selectAttachments": false,
+        "videoLanguages": "",
+        "audioLanguages": ", ,",
+        "subtitleLanguages": " , ",
+        "defaultGroupMode": false
+      },
+      "selected": [
+        "audio:1",
+        "audio:2",
+        "subtitles:3",
+        "subtitles:4",
+        "subtitles:5",
+        "subtitles:6",
+        "audio:8",
+        "subtitles:9",
+        "subtitles:11"
+      ]
+    },
+    {
+      "profile": {
+        "name": "Chapters and attachments",
+        "videoTemplate": "{file_name}.{track_id}.{language}",
+        "audioTemplate": "{file_name}.{track_id}.{language}",
+        "subtitleTemplate": "{file_name}.{track_id}.{language}",
+        "chaptersTemplate": "{file_name}.{track_id}",
+        "attachmentsTemplate": "{file_name}.{track_id}",
+        "selectVideo": false,
+        "selectAudio": false,
+        "selectSubtitle": false,
+        "selectChapters": true,
+        "selectAttachments": true,
+        "videoLanguages": "",
+        "audioLanguages": "",
+        "subtitleLanguages": "eng, chi, spa, ger, fre, jpn",
+        "defaultGroupMode": false
+      },
+      "selected": [
+        "chapters:0",
+        "attachment:1",
+        "attachment:2"
+      ]
+    },
+    {
+      "profile": {
+        "name": "Filters only",
+        "videoTemplate": "{file_name}.{track_id}.{language}",
+        "audioTemplate": "{file_name}.{track_id}.{language}",
+        "subtitleTemplate": "{file_name}.{track_id}.{language}",
+        "chaptersTemplate": "{file_name}.{track_id}",
+        "attachmentsTemplate": "{file_name}.{track_id}",
+        "selectVideo": false,
+        "selectAudio": false,
+        "selectSubtitle": false,
+        "selectChapters": false,
+        "selectAttachments": false,
+        "videoLanguages": "eng",
+        "audioLanguages": "eng",
+        "subtitleLanguages": "eng",
+        "defaultGroupMode": false
+      },
+      "selected": []
+    },
+    {
+      "profile": {
+        "name": "Empty language",
+        "videoTemplate": "{file_name}.{track_id}.{language}",
+        "audioTemplate": "{file_name}.{track_id}.{language}",
+        "subtitleTemplate": "{file_name}.{track_id}.{language}",
+        "chaptersTemplate": "{file_name}.{track_id}",
+        "attachmentsTemplate": "{file_name}.{track_id}",
+        "selectVideo": false,
+        "selectAudio": false,
+        "selectSubtitle": true,
+        "selectChapters": false,
+        "selectAttachments": false,
+        "videoLanguages": "",
+        "audioLanguages": "",
+        "subtitleLanguages": "und",
+        "defaultGroupMode": false
+      },
+      "selected": [
+        "subtitles:5"
+      ]
+    }
+  ]
+}

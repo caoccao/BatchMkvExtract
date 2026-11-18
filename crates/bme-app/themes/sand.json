@@ -1,0 +1,37 @@
+{
+  "name": "Sand",
+  "author": "Sam Cao",
+  "url": "https://github.com/caoccao/BatchMkvExtract",
+  "themes": [
+    {
+      "name": "Sand Light",
+      "mode": "light",
+      "font.size": 14,
+      "colors": {
+        "primary.background": "#bcaaa4",
+        "primary.hover.background": "#d0c4bf",
+        "primary.active.background": "#d0c4bf",
+        "primary.foreground": "#000000de",
+        "ring": "#bcaaa4",
+        "link": "#bcaaa4",
+        "link.hover": "#847773",
+        "link.active": "#847773"
+      }
+    },
+    {
+      "name": "Sand Dark",
+      "mode": "dark",
+      "font.size": 14,
+      "colors": {
+        "primary.background": "#bcaaa4",
+        "primary.hover.background": "#d0c4bf",
+        "primary.active.background": "#d0c4bf",
+        "primary.foreground": "#000000de",
+        "ring": "#bcaaa4",
+        "link": "#bcaaa4",
+        "link.hover": "#c9bbb6",
+        "link.active": "#c9bbb6"
+      }
+    }
+  ]
+}

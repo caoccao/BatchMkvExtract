@@ -1,33 +1,12 @@
 # Logs
 logs
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-# Dependencies
-node_modules
-.pnp
-.pnp.js
-
-# Build output
-dist
-dist-ssr
-build
-*.local
-
-# Vite
-.vite
 
 # Editor / IDE
 .vscode
 .idea
 .fleet
 *.suo
-*.ntvs*
-*.njsproj
 *.sln
 *.sw?
 .claude
@@ -41,10 +20,8 @@ Thumbs.db
 .env.local
 .env.*.local
 
-# Rust / Tauri build artifacts (in addition to src-tauri/.gitignore)
-src-tauri/target
-src-tauri/gen/schemas
+# Rust build output
+/target
 
 # Misc
-*.tsbuildinfo
 coverage

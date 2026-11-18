@@ -1,5 +1,19 @@
 # Release Notes
 
+## 1.0.0
+
+* Rebuilt BatchMkvExtract as a native Rust application.
+* Settings opens as a searchable dialog (F10, Ctrl/Cmd+Comma); deleting or resetting a profile asks first.
+* The Queue tab is always shown; Resume All, Cancel All and Clear Completed are on the toolbar, and each queue row can be cancelled or resumed.
+* Added System Notification, Topmost Notification and Quit when complete toggles, which act once the whole queue finishes.
+* Extractions that end with mkvextract warnings complete and show the warnings instead of failing.
+* Failed extractions and track listings show localized messages with the errors MKVToolNix reports; progress works with any MKVToolNix interface language.
+* Copy Command quotes the command for the platform's shell.
+* Clear also empties the queue, and deleting a card removes its queue row.
+* A file added again under another spelling is listed once, and paths that cannot be read are named.
+* Numeric word navigation (Ctrl/Option+Arrow) in text fields.
+* An unreadable config file is kept as a backup instead of stopping the app; a log file is written next to the config file.
+
 ## 0.3.0
 
 ### Output paths

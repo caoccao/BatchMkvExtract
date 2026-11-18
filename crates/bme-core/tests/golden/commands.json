@@ -1,0 +1,53 @@
+{
+  "description": "Written by hand, per platform, not recorded: 0.3.0's Copy Command put every argument in plain double quotes and named `<MKVToolNix directory>/mkvextract`; 1.0.0 quotes for the platform's shell (POSIX single quotes; on Windows the Command Prompt and CommandLineToArgvW rules) and names the mkvextract an extraction runs. The MKVToolNix directories do not exist, so the command names `mkvextract` in them as it is. Each case extracts the rows of track_selector.json with these keys, with the Default profile.",
+  "posix": [
+    {
+      "file": "/media/It's $5.mkv",
+      "outputDir": "/out dir",
+      "mkvToolNixPath": "/opt/mkvtoolnix",
+      "tracks": ["subtitles:3", "chapters:0", "attachment:1"],
+      "args": [
+        "tracks",
+        "3:/out dir/It's $5.3.eng.srt",
+        "chapters",
+        "/out dir/It's $5.0.xml",
+        "attachments",
+        "1:/out dir/It's $5.1.ttf"
+      ],
+      "command": "/opt/mkvtoolnix/mkvextract '/media/It'\\''s $5.mkv' tracks '3:/out dir/It'\\''s $5.3.eng.srt' chapters '/out dir/It'\\''s $5.0.xml' attachments '1:/out dir/It'\\''s $5.1.ttf'"
+    },
+    {
+      "file": "/media/Movie.mkv",
+      "outputDir": "/out",
+      "mkvToolNixPath": " /opt/mkvtoolnix ",
+      "tracks": ["video:0", "audio:2", "subtitles:4"],
+      "args": ["tracks", "0:/out/Movie.0.eng.h264", "2:/out/Movie.2.JPN.aac", "4:/out/Movie.4.chi.sup"],
+      "command": "/opt/mkvtoolnix/mkvextract /media/Movie.mkv tracks 0:/out/Movie.0.eng.h264 2:/out/Movie.2.JPN.aac 4:/out/Movie.4.chi.sup"
+    }
+  ],
+  "windows": [
+    {
+      "file": "D:\\Media\\Movie (2024).mkv",
+      "outputDir": "D:\\Out",
+      "mkvToolNixPath": "C:\\Tools\\MKV ToolNix",
+      "tracks": ["video:0", "audio:1", "subtitles:3", "chapters:0"],
+      "args": [
+        "tracks",
+        "0:D:\\Out\\Movie (2024).0.eng.h264",
+        "1:D:\\Out\\Movie (2024).1.eng.ac3",
+        "3:D:\\Out\\Movie (2024).3.eng.srt",
+        "chapters",
+        "D:\\Out\\Movie (2024).0.xml"
+      ],
+      "command": "\"C:\\Tools\\MKV ToolNix\\mkvextract\" \"D:\\Media\\Movie (2024).mkv\" tracks \"0:D:\\Out\\Movie (2024).0.eng.h264\" \"1:D:\\Out\\Movie (2024).1.eng.ac3\" \"3:D:\\Out\\Movie (2024).3.eng.srt\" chapters \"D:\\Out\\Movie (2024).0.xml\""
+    },
+    {
+      "file": "\\\\nas\\media\\Movie.mkv",
+      "outputDir": "\\\\nas\\media\\out\\",
+      "mkvToolNixPath": "C:\\Tools\\MKVToolNix",
+      "tracks": ["subtitles:3", "attachment:2"],
+      "args": ["tracks", "3:\\\\nas\\media\\out\\Movie.3.eng.srt", "attachments", "2:\\\\nas\\media\\out\\Movie.2.jpg"],
+      "command": "C:\\Tools\\MKVToolNix\\mkvextract \\\\nas\\media\\Movie.mkv tracks 3:\\\\nas\\media\\out\\Movie.3.eng.srt attachments 2:\\\\nas\\media\\out\\Movie.2.jpg"
+    }
+  ]
+}

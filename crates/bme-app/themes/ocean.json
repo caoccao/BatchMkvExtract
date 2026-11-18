@@ -1,0 +1,37 @@
+{
+  "name": "Ocean",
+  "author": "Sam Cao",
+  "url": "https://github.com/caoccao/BatchMkvExtract",
+  "themes": [
+    {
+      "name": "Ocean Light",
+      "mode": "light",
+      "font.size": 14,
+      "colors": {
+        "primary.background": "#027cbe",
+        "primary.hover.background": "#015785",
+        "primary.active.background": "#015785",
+        "primary.foreground": "#ffffff",
+        "ring": "#0288d1",
+        "link": "#0288d1",
+        "link.hover": "#015f92",
+        "link.active": "#015f92"
+      }
+    },
+    {
+      "name": "Ocean Dark",
+      "mode": "dark",
+      "font.size": 14,
+      "colors": {
+        "primary.background": "#027cbe",
+        "primary.hover.background": "#015785",
+        "primary.active.background": "#015785",
+        "primary.foreground": "#ffffff",
+        "ring": "#0288d1",
+        "link": "#0288d1",
+        "link.hover": "#35a0da",
+        "link.active": "#35a0da"
+      }
+    }
+  ]
+}

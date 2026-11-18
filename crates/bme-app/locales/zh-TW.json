@@ -1,0 +1,246 @@
+{
+  "list": {
+    "delete": "刪除"
+  },
+  "extract": {
+    "copyCommand": "複製指令",
+    "extract": "擷取",
+    "cancel": "取消",
+    "ok": "確定",
+    "browse": "瀏覽",
+    "setOutputPath": "設定輸出路徑",
+    "outputPath": "輸出路徑",
+    "openInBetterMediaInfo": "在 BetterMediaInfo 中開啟",
+    "outputPathNotWritable": "輸出路徑無法寫入。請選擇其他路徑。",
+    "outputPathDoesNotExist": "輸出路徑不存在。將會建立。",
+    "outputPathHint": "留空以使用預設輸出路徑。",
+    "commandCopied": "指令已複製到剪貼簿。",
+    "commandCopiedForCommandPrompt": "已將命令提示字元指令複製到剪貼簿。",
+    "extractionComplete": "擷取完成。",
+    "noTracks": "找不到軌道。",
+    "retry": "重試",
+    "notExtractable": "mkvextract 無法擷取 %{codec} 軌道。",
+    "header": {
+      "id": "ID",
+      "number": "編號",
+      "type": "類型",
+      "codec": "編碼",
+      "trackName": "軌道名稱",
+      "language": "語言",
+      "selectAll": "全選",
+      "tracks": "軌道"
+    },
+    "error": {
+      "mkvmergeNotAvailable": "mkvmerge 無法使用。請在設定中檢查 MKVToolNix 路徑。%{detail}",
+      "mkvmergeFailed": "mkvmerge 失敗:%{detail}",
+      "parseError": "無法解析 mkvmerge 的輸出:%{detail}",
+      "mkvmergeTimedOut": "mkvmerge 未在 %{seconds} 秒內完成。請檢查檔案所在的磁碟機後再試。",
+      "mkvextractNotAvailable": "mkvextract 無法使用。請在設定中檢查 MKVToolNix 路徑。%{detail}",
+      "mkvextractFailed": "mkvextract 失敗:%{detail}",
+      "sourceMissing": "找不到來源檔案 %{path}。",
+      "mkvextractExitCode": "mkvextract 已結束，結束代碼為 %{code}。",
+      "mkvextractTerminated": "mkvextract 被終止。"
+    }
+  },
+  "toolbar": {
+    "extractAll": "全部擷取 (F3)",
+    "cancelAll": "全部取消 (F4)",
+    "clear": "清空 (Ctrl + Q)",
+    "groupByFile": "分組模式 (F8)",
+    "profile": "設定檔 (F9)",
+    "settings": "設定 (Ctrl + ,)",
+    "setGlobalOutputPath": "設定全域輸出路徑",
+    "about": "關於",
+    "moreActions": "更多工具列操作",
+    "settingsMac": "設定 (Cmd + ,)"
+  },
+  "group": {
+    "copyAllCommands": "複製全部指令",
+    "extractAll": "全部擷取",
+    "clearAll": "全部清除"
+  },
+  "tabs": {
+    "fileList": "檔案清單",
+    "queue": "佇列",
+    "about": "關於",
+    "close": "關閉"
+  },
+  "queue": {
+    "resumeAll": "全部恢復",
+    "clearCompleted": "清除已完成",
+    "header": {
+      "filePath": "檔案路徑",
+      "status": "狀態",
+      "start": "開始",
+      "end": "結束",
+      "elapsed": "已用時間",
+      "eta": "預計剩餘"
+    },
+    "status": {
+      "waiting": "等待中",
+      "extracting": "擷取中",
+      "completed": "已完成",
+      "cancelled": "已取消",
+      "failed": "失敗"
+    },
+    "resume": "恢復",
+    "quitWhenComplete": "完成後結束",
+    "systemNotificationTooltip": "完成時顯示系統通知。",
+    "topmostNotificationTooltip": "完成時顯示置頂通知。",
+    "warnings": "已完成，有警告:"
+  },
+  "settings": {
+    "title": "設定",
+    "appearance": "外觀",
+    "mode": "模式",
+    "autoMode": "自動",
+    "lightMode": "淺色",
+    "darkMode": "深色",
+    "theme": "主題",
+    "themeOcean": "海洋",
+    "themeAqua": "碧水",
+    "themeSky": "天空",
+    "themeArctic": "北極",
+    "themeGlacier": "冰川",
+    "themeMist": "薄霧",
+    "themeSlate": "石板灰",
+    "themeCharcoal": "炭灰",
+    "themeMidnight": "午夜",
+    "themeIndigo": "靛藍",
+    "themeViolet": "紫羅蘭",
+    "themeLavender": "薰衣草",
+    "themeRose": "玫瑰",
+    "themeBlush": "粉霞",
+    "themeCoral": "珊瑚",
+    "themeSunset": "日落",
+    "themeAmber": "琥珀",
+    "themeSand": "沙丘",
+    "themeForest": "森林",
+    "themeEmerald": "翡翠",
+    "language": "語言",
+    "integration": "整合",
+    "mkvToolNixPath": "MKVToolNix 路徑",
+    "betterMediaInfoPath": "BetterMediaInfo 路徑",
+    "browse": "瀏覽",
+    "folderDialogFailed": "無法開啟資料夾對話方塊：%{detail}。也可以直接輸入路徑。",
+    "detect": "偵測",
+    "mkvToolNixFound": "已在 MKVToolNix 路徑下找到 mkvmerge 和 mkvextract。",
+    "mkvToolNixNotFound": "在 MKVToolNix 路徑下未找到 mkvmerge 或 mkvextract。",
+    "betterMediaInfoFound": "已找到 BetterMediaInfo",
+    "betterMediaInfoNotFound": "未偵測到 BetterMediaInfo。請檢查路徑並再試一次。",
+    "update": "更新",
+    "checkNewVersion": "檢查新版本",
+    "daily": "每日",
+    "weekly": "每週",
+    "monthly": "每月",
+    "profiles": "設定檔",
+    "activeProfile": "目前設定檔",
+    "newProfileName": "新設定檔名稱",
+    "addProfile": "新增",
+    "deleteProfile": "刪除",
+    "video": "影像",
+    "audio": "音訊",
+    "subtitles": "字幕",
+    "chapters": "章節",
+    "attachments": "附件",
+    "autoSelectOnDrop": "加入檔案時自動選取",
+    "autoSelectOnDropForLanguages": "加入檔案時依語言自動選取",
+    "defaultGroupMode": "預設分組模式",
+    "templatePlaceholdersHint": "佔位符: {file_name}, {track_id}, {track_number}, {language}, {codec_name}, {track_name}",
+    "mkvToolNix": "MKVToolNix",
+    "betterMediaInfo": "BetterMediaInfo",
+    "reset": "重設",
+    "trackSelection": "軌道選擇",
+    "fileNameTemplates": "檔案名稱範本"
+  },
+  "about": {
+    "tagline": "mkvextract 批次圖形介面",
+    "author": "作者",
+    "github": "GitHub"
+  },
+  "footer": {
+    "donate": "捐款支持開發",
+    "copyright": "© 版權所有 2026"
+  },
+  "notification": {
+    "completedIn": "%{elapsed} 內完成",
+    "unknownError": "未知錯誤",
+    "failedCreateOutput": "無法建立 %{path}。請檢查後再試。",
+    "outputRepeated": "兩個軌道會寫入同一個檔案 %{path}。請修改檔案名稱範本後再試。",
+    "outputIsSource": "%{path} 是清單中的來源檔案。請修改輸出路徑或檔案名稱範本後再試。",
+    "outputTaken": "%{other} 也會寫入 %{path}。請修改輸出路徑或檔案名稱範本後再試。",
+    "cancelFailed": "無法停止 mkvextract：%{detail}",
+    "quit": "結束",
+    "okButDoNotQuit": "確定，但不結束",
+    "summary": "已完成 %{completed} 個，失敗 %{failed} 個，已取消 %{cancelled} 個",
+    "finishedIn": "%{elapsed} 內結束",
+    "configResetTitle": "無法讀取設定",
+    "configReset": "無法讀取的設定已還原為預設值。原檔案已保留為 %{path}。",
+    "configResetNoBackup": "無法讀取的設定已還原為預設值。",
+    "configSaveFailedTitle": "無法儲存設定",
+    "configSaveFailed": "%{detail}。下次變更和結束應用程式時會再次儲存。",
+    "completedWithWarnings": "%{elapsed} 內完成，有警告:%{warnings}",
+    "pathsSkipped": "%{count} 個項目無法讀取，已略過:%{paths}",
+    "fileDialogFailed": "無法開啟檔案對話方塊：%{detail}。也可以將檔案和資料夾拖放到視窗中。"
+  },
+  "confirm": {
+    "exitTitle": "結束",
+    "exitMessage": "目前有擷取作業進行中。確定要結束嗎?",
+    "yes": "是",
+    "no": "否",
+    "stillRunningTitle": "擷取仍在進行",
+    "stillRunningMessage": "mkvextract 未能及時停止。要等待，還是結束並讓它繼續執行？",
+    "wait": "等待",
+    "quitAnyway": "仍然結束",
+    "deleteProfileTitle": "刪除設定檔",
+    "deleteProfileMessage": "刪除設定檔「%{name}」?",
+    "resetProfileTitle": "重設設定檔",
+    "resetProfileMessage": "將設定檔「%{name}」重設為預設設定?"
+  },
+  "card": {
+    "summary": {
+      "toPath": "輸出至 %{path}"
+    }
+  },
+  "update": {
+    "newVersionAvailable": "新版本 %{version} 已發佈。",
+    "skipThisVersion": "跳過此版本"
+  },
+  "welcome": {
+    "title": "歡迎使用 BatchMkvExtract",
+    "subtitle": "建構於 MKVToolNix mkvextract 之上的批次圖形介面。",
+    "intro": "從多個 .mkv 檔案一次擷取軌道、章節和附件。建構於 MKVToolNix 的 mkvextract 之上的批次圖形介面。",
+    "introBatchMkvMerge": "以使用者友善的方式批次處理媒體檔案。建構於 MKVToolNix 的 mkvmerge 之上的圖形介面。",
+    "introBetterMediaInfo": "透過快速、現代的介面檢查任何媒體檔案。一目了然地瀏覽視訊、音訊、影像與字幕軌道的串流、屬性與中繼資料。",
+    "introBDMaster": "以現代圖形介面檢視藍光光碟。一眼瀏覽光碟、播放清單、串流、軌道和位元率圖表。",
+    "addFiles": "新增檔案",
+    "addFolder": "新增資料夾",
+    "emptyHint": "提示：您也可以將 .mkv 檔案或資料夾拖放到此視窗。",
+    "viewOnGithub": "在 GitHub 查看"
+  },
+  "gpui_component": {
+    "Settings": {
+      "search_placeholder": "搜尋...",
+      "no_results": "沒有相符的設定",
+      "no_results_description": "請嘗試其他關鍵字。",
+      "Reset All": "全部重設"
+    },
+    "Select": {
+      "placeholder": "請選擇"
+    },
+    "List": {
+      "search_placeholder": "搜尋..."
+    },
+    "Input": {
+      "Cut": "剪下",
+      "Copy": "複製",
+      "Paste": "貼上",
+      "Select All": "全選",
+      "Clear": "清除"
+    },
+    "Dialog": {
+      "ok": "確定",
+      "cancel": "取消"
+    }
+  }
+}

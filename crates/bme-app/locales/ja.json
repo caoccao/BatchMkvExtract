@@ -1,0 +1,246 @@
+{
+  "list": {
+    "delete": "削除"
+  },
+  "extract": {
+    "copyCommand": "コマンドをコピー",
+    "extract": "抽出",
+    "cancel": "キャンセル",
+    "ok": "OK",
+    "browse": "参照",
+    "setOutputPath": "出力先を設定",
+    "outputPath": "出力先",
+    "openInBetterMediaInfo": "BetterMediaInfo で開く",
+    "outputPathNotWritable": "出力先に書き込めません。別のパスを選択してください。",
+    "outputPathDoesNotExist": "出力先が存在しません。作成されます。",
+    "outputPathHint": "空欄のままにすると、既定の出力先が使われます。",
+    "commandCopied": "コマンドをクリップボードにコピーしました。",
+    "commandCopiedForCommandPrompt": "コマンド プロンプト用のコマンドをクリップボードにコピーしました。",
+    "extractionComplete": "抽出が完了しました。",
+    "noTracks": "トラックが見つかりません。",
+    "retry": "再試行",
+    "notExtractable": "mkvextract は %{codec} トラックを抽出できません。",
+    "header": {
+      "id": "ID",
+      "number": "番号",
+      "type": "種類",
+      "codec": "コーデック",
+      "trackName": "トラック名",
+      "language": "言語",
+      "selectAll": "すべて選択",
+      "tracks": "トラック"
+    },
+    "error": {
+      "mkvmergeNotAvailable": "mkvmerge が使用できません。設定で MKVToolNix のパスを確認してください。%{detail}",
+      "mkvmergeFailed": "mkvmerge が失敗しました: %{detail}",
+      "parseError": "mkvmerge の出力を解析できませんでした: %{detail}",
+      "mkvmergeTimedOut": "mkvmerge が %{seconds} 秒以内に終了しませんでした。ファイルのドライブを確認してもう一度お試しください。",
+      "mkvextractNotAvailable": "mkvextract が使用できません。設定で MKVToolNix のパスを確認してください。%{detail}",
+      "mkvextractFailed": "mkvextract が失敗しました: %{detail}",
+      "sourceMissing": "ソースファイル %{path} が見つかりません。",
+      "mkvextractExitCode": "mkvextract はコード %{code} で終了しました。",
+      "mkvextractTerminated": "mkvextract が強制終了されました。"
+    }
+  },
+  "toolbar": {
+    "extractAll": "すべて抽出 (F3)",
+    "cancelAll": "すべてキャンセル (F4)",
+    "clear": "クリア (Ctrl + Q)",
+    "groupByFile": "グループモード (F8)",
+    "profile": "プロファイル (F9)",
+    "settings": "設定 (Ctrl + ,)",
+    "setGlobalOutputPath": "グローバル出力先を設定",
+    "about": "情報",
+    "moreActions": "ツールバーのその他の操作",
+    "settingsMac": "設定 (Cmd + ,)"
+  },
+  "group": {
+    "copyAllCommands": "すべてのコマンドをコピー",
+    "extractAll": "すべて抽出",
+    "clearAll": "すべて削除"
+  },
+  "tabs": {
+    "fileList": "ファイル一覧",
+    "queue": "キュー",
+    "about": "情報",
+    "close": "閉じる"
+  },
+  "queue": {
+    "resumeAll": "すべて再開",
+    "clearCompleted": "完了を消去",
+    "header": {
+      "filePath": "ファイルパス",
+      "status": "状態",
+      "start": "開始",
+      "end": "終了",
+      "elapsed": "経過時間",
+      "eta": "残り時間"
+    },
+    "status": {
+      "waiting": "待機中",
+      "extracting": "抽出中",
+      "completed": "完了",
+      "cancelled": "キャンセル済み",
+      "failed": "失敗"
+    },
+    "resume": "再開",
+    "quitWhenComplete": "完了時に終了",
+    "systemNotificationTooltip": "完了時にシステム通知を表示します。",
+    "topmostNotificationTooltip": "完了時に最前面の通知を表示します。",
+    "warnings": "警告ありで完了:"
+  },
+  "settings": {
+    "title": "設定",
+    "appearance": "外観",
+    "mode": "モード",
+    "autoMode": "自動",
+    "lightMode": "ライト",
+    "darkMode": "ダーク",
+    "theme": "テーマ",
+    "themeOcean": "オーシャン",
+    "themeAqua": "アクア",
+    "themeSky": "スカイ",
+    "themeArctic": "アークティック",
+    "themeGlacier": "グレイシャー",
+    "themeMist": "ミスト",
+    "themeSlate": "スレート",
+    "themeCharcoal": "チャコール",
+    "themeMidnight": "ミッドナイト",
+    "themeIndigo": "インディゴ",
+    "themeViolet": "バイオレット",
+    "themeLavender": "ラベンダー",
+    "themeRose": "ローズ",
+    "themeBlush": "ブラッシュ",
+    "themeCoral": "コーラル",
+    "themeSunset": "サンセット",
+    "themeAmber": "アンバー",
+    "themeSand": "サンド",
+    "themeForest": "フォレスト",
+    "themeEmerald": "エメラルド",
+    "language": "言語",
+    "integration": "統合",
+    "mkvToolNixPath": "MKVToolNix のパス",
+    "betterMediaInfoPath": "BetterMediaInfo のパス",
+    "browse": "参照",
+    "folderDialogFailed": "フォルダー ダイアログを開けませんでした: %{detail}。パスは入力することもできます。",
+    "detect": "検出",
+    "mkvToolNixFound": "MKVToolNix のパスに mkvmerge と mkvextract が見つかりました。",
+    "mkvToolNixNotFound": "MKVToolNix のパスに mkvmerge または mkvextract が見つかりません。",
+    "betterMediaInfoFound": "BetterMediaInfo が見つかりました",
+    "betterMediaInfoNotFound": "BetterMediaInfo が検出されませんでした。パスを確認してもう一度お試しください。",
+    "update": "アップデート",
+    "checkNewVersion": "新しいバージョンを確認",
+    "daily": "毎日",
+    "weekly": "毎週",
+    "monthly": "毎月",
+    "profiles": "プロファイル",
+    "activeProfile": "アクティブなプロファイル",
+    "newProfileName": "新しいプロファイル名",
+    "addProfile": "追加",
+    "deleteProfile": "削除",
+    "video": "ビデオ",
+    "audio": "オーディオ",
+    "subtitles": "字幕",
+    "chapters": "チャプター",
+    "attachments": "添付ファイル",
+    "autoSelectOnDrop": "追加時に自動で選択",
+    "autoSelectOnDropForLanguages": "追加時に言語で自動選択",
+    "defaultGroupMode": "既定のグループモード",
+    "templatePlaceholdersHint": "プレースホルダー: {file_name}, {track_id}, {track_number}, {language}, {codec_name}, {track_name}",
+    "mkvToolNix": "MKVToolNix",
+    "betterMediaInfo": "BetterMediaInfo",
+    "reset": "リセット",
+    "trackSelection": "トラック選択",
+    "fileNameTemplates": "ファイル名テンプレート"
+  },
+  "about": {
+    "tagline": "mkvextract のバッチ GUI",
+    "author": "作者",
+    "github": "GitHub"
+  },
+  "footer": {
+    "donate": "開発を支援するために寄付する",
+    "copyright": "© Copyright 2026"
+  },
+  "notification": {
+    "completedIn": "%{elapsed} で完了しました",
+    "unknownError": "不明なエラー",
+    "failedCreateOutput": "%{path} の作成に失敗しました。確認してもう一度お試しください。",
+    "outputRepeated": "2 つのトラックが %{path} に書き込まれます。ファイル名テンプレートを変更してもう一度お試しください。",
+    "outputIsSource": "%{path} は一覧にあるソースファイルです。出力先またはファイル名テンプレートを変更してもう一度お試しください。",
+    "outputTaken": "%{path} は %{other} からも書き込まれます。出力先またはファイル名テンプレートを変更してもう一度お試しください。",
+    "cancelFailed": "mkvextract を停止できませんでした: %{detail}",
+    "quit": "終了",
+    "okButDoNotQuit": "OK、アプリは終了しない",
+    "summary": "完了 %{completed} 件、失敗 %{failed} 件、キャンセル %{cancelled} 件",
+    "finishedIn": "%{elapsed} で終了しました",
+    "configResetTitle": "設定を読み込めませんでした",
+    "configReset": "読み込めなかった設定は既定値に戻されました。元のファイルは %{path} として保存されています。",
+    "configResetNoBackup": "読み込めなかった設定は既定値に戻されました。",
+    "configSaveFailedTitle": "設定を保存できませんでした",
+    "configSaveFailed": "%{detail}。次の変更時とアプリの終了時にもう一度保存します。",
+    "completedWithWarnings": "%{elapsed} で完了しました（警告あり）: %{warnings}",
+    "pathsSkipped": "%{count} 個の項目を読み込めなかったため、スキップしました: %{paths}",
+    "fileDialogFailed": "ファイル ダイアログを開けませんでした: %{detail}。ファイルやフォルダーはウィンドウにドロップすることもできます。"
+  },
+  "confirm": {
+    "exitTitle": "終了",
+    "exitMessage": "抽出処理が実行中です。終了してもよろしいですか?",
+    "yes": "はい",
+    "no": "いいえ",
+    "stillRunningTitle": "抽出はまだ実行中です",
+    "stillRunningMessage": "mkvextract が時間内に停止しませんでした。待ちますか、それとも実行したまま終了しますか？",
+    "wait": "待つ",
+    "quitAnyway": "それでも終了",
+    "deleteProfileTitle": "プロファイルの削除",
+    "deleteProfileMessage": "プロファイル「%{name}」を削除しますか?",
+    "resetProfileTitle": "プロファイルのリセット",
+    "resetProfileMessage": "プロファイル「%{name}」を既定の設定に戻しますか?"
+  },
+  "card": {
+    "summary": {
+      "toPath": "出力先: %{path}"
+    }
+  },
+  "update": {
+    "newVersionAvailable": "新しいバージョン %{version} が利用可能です。",
+    "skipThisVersion": "このバージョンをスキップ"
+  },
+  "welcome": {
+    "title": "BatchMkvExtract へようこそ",
+    "subtitle": "MKVToolNix の mkvextract 向けのバッチ GUI。",
+    "intro": "複数の .mkv ファイルからトラック・チャプター・添付ファイルを一括で抽出。MKVToolNix の mkvextract を活用したバッチ向け GUI です。",
+    "introBatchMkvMerge": "メディアファイルを使いやすい方法でバッチ処理。MKVToolNix の mkvmerge を活用した GUI です。",
+    "introBetterMediaInfo": "高速でモダンな UI であらゆるメディアファイルを検査します。ビデオ、オーディオ、画像、字幕トラックのストリーム、プロパティ、メタデータを一目で参照できます。",
+    "introBDMaster": "モダンな GUI で Blu-ray ディスクを解析。ディスク、プレイリスト、ストリーム、トラック、ビットレートグラフを一目で確認できます。",
+    "addFiles": "ファイルを追加",
+    "addFolder": "フォルダを追加",
+    "emptyHint": "ヒント：このウィンドウに .mkv ファイルやフォルダをドラッグ＆ドロップすることもできます。",
+    "viewOnGithub": "GitHub で見る"
+  },
+  "gpui_component": {
+    "Settings": {
+      "search_placeholder": "検索...",
+      "no_results": "一致する設定はありません",
+      "no_results_description": "別のキーワードをお試しください。",
+      "Reset All": "すべてリセット"
+    },
+    "Select": {
+      "placeholder": "選択してください"
+    },
+    "List": {
+      "search_placeholder": "検索..."
+    },
+    "Input": {
+      "Cut": "切り取り",
+      "Copy": "コピー",
+      "Paste": "貼り付け",
+      "Select All": "すべて選択",
+      "Clear": "クリア"
+    },
+    "Dialog": {
+      "ok": "OK",
+      "cancel": "キャンセル"
+    }
+  }
+}

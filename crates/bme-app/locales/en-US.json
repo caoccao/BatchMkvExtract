@@ -1,0 +1,246 @@
+{
+  "list": {
+    "delete": "Delete"
+  },
+  "extract": {
+    "copyCommand": "Copy Command",
+    "extract": "Extract",
+    "cancel": "Cancel",
+    "ok": "OK",
+    "browse": "Browse",
+    "setOutputPath": "Set Output Path",
+    "outputPath": "Output Path",
+    "openInBetterMediaInfo": "Open in BetterMediaInfo",
+    "outputPathNotWritable": "The output path is not writable. Please choose another path.",
+    "outputPathDoesNotExist": "The output path doesn't exist. It will be created.",
+    "outputPathHint": "Leave blank to use the default output path.",
+    "commandCopied": "Command copied to clipboard.",
+    "commandCopiedForCommandPrompt": "Command for the Command Prompt copied to clipboard.",
+    "extractionComplete": "Extraction complete.",
+    "noTracks": "No tracks found.",
+    "retry": "Retry",
+    "notExtractable": "mkvextract cannot extract %{codec} tracks.",
+    "header": {
+      "id": "ID",
+      "number": "Number",
+      "type": "Type",
+      "codec": "Codec",
+      "trackName": "Track Name",
+      "language": "Language",
+      "selectAll": "Select all",
+      "tracks": "Tracks"
+    },
+    "error": {
+      "mkvmergeNotAvailable": "mkvmerge is not available. Please check the MKVToolNix path in Settings. %{detail}",
+      "mkvmergeFailed": "mkvmerge failed: %{detail}",
+      "parseError": "Failed to parse mkvmerge output: %{detail}",
+      "mkvmergeTimedOut": "mkvmerge did not finish within %{seconds} seconds. Please check the file's drive and try again.",
+      "mkvextractNotAvailable": "mkvextract is not available. Please check the MKVToolNix path in Settings. %{detail}",
+      "mkvextractFailed": "mkvextract failed: %{detail}",
+      "sourceMissing": "The source file %{path} cannot be found.",
+      "mkvextractExitCode": "mkvextract exited with code %{code}.",
+      "mkvextractTerminated": "mkvextract was terminated."
+    }
+  },
+  "toolbar": {
+    "extractAll": "Extract All (F3)",
+    "cancelAll": "Cancel All (F4)",
+    "clear": "Clear (Ctrl + Q)",
+    "groupByFile": "Group Mode (F8)",
+    "profile": "Profile (F9)",
+    "settings": "Settings (Ctrl + ,)",
+    "setGlobalOutputPath": "Set global output path",
+    "about": "About",
+    "moreActions": "More toolbar actions",
+    "settingsMac": "Settings (Cmd + ,)"
+  },
+  "group": {
+    "copyAllCommands": "Copy All Commands",
+    "extractAll": "Extract All",
+    "clearAll": "Clear All"
+  },
+  "tabs": {
+    "fileList": "File List",
+    "queue": "Queue",
+    "about": "About",
+    "close": "Close"
+  },
+  "queue": {
+    "resumeAll": "Resume All",
+    "clearCompleted": "Clear Completed",
+    "header": {
+      "filePath": "File Path",
+      "status": "Status",
+      "start": "Start",
+      "end": "End",
+      "elapsed": "Elapsed",
+      "eta": "ETA"
+    },
+    "status": {
+      "waiting": "Waiting",
+      "extracting": "Extracting",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "failed": "Failed"
+    },
+    "resume": "Resume",
+    "quitWhenComplete": "Quit when complete",
+    "systemNotificationTooltip": "Show system notification when complete.",
+    "topmostNotificationTooltip": "Show topmost notification when complete",
+    "warnings": "Completed with warnings:"
+  },
+  "settings": {
+    "title": "Settings",
+    "appearance": "Appearance",
+    "mode": "Mode",
+    "autoMode": "Auto",
+    "lightMode": "Light",
+    "darkMode": "Dark",
+    "theme": "Theme",
+    "themeOcean": "Ocean",
+    "themeAqua": "Aqua",
+    "themeSky": "Sky",
+    "themeArctic": "Arctic",
+    "themeGlacier": "Glacier",
+    "themeMist": "Mist",
+    "themeSlate": "Slate",
+    "themeCharcoal": "Charcoal",
+    "themeMidnight": "Midnight",
+    "themeIndigo": "Indigo",
+    "themeViolet": "Violet",
+    "themeLavender": "Lavender",
+    "themeRose": "Rose",
+    "themeBlush": "Blush",
+    "themeCoral": "Coral",
+    "themeSunset": "Sunset",
+    "themeAmber": "Amber",
+    "themeSand": "Sand",
+    "themeForest": "Forest",
+    "themeEmerald": "Emerald",
+    "language": "Language",
+    "integration": "Integration",
+    "mkvToolNixPath": "MKVToolNix Path",
+    "betterMediaInfoPath": "BetterMediaInfo Path",
+    "browse": "Browse",
+    "folderDialogFailed": "The folder dialog could not be opened: %{detail}. The path can also be typed.",
+    "detect": "Detect",
+    "mkvToolNixFound": "mkvmerge and mkvextract found under MKVToolNix path.",
+    "mkvToolNixNotFound": "mkvmerge or mkvextract not found under MKVToolNix path.",
+    "betterMediaInfoFound": "BetterMediaInfo found",
+    "betterMediaInfoNotFound": "BetterMediaInfo is not detected. Please check your path and try again.",
+    "update": "Update",
+    "checkNewVersion": "Check New Version",
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "profiles": "Profiles",
+    "activeProfile": "Active Profile",
+    "newProfileName": "New profile name",
+    "addProfile": "Add",
+    "deleteProfile": "Delete",
+    "video": "Video",
+    "audio": "Audio",
+    "subtitles": "Subtitles",
+    "chapters": "Chapters",
+    "attachments": "Attachments",
+    "autoSelectOnDrop": "Auto-select on file add",
+    "autoSelectOnDropForLanguages": "Auto-select on file add for languages",
+    "defaultGroupMode": "Default group mode",
+    "templatePlaceholdersHint": "Placeholders: {file_name}, {track_id}, {track_number}, {language}, {codec_name}, {track_name}",
+    "mkvToolNix": "MKVToolNix",
+    "betterMediaInfo": "BetterMediaInfo",
+    "reset": "Reset",
+    "trackSelection": "Track Selection",
+    "fileNameTemplates": "File Name Templates"
+  },
+  "about": {
+    "tagline": "Batch GUI for mkvextract",
+    "author": "Author",
+    "github": "GitHub"
+  },
+  "footer": {
+    "donate": "Donate to Support the Development",
+    "copyright": "© Copyright 2026"
+  },
+  "notification": {
+    "completedIn": "Completed in %{elapsed}",
+    "unknownError": "Unknown error",
+    "failedCreateOutput": "Failed to create %{path}. Please check it out and try again.",
+    "outputRepeated": "Two tracks would be written to %{path}. Please change the file name templates and try again.",
+    "outputIsSource": "%{path} is a listed source file. Please change the output path or the file name templates and try again.",
+    "outputTaken": "%{path} is also written by %{other}. Please change the output path or the file name templates and try again.",
+    "cancelFailed": "mkvextract could not be stopped: %{detail}",
+    "quit": "Quit",
+    "okButDoNotQuit": "OK, but do not quit",
+    "summary": "%{completed} completed, %{failed} failed, %{cancelled} cancelled",
+    "finishedIn": "Finished in %{elapsed}",
+    "configResetTitle": "Settings could not be read",
+    "configReset": "Settings that could not be read were reset to their defaults. The original file was kept as %{path}.",
+    "configResetNoBackup": "Settings that could not be read were reset to their defaults.",
+    "configSaveFailedTitle": "Settings could not be saved",
+    "configSaveFailed": "%{detail}. They are saved again with the next change and when the app quits.",
+    "completedWithWarnings": "Completed in %{elapsed} with warnings: %{warnings}",
+    "pathsSkipped": "%{count} item(s) could not be read and were skipped: %{paths}",
+    "fileDialogFailed": "The file dialog could not be opened: %{detail}. Files and folders can also be dropped onto the window."
+  },
+  "confirm": {
+    "exitTitle": "Exit",
+    "exitMessage": "There are extractions in progress. Are you sure you want to exit?",
+    "yes": "Yes",
+    "no": "No",
+    "stillRunningTitle": "Extractions still running",
+    "stillRunningMessage": "mkvextract did not stop in time. Wait for it, or quit and leave it running?",
+    "wait": "Wait",
+    "quitAnyway": "Quit anyway",
+    "deleteProfileTitle": "Delete Profile",
+    "deleteProfileMessage": "Delete the profile \"%{name}\"?",
+    "resetProfileTitle": "Reset Profile",
+    "resetProfileMessage": "Reset the profile \"%{name}\" to its default settings?"
+  },
+  "card": {
+    "summary": {
+      "toPath": "To path %{path}"
+    }
+  },
+  "update": {
+    "newVersionAvailable": "A new version %{version} is available.",
+    "skipThisVersion": "Skip this version"
+  },
+  "welcome": {
+    "title": "Welcome to BatchMkvExtract",
+    "subtitle": "A batch-friendly GUI for mkvextract from MKVToolNix.",
+    "intro": "Pull tracks, chapters, and attachments from many .mkv files at once. A batch-friendly GUI on top of mkvextract from MKVToolNix.",
+    "introBatchMkvMerge": "Batch process media files in a user friendly way. A GUI on top of mkvmerge from MKVToolNix.",
+    "introBetterMediaInfo": "Inspect any media file with a fast, modern UI. Browse streams, properties, and metadata for video, audio, image, and subtitle tracks at a glance.",
+    "introBDMaster": "Inspect Blu-ray discs with a modern GUI. Browse discs, playlists, streams, tracks, and bit rate graphs at a glance.",
+    "addFiles": "Add Files",
+    "addFolder": "Add Folder",
+    "emptyHint": "Tip: you can also drag and drop .mkv files or folders into this window.",
+    "viewOnGithub": "View on GitHub"
+  },
+  "gpui_component": {
+    "Settings": {
+      "search_placeholder": "Search...",
+      "no_results": "No matching settings",
+      "no_results_description": "Try a different keyword.",
+      "Reset All": "Reset All"
+    },
+    "Select": {
+      "placeholder": "Please select"
+    },
+    "List": {
+      "search_placeholder": "Search..."
+    },
+    "Input": {
+      "Cut": "Cut",
+      "Copy": "Copy",
+      "Paste": "Paste",
+      "Select All": "Select All",
+      "Clear": "Clear"
+    },
+    "Dialog": {
+      "ok": "OK",
+      "cancel": "Cancel"
+    }
+  }
+}

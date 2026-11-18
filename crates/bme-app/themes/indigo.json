@@ -1,0 +1,37 @@
+{
+  "name": "Indigo",
+  "author": "Sam Cao",
+  "url": "https://github.com/caoccao/BatchMkvExtract",
+  "themes": [
+    {
+      "name": "Indigo Light",
+      "mode": "light",
+      "font.size": 14,
+      "colors": {
+        "primary.background": "#3f51b5",
+        "primary.hover.background": "#2c397f",
+        "primary.active.background": "#2c397f",
+        "primary.foreground": "#ffffff",
+        "ring": "#3f51b5",
+        "link": "#3f51b5",
+        "link.hover": "#2c397f",
+        "link.active": "#2c397f"
+      }
+    },
+    {
+      "name": "Indigo Dark",
+      "mode": "dark",
+      "font.size": 14,
+      "colors": {
+        "primary.background": "#3f51b5",
+        "primary.hover.background": "#2c397f",
+        "primary.active.background": "#2c397f",
+        "primary.foreground": "#ffffff",
+        "ring": "#3f51b5",
+        "link": "#3f51b5",
+        "link.hover": "#6574c4",
+        "link.active": "#6574c4"
+      }
+    }
+  ]
+}

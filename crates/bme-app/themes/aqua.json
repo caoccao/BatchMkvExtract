@@ -1,0 +1,37 @@
+{
+  "name": "Aqua",
+  "author": "Sam Cao",
+  "url": "https://github.com/caoccao/BatchMkvExtract",
+  "themes": [
+    {
+      "name": "Aqua Light",
+      "mode": "light",
+      "font.size": 14,
+      "colors": {
+        "primary.background": "#00acc1",
+        "primary.hover.background": "#4dc5d4",
+        "primary.active.background": "#4dc5d4",
+        "primary.foreground": "#000000de",
+        "ring": "#00acc1",
+        "link": "#00acc1",
+        "link.hover": "#007887",
+        "link.active": "#007887"
+      }
+    },
+    {
+      "name": "Aqua Dark",
+      "mode": "dark",
+      "font.size": 14,
+      "colors": {
+        "primary.background": "#00acc1",
+        "primary.hover.background": "#4dc5d4",
+        "primary.active.background": "#4dc5d4",
+        "primary.foreground": "#000000de",
+        "ring": "#00acc1",
+        "link": "#00acc1",
+        "link.hover": "#33bdcd",
+        "link.active": "#33bdcd"
+      }
+    }
+  ]
+}

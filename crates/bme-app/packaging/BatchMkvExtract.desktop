@@ -1,0 +1,9 @@
+[Desktop Entry]
+Categories=AudioVideo;Video;
+Comment=A tool to batch extract tracks from MKV files using mkvextract.
+Exec=BatchMkvExtract
+StartupWMClass=BatchMkvExtract
+Icon=BatchMkvExtract
+Name=BatchMkvExtract
+Terminal=false
+Type=Application

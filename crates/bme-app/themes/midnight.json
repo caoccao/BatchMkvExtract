@@ -1,0 +1,37 @@
+{
+  "name": "Midnight",
+  "author": "Sam Cao",
+  "url": "https://github.com/caoccao/BatchMkvExtract",
+  "themes": [
+    {
+      "name": "Midnight Light",
+      "mode": "light",
+      "font.size": 14,
+      "colors": {
+        "primary.background": "#1a237e",
+        "primary.hover.background": "#121958",
+        "primary.active.background": "#121958",
+        "primary.foreground": "#ffffff",
+        "ring": "#1a237e",
+        "link": "#1a237e",
+        "link.hover": "#121958",
+        "link.active": "#121958"
+      }
+    },
+    {
+      "name": "Midnight Dark",
+      "mode": "dark",
+      "font.size": 14,
+      "colors": {
+        "primary.background": "#1a237e",
+        "primary.hover.background": "#121958",
+        "primary.active.background": "#121958",
+        "primary.foreground": "#ffffff",
+        "ring": "#1a237e",
+        "link": "#1a237e",
+        "link.hover": "#484f98",
+        "link.active": "#484f98"
+      }
+    }
+  ]
+}

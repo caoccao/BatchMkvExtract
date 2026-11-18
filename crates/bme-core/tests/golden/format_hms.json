@@ -1,0 +1,73 @@
+{
+  "description": "0.3.0's duration format, recorded under Deno: milliseconds to HH:MM:SS.",
+  "cases": [
+    {
+      "ms": 0,
+      "expected": "00:00:00"
+    },
+    {
+      "ms": 0.4,
+      "expected": "00:00:00"
+    },
+    {
+      "ms": 999,
+      "expected": "00:00:00"
+    },
+    {
+      "ms": 1000,
+      "expected": "00:00:01"
+    },
+    {
+      "ms": 1999.9,
+      "expected": "00:00:01"
+    },
+    {
+      "ms": 59999,
+      "expected": "00:00:59"
+    },
+    {
+      "ms": 60000,
+      "expected": "00:01:00"
+    },
+    {
+      "ms": 3599999,
+      "expected": "00:59:59"
+    },
+    {
+      "ms": 3600000,
+      "expected": "01:00:00"
+    },
+    {
+      "ms": 3661999,
+      "expected": "01:01:01"
+    },
+    {
+      "ms": 86399999,
+      "expected": "23:59:59"
+    },
+    {
+      "ms": 86400000,
+      "expected": "24:00:00"
+    },
+    {
+      "ms": 360059000,
+      "expected": "100:00:59"
+    },
+    {
+      "ms": 1000000000000,
+      "expected": "277777:46:40"
+    },
+    {
+      "ms": -0.5,
+      "expected": "--:--:--"
+    },
+    {
+      "ms": -1,
+      "expected": "--:--:--"
+    },
+    {
+      "ms": -3600000,
+      "expected": "--:--:--"
+    }
+  ]
+}
