@@ -33,6 +33,7 @@ use gpui_kit::App;
 use crate::domain::extract_error::{extract_error_message, warnings_text};
 use crate::domain::format::format_hms;
 use crate::state::Stores;
+use crate::state::config::ConfigEvent;
 use crate::state::queue::{QueueBatch, QueueEvent};
 use crate::state::ui::{CompletionNotice, NotificationKind};
 
@@ -95,6 +96,22 @@ pub fn watch(stores: &Stores, cx: &mut App) {
     QueueEvent::ItemChanged { .. } | QueueEvent::Tick => {}
   })
   .detach();
+  let ui = stores.ui.clone();
+  cx.subscribe(&stores.config, move |_, event: &ConfigEvent, cx| {
+    if let ConfigEvent::SaveFailed(error) = event {
+      let (title, detail) = save_failed_message(error);
+      ui.update(cx, |ui, cx| ui.show_toast(NotificationKind::Error, title, detail, cx));
+    }
+  })
+  .detach();
+}
+
+/// The toast's title and text for settings that could not be saved.
+pub fn save_failed_message(error: &str) -> (String, String) {
+  (
+    rust_i18n::t!("notification.configSaveFailedTitle").into_owned(),
+    rust_i18n::t!("notification.configSaveFailed", detail = error).into_owned(),
+  )
 }
 
 /// At most this many warnings are shown in a finished extraction's toast.
@@ -305,6 +322,20 @@ mod tests {
     assert_eq!(
       unreadable_config_message(&lost).1,
       "Settings that could not be read were reset to their defaults."
+    );
+  }
+
+  #[test]
+  fn settings_that_could_not_be_saved_say_when_they_are_saved_again() {
+    let _locale = LOCALE_LOCK.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    crate::i18n::set_language(Language::EnUS);
+    assert_eq!(
+      save_failed_message("No space left on device (os error 28)"),
+      (
+        "Settings could not be saved".to_string(),
+        "No space left on device (os error 28). They are saved again with the next change and when the app quits."
+          .to_string()
+      )
     );
   }
 }

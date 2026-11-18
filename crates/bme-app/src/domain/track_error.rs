@@ -39,6 +39,11 @@ pub fn track_error_message(error: &TrackListError) -> String {
       rust_i18n::t!("extract.error.mkvmergeFailed", detail = detail).into_owned()
     }
     TrackListError::Parse { detail } => rust_i18n::t!("extract.error.parseError", detail = detail).into_owned(),
+    TrackListError::TimedOut { seconds } => {
+      rust_i18n::t!("extract.error.mkvmergeTimedOut", seconds = seconds).into_owned()
+    }
+    // Never shown: a cancelled listing's result is dropped.
+    TrackListError::Cancelled => rust_i18n::t!("queue.status.cancelled").into_owned(),
     TrackListError::Other(message) => message.clone(),
   }
 }
@@ -80,6 +85,11 @@ mod tests {
       "Failed to parse mkvmerge output: EOF while parsing"
     );
     assert_eq!(track_error_message(&TrackListError::Other("as is".into())), "as is");
+    assert_eq!(
+      track_error_message(&TrackListError::TimedOut { seconds: 60 }),
+      "mkvmerge did not finish within 60 seconds. Please check the file's drive and try again."
+    );
+    assert_eq!(track_error_message(&TrackListError::Cancelled), "Cancelled");
     crate::i18n::set_language(Language::De);
     assert_eq!(
       track_error_message(&TrackListError::Parse { detail: "EOF".into() }),

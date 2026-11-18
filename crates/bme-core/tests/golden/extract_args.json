@@ -374,7 +374,7 @@
       "expected": []
     },
     {
-      "description": "Templates with separators: a name is joined into the output directory and `.`, empty and `..` components are resolved without touching the disk, so a leading `/` stays inside the directory.",
+      "description": "Templates with separators: a name is joined into the output directory and `.`, empty and `..` components are resolved without touching the disk, so a leading `/` stays inside the directory. Changed from 0.3.0 on purpose: a name's `..` no longer climbs above the output directory (0.3.0 wrote the audio track to `/out/Movie.1.ac3`).",
       "file": "/media/Movie.mkv",
       "outputDir": "/out/./set/",
       "tracks": [
@@ -444,7 +444,7 @@
       "expected": [
         "tracks",
         "0:/out/set/Movie.0.h264",
-        "1:/out/Movie.1.ac3",
+        "1:/out/set/Movie.1.ac3",
         "3:/out/set/subs/eng/Movie.srt",
         "chapters",
         "/out/set/Movie/.xml",

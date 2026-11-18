@@ -33,6 +33,14 @@
 //! its `Finished` arrives, which then drops it: the item counts as active
 //! until the extraction really ended, and the late `Cancelled` lists nothing
 //! again.
+//!
+//! An extraction is listed as waiting from the moment it is asked for, while
+//! it is prepared on the background executor ([`QueueStore::reserve`]):
+//! Cancel, Delete and Cancel All see it, and a cancelled reservation ends at
+//! once, as the extract queue ends a waiting file. Once handed to the extract
+//! queue ([`QueueStore::hand_over`]), the files it writes are its own until it
+//! finishes: no other extraction may write one of them
+//! ([`QueueStore::output_owner`]).
 
 use std::collections::{HashMap, HashSet};
 use std::time::{Duration, SystemTime};
@@ -128,6 +136,8 @@ pub struct QueueSummary {
 }
 
 impl QueueSummary {
+  /// The summary counted over `items` (tests check the kept totals by it).
+  #[cfg(test)]
   fn of<'a>(items: impl IntoIterator<Item = &'a QueueItem>) -> Self {
     let mut summary = Self::default();
     let mut progress_sum: u64 = 0;
@@ -152,6 +162,84 @@ impl QueueSummary {
   }
 }
 
+/// Running counts of the queue, kept as items change, so a progress event
+/// or a tick costs no scan of the whole queue.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+struct Totals {
+  /// Shown items (a removed file whose extraction is ending is hidden).
+  shown: usize,
+  /// Shown completed, cancelled or failed items.
+  done: usize,
+  /// Shown waiting or extracting items.
+  shown_active: usize,
+  /// The shown items' progress: 100 for a finished one, its percentage for
+  /// an extracting one.
+  progress: u64,
+  /// Waiting or extracting items, hidden ones included.
+  active: usize,
+  /// Extracting items, hidden ones included.
+  extracting: usize,
+}
+
+impl Totals {
+  /// What `item` adds, `shown` or hidden.
+  fn of(item: Option<&QueueItem>, shown: bool) -> Self {
+    let Some(item) = item else {
+      return Self::default();
+    };
+    let extracting = item.status == QueueItemStatus::Extracting;
+    let mut totals = Self {
+      active: usize::from(item.status.is_active()),
+      extracting: usize::from(extracting),
+      ..Self::default()
+    };
+    if shown {
+      totals.shown = 1;
+      if item.status.is_terminal() {
+        totals.done = 1;
+        totals.progress = 100;
+      } else {
+        totals.shown_active = 1;
+        if extracting {
+          totals.progress = u64::from(item.progress);
+        }
+      }
+    }
+    totals
+  }
+
+  fn add(&mut self, other: Self) {
+    self.shown += other.shown;
+    self.done += other.done;
+    self.shown_active += other.shown_active;
+    self.progress += other.progress;
+    self.active += other.active;
+    self.extracting += other.extracting;
+  }
+
+  fn sub(&mut self, other: Self) {
+    self.shown -= other.shown;
+    self.done -= other.done;
+    self.shown_active -= other.shown_active;
+    self.progress -= other.progress;
+    self.active -= other.active;
+    self.extracting -= other.extracting;
+  }
+
+  fn summary(&self) -> QueueSummary {
+    QueueSummary {
+      done: self.done,
+      total: self.shown,
+      active: self.shown_active > 0,
+      percent: if self.shown > 0 {
+        (self.progress / self.shown as u64).min(100) as u32
+      } else {
+        0
+      },
+    }
+  }
+}
+
 #[derive(Default)]
 pub struct QueueStore {
   items: HashMap<String, QueueItem>,
@@ -163,6 +251,19 @@ pub struct QueueStore {
   ticker: Option<Task<()>>,
   /// The batch running while an item is waiting or extracting.
   batch: Option<QueueBatch>,
+  /// Files listed as waiting while their extraction is prepared, with the
+  /// token of their reservation.
+  preparing: HashMap<String, u64>,
+  /// The last reservation's token.
+  last_reservation: u64,
+  /// The [`output_key`](bme_core::extract_args::output_key)s of the files
+  /// each handed-over extraction writes, until it finishes.
+  outputs: HashMap<String, Vec<String>>,
+  /// Which extraction writes each of those keys.
+  output_owners: HashMap<String, String>,
+  /// The counts behind [`Self::summary`], [`Self::has_active`], the ticker
+  /// and the batch.
+  totals: Totals,
 }
 
 impl EventEmitter<QueueEvent> for QueueStore {}
@@ -200,7 +301,7 @@ impl QueueStore {
 
   /// Whether an extraction is waiting or running, a removed file's included.
   pub fn has_active(&self) -> bool {
-    self.items.values().any(|item| item.status.is_active())
+    self.totals.active > 0
   }
 
   /// The waiting and extracting files in queue order, removed files whose
@@ -216,7 +317,23 @@ impl QueueStore {
   }
 
   pub fn summary(&self) -> QueueSummary {
-    QueueSummary::of(self.items())
+    self.totals.summary()
+  }
+
+  /// What the item of `file` adds to the totals now.
+  fn tally(&self, file: &str) -> Totals {
+    Totals::of(self.items.get(file), self.shown(file))
+  }
+
+  /// Runs `edit`, which changes the item of `file` only, and keeps the
+  /// totals.
+  fn edit<R>(&mut self, file: &str, edit: impl FnOnce(&mut Self) -> R) -> R {
+    let before = self.tally(file);
+    let result = edit(self);
+    let after = self.tally(file);
+    self.totals.sub(before);
+    self.totals.add(after);
+    result
   }
 
   fn shown(&self, file: &str) -> bool {
@@ -248,37 +365,121 @@ impl QueueStore {
     if !self.can_enqueue(file) {
       return false;
     }
-    if self.items.insert(file.to_string(), QueueItem::waiting(file)).is_none() {
+    let added = self.edit(file, |this| {
+      this.items.insert(file.to_string(), QueueItem::waiting(file)).is_none()
+    });
+    if added {
       self.order.push(file.to_string());
     }
     self.changed(file, true, cx);
     true
   }
 
-  /// Takes `file` off the queue after the extract queue refused it.
+  /// Lists `file` as waiting while its extraction is prepared, before the
+  /// extract queue has it, as [`Self::add_to_queue`] does. Returns the token
+  /// of the reservation, which [`Self::is_reserved`] checks before the hand
+  /// over; `None` when the file is waiting or extracting already.
+  pub fn reserve(&mut self, file: &str, cx: &mut Context<Self>) -> Option<u64> {
+    if !self.add_to_queue(file, cx) {
+      return None;
+    }
+    self.last_reservation += 1;
+    self.preparing.insert(file.to_string(), self.last_reservation);
+    Some(self.last_reservation)
+  }
+
+  /// Whether the reservation `token` of `file` stands: it was not
+  /// cancelled, removed or handed over since.
+  pub fn is_reserved(&self, file: &str, token: u64) -> bool {
+    self.preparing.get(file) == Some(&token)
+  }
+
+  /// The other waiting or extracting file that writes one of `outputs`
+  /// (output keys), with the index of that output.
+  pub fn output_owner(&self, file: &str, outputs: &[String]) -> Option<(usize, &str)> {
+    outputs.iter().enumerate().find_map(|(index, output)| {
+      self
+        .output_owners
+        .get(output)
+        .filter(|owner| *owner != file)
+        .map(|owner| (index, owner.as_str()))
+    })
+  }
+
+  /// The reserved `file` goes to the extract queue: from now on it writes
+  /// `outputs` (output keys) until it finishes.
+  pub fn hand_over(&mut self, file: &str, outputs: Vec<String>) {
+    self.preparing.remove(file);
+    self.release_outputs(file);
+    for output in &outputs {
+      self.output_owners.insert(output.clone(), file.to_string());
+    }
+    self.outputs.insert(file.to_string(), outputs);
+  }
+
+  /// Cancels the reservation of `file` before the extract queue has it: the
+  /// item finishes as cancelled at once. `false` when `file` is not being
+  /// prepared.
+  pub fn cancel_reservation(&mut self, file: &str, now: SystemTime, cx: &mut Context<Self>) -> bool {
+    if self.preparing.remove(file).is_none() {
+      return false;
+    }
+    let cancelled = ExtractEvent::Finished {
+      file: file.to_string(),
+      outcome: ExtractOutcome::Cancelled,
+      error: None,
+      warnings: Vec::new(),
+      at: now,
+    };
+    self.apply_event(&cancelled, now, cx);
+    true
+  }
+
+  /// Takes `file` off the queue: its preparation failed, or the extract
+  /// queue refused it.
   pub fn abandon(&mut self, file: &str, cx: &mut Context<Self>) {
     self.drop_item(file, cx);
   }
 
   /// Drops the item of `file`. While the extract queue still has it, the item
   /// is only hidden: it counts as active until its `Finished` arrives,
-  /// which drops it without a row, a toast or a place in the batch.
+  /// which drops it without a row, a toast or a place in the batch. A file
+  /// still being prepared is not in the extract queue and goes at once.
   pub fn remove_from_queue(&mut self, file: &str, cx: &mut Context<Self>) {
     let Some(item) = self.items.get(file) else {
       return;
     };
-    if !item.status.is_active() {
+    if !item.status.is_active() || self.preparing.contains_key(file) {
       self.drop_item(file, cx);
-    } else if self.discarded.insert(file.to_string()) {
+    } else if self.edit(file, |this| this.discarded.insert(file.to_string())) {
       self.changed(file, true, cx);
     }
   }
 
   fn drop_item(&mut self, file: &str, cx: &mut Context<Self>) {
-    self.discarded.remove(file);
-    if self.items.remove(file).is_some() {
+    if self.forget_item(file) {
       self.order.retain(|listed| listed != file);
       self.changed(file, true, cx);
+    }
+  }
+
+  /// Drops everything about the item of `file` but its place in `order`;
+  /// whether there was an item.
+  fn forget_item(&mut self, file: &str) -> bool {
+    self.preparing.remove(file);
+    self.release_outputs(file);
+    self.edit(file, |this| {
+      this.discarded.remove(file);
+      this.items.remove(file).is_some()
+    })
+  }
+
+  /// The outputs of `file` are free again.
+  fn release_outputs(&mut self, file: &str) {
+    for output in self.outputs.remove(file).unwrap_or_default() {
+      if self.output_owners.get(&output).is_some_and(|owner| owner == file) {
+        self.output_owners.remove(&output);
+      }
     }
   }
 
@@ -290,12 +491,28 @@ impl QueueStore {
     }
   }
 
+  /// A cancel of `file` could not stop its `mkvextract`: the request is
+  /// withdrawn, so Cancel can be tried again.
+  pub fn cancel_failed(&mut self, file: &str, cx: &mut Context<Self>) {
+    if let Some(item) = self.items.get_mut(file)
+      && item.cancel_requested
+    {
+      item.cancel_requested = false;
+      self.changed(file, false, cx);
+    }
+  }
+
   /// Applies one extract event. An event for a file that is not listed lists
   /// it.
   /// `now` stands in for a time the event does not carry.
   pub fn apply_event(&mut self, event: &ExtractEvent, now: SystemTime, cx: &mut Context<Self>) {
     let file = event.file();
     let finished = matches!(event, ExtractEvent::Finished { .. });
+    if finished {
+      // Whatever it wrote is done.
+      self.preparing.remove(file);
+      self.release_outputs(file);
+    }
     if !self.shown(file) {
       // A removed file: its extraction's end drops it.
       if finished {
@@ -303,20 +520,22 @@ impl QueueStore {
       }
       return;
     }
-    let structural = match self.items.get_mut(file) {
+    let applied = self.edit(file, |this| match this.items.get_mut(file) {
       Some(item) => {
         let status = item.status;
-        if !item.apply(event, now) {
-          return;
-        }
-        item.status != status
+        item.apply(event, now).then_some((item.status != status, false))
       }
       None => {
-        self.items.insert(file.to_string(), QueueItem::from_event(event, now));
-        self.order.push(file.to_string());
-        true
+        this.items.insert(file.to_string(), QueueItem::from_event(event, now));
+        Some((true, true))
       }
+    });
+    let Some((structural, listed)) = applied else {
+      return;
     };
+    if listed {
+      self.order.push(file.to_string());
+    }
     if let ExtractEvent::Started { at, .. } = event {
       self.batch.get_or_insert_default().start(*at);
     }
@@ -352,12 +571,23 @@ impl QueueStore {
       .filter(|item| item.status.is_terminal())
       .map(|item| item.file.clone())
       .collect();
-    for file in &removed {
-      self.items.remove(file);
+    self.forget_all(&removed, cx);
+  }
+
+  /// Drops the items of `files` with one pass over `order`.
+  fn forget_all(&mut self, files: &[String], cx: &mut Context<Self>) {
+    let mut dropped = HashSet::new();
+    for file in files {
+      if self.forget_item(file) {
+        dropped.insert(file.as_str());
+      }
     }
-    self.order.retain(|file| !removed.contains(file));
-    for file in removed {
-      self.changed(&file, true, cx);
+    if dropped.is_empty() {
+      return;
+    }
+    self.order.retain(|file| !dropped.contains(file.as_str()));
+    for file in dropped {
+      self.changed(file, true, cx);
     }
   }
 
@@ -372,20 +602,47 @@ impl QueueStore {
   }
 
   /// Removes every item (the queue part of Clear), as
-  /// [`Self::remove_from_queue`] does.
+  /// [`Self::remove_from_queue`] does: a file the extract queue still has is
+  /// hidden, the others go, with one pass over `order`.
   pub fn clear(&mut self, cx: &mut Context<Self>) {
+    let mut dropped = Vec::new();
     for file in self.order.clone() {
-      self.remove_from_queue(&file, cx);
+      let Some(item) = self.items.get(&file) else {
+        continue;
+      };
+      if !item.status.is_active() || self.preparing.contains_key(&file) {
+        dropped.push(file);
+      } else if self.edit(&file, |this| this.discarded.insert(file.clone())) {
+        self.changed(&file, true, cx);
+      }
     }
+    self.forget_all(&dropped, cx);
   }
 
   fn changed(&mut self, file: &str, structural: bool, cx: &mut Context<Self>) {
+    #[cfg(test)]
+    assert_eq!(self.totals, self.recount(), "the totals after a change of {file}");
     cx.emit(QueueEvent::ItemChanged { file: file.to_string() });
     if structural {
       cx.notify();
     }
     self.update_ticker(cx);
     self.update_batch(cx);
+  }
+
+  /// The totals counted from scratch, which the kept ones must equal.
+  #[cfg(test)]
+  fn recount(&self) -> Totals {
+    let mut totals = Totals::default();
+    for file in self.items.keys() {
+      totals.add(self.tally(file));
+    }
+    assert_eq!(
+      totals.summary(),
+      QueueSummary::of(self.items()),
+      "the summary as it was counted"
+    );
+    totals
   }
 
   /// Starts a batch when an item waits or extracts, and ends it (emitting
@@ -400,11 +657,7 @@ impl QueueStore {
 
   /// Starts the ticker when an extraction runs and stops it when none does.
   fn update_ticker(&mut self, cx: &mut Context<Self>) {
-    let extracting = self
-      .items
-      .values()
-      .any(|item| item.status == QueueItemStatus::Extracting);
-    if !extracting {
+    if self.totals.extracting == 0 {
       self.ticker = None;
     } else if self.ticker.is_none() {
       self.ticker = Some(cx.spawn(async move |this, cx| {
@@ -643,6 +896,64 @@ mod tests {
       assert_eq!(queue.items().count(), 0, "their ends list nothing");
       assert!(!queue.has_active());
       assert!(queue.can_enqueue(A));
+    });
+  }
+
+  /// A reservation ends when it is cancelled (the item finishes as
+  /// cancelled), removed (the item goes) or handed over.
+  #[gpui_kit::test]
+  fn a_reservation_ends_by_cancel_removal_or_hand_over(cx: &mut TestAppContext) {
+    let harness = Harness::new(cx);
+    harness.queue.update(cx, |queue, cx| {
+      let first = queue.reserve(A, cx).expect("reserved");
+      assert_eq!(queue.reserve(A, cx), None, "waiting already");
+      assert!(queue.is_reserved(A, first));
+      assert!(queue.cancel_reservation(A, at(1), cx));
+      assert_eq!(queue.item(A).unwrap().status, QueueItemStatus::Cancelled);
+      assert!(!queue.is_reserved(A, first));
+      assert!(!queue.cancel_reservation(A, at(1), cx), "nothing to cancel");
+      let second = queue.reserve(A, cx).expect("reserved again");
+      assert_ne!(second, first, "a reservation of its own");
+      let b = queue.reserve(B, cx).expect("reserved");
+      queue.remove_from_queue(B, cx);
+      assert!(queue.item(B).is_none() && !queue.is_reserved(B, b), "gone at once");
+      queue.hand_over(A, vec!["/out/a.srt".to_string()]);
+      assert!(!queue.is_reserved(A, second));
+      assert!(!queue.cancel_reservation(A, at(1), cx), "the extract queue has it");
+      assert_eq!(queue.active_files(), [A]);
+    });
+    let cancelled = drained(&harness.take_events());
+    assert_eq!(cancelled.len(), 1, "the cancelled reservation ended a batch");
+    assert_eq!(cancelled[0].cancelled, 1);
+  }
+
+  /// A handed-over extraction owns its outputs until it finishes, also when
+  /// its file was removed meanwhile.
+  #[gpui_kit::test]
+  fn outputs_are_taken_until_the_extraction_finishes(cx: &mut TestAppContext) {
+    let harness = Harness::new(cx);
+    let (a_srt, b_srt) = ("/out/a.srt".to_string(), "/out/b.srt".to_string());
+    harness.queue.update(cx, |queue, cx| {
+      queue.reserve(A, cx);
+      queue.reserve(B, cx);
+      queue.hand_over(A, vec![a_srt.clone()]);
+      queue.hand_over(B, vec![b_srt.clone()]);
+      assert_eq!(
+        queue.output_owner(B, &["/out/x.srt".to_string(), a_srt.clone()]),
+        Some((1, A))
+      );
+      assert_eq!(queue.output_owner(A, std::slice::from_ref(&a_srt)), None, "its own");
+      queue.remove_from_queue(B, cx);
+      assert_eq!(
+        queue.output_owner(A, std::slice::from_ref(&b_srt)),
+        Some((0, B)),
+        "still extracting"
+      );
+    });
+    harness.apply(cx, finished(A, ExtractOutcome::Completed, 2));
+    harness.apply(cx, finished(B, ExtractOutcome::Cancelled, 2));
+    harness.queue.read_with(cx, |queue, _| {
+      assert_eq!(queue.output_owner(B, &[a_srt.clone(), b_srt.clone()]), None);
     });
   }
 

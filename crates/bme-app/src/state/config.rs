@@ -42,18 +42,31 @@ fn active_profile_index(config: &Config) -> Option<usize> {
     .or_else(|| (!config.profiles.is_empty()).then_some(0))
 }
 
+type WriteFn = dyn Fn(Config) -> anyhow::Result<()> + Send + Sync;
+
 /// Where configuration writes go: the config file in the app, a recorder in
 /// tests. Writes carry a revision and run one at a time, and a write older
 /// than the last one written is dropped, so background writes that finish out
-/// of order never put an older config on disk.
+/// of order never put an older config on disk. Only a write that succeeded
+/// counts as written: after a failure (a full disk, a folder that is not
+/// writable for a moment) the next write, or the flush at quit, tries again.
 #[derive(Clone)]
 pub struct Persistence {
-  write: Arc<dyn Fn(Config) + Send + Sync>,
+  write: Arc<WriteFn>,
   last_written: Arc<Mutex<u64>>,
 }
 
 impl Persistence {
+  /// A write that cannot fail (a recorder in tests).
   pub fn new(write: impl Fn(Config) + Send + Sync + 'static) -> Self {
+    Self::fallible(move |config| {
+      write(config);
+      Ok(())
+    })
+  }
+
+  /// A write that reports its failure.
+  pub fn fallible(write: impl Fn(Config) -> anyhow::Result<()> + Send + Sync + 'static) -> Self {
     Self {
       write: Arc::new(write),
       last_written: Arc::new(Mutex::new(0)),
@@ -63,32 +76,41 @@ impl Persistence {
   /// Writes through `bme_core::config::set_config`, which also updates the
   /// in-memory config the core reads.
   pub fn disk() -> Self {
-    Self::new(|config| {
-      if let Err(error) = bme_core::config::set_config(config) {
-        log::error!("Failed to save the config: {error}");
-      }
-    })
+    Self::fallible(bme_core::config::set_config)
   }
 
-  /// Writes `config` unless a newer revision has been written already.
-  fn write(&self, revision: u64, config: Config) {
+  /// Writes `config` unless a newer revision has been written already; the
+  /// error of a write that failed.
+  fn write(&self, revision: u64, config: Config) -> Result<(), String> {
     let mut last_written = self
       .last_written
       .lock()
       .unwrap_or_else(|poisoned| poisoned.into_inner());
-    if revision > *last_written {
-      (self.write)(config);
-      *last_written = revision;
+    if revision <= *last_written {
+      return Ok(());
+    }
+    match (self.write)(config) {
+      Ok(()) => {
+        *last_written = revision;
+        Ok(())
+      }
+      Err(error) => {
+        log::error!("Failed to save the config: {error}");
+        Err(error.to_string())
+      }
     }
   }
 }
 
 /// What a [`ConfigStore`] edit means beyond the new config.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ConfigEvent {
   /// A profile operation set Group Mode to this value (the profile's
   /// `defaultGroupMode`).
   GroupMode(bool),
+  /// Saving the config failed, after the saves before it succeeded; the
+  /// error. The next edit and the quit try again.
+  SaveFailed(String),
 }
 
 /// Holds the configuration the UI shows and edits.
@@ -96,6 +118,9 @@ pub struct ConfigStore {
   config: Config,
   revision: u64,
   persistence: Persistence,
+  /// The revision of the last save whose outcome arrived, and whether it
+  /// failed.
+  last_saved: (u64, bool),
   _flush_on_quit: Subscription,
 }
 
@@ -107,9 +132,11 @@ impl ConfigStore {
       config,
       revision: 0,
       persistence,
-      // A write still pending at quit is finished synchronously.
+      last_saved: (0, false),
+      // A write still pending at quit, or one that failed, is finished
+      // synchronously; a failure is in the log.
       _flush_on_quit: cx.on_app_quit(|this, _| {
-        this.flush();
+        let _ = this.flush();
         async {}
       }),
     }
@@ -126,9 +153,29 @@ impl ConfigStore {
     edit(&mut self.config);
     self.revision += 1;
     let (revision, config, persistence) = (self.revision, self.config.clone(), self.persistence.clone());
-    cx.background_spawn(async move { persistence.write(revision, config) })
-      .detach();
+    let saved = cx.background_spawn(async move { persistence.write(revision, config) });
+    cx.spawn(async move |this, cx| {
+      let saved = saved.await;
+      let _ = this.update(cx, |store, cx| store.saved(revision, saved, cx));
+    })
+    .detach();
     cx.notify();
+  }
+
+  /// The outcome of the save of `revision`. A failure is emitted once, when
+  /// the save before it succeeded, so a field typed into while the disk is
+  /// full says so once; an outcome older than one already seen is dropped.
+  fn saved(&mut self, revision: u64, saved: Result<(), String>, cx: &mut Context<Self>) {
+    if revision < self.last_saved.0 {
+      return;
+    }
+    let failed_before = self.last_saved.1;
+    self.last_saved = (revision, saved.is_err());
+    if let Err(error) = saved
+      && !failed_before
+    {
+      cx.emit(ConfigEvent::SaveFailed(error));
+    }
   }
 
   /// Edits the profile the Settings show: the active one, else the first. An
@@ -224,9 +271,10 @@ impl ConfigStore {
     cx.emit(ConfigEvent::GroupMode(group_mode));
   }
 
-  /// Writes the current config now unless that revision is on disk already.
-  pub fn flush(&self) {
-    self.persistence.write(self.revision, self.config.clone());
+  /// Writes the current config now unless that revision is on disk already,
+  /// also after its background write failed; the error of a failed write.
+  pub fn flush(&self) -> Result<(), String> {
+    self.persistence.write(self.revision, self.config.clone())
   }
 }
 
@@ -307,9 +355,9 @@ mod tests {
       language: Language::Ja,
       ..Config::default()
     };
-    persistence.write(2, newer);
-    persistence.write(1, Config::default());
-    persistence.write(2, Config::default());
+    assert_eq!(persistence.write(2, newer), Ok(()));
+    assert_eq!(persistence.write(1, Config::default()), Ok(()));
+    assert_eq!(persistence.write(2, Config::default()), Ok(()));
     let written = written.lock().unwrap();
     assert_eq!(written.len(), 1);
     assert_eq!(written[0].language, Language::Ja);
@@ -322,10 +370,10 @@ mod tests {
     store.update(cx, |store, cx| {
       store.update(cx, |config| config.language = Language::It)
     });
-    store.read_with(cx, |store, _| store.flush());
+    assert_eq!(store.read_with(cx, |store, _| store.flush()), Ok(()));
     assert_eq!(written.lock().unwrap().len(), 1);
     cx.run_until_parked();
-    store.read_with(cx, |store, _| store.flush());
+    assert_eq!(store.read_with(cx, |store, _| store.flush()), Ok(()));
     assert_eq!(
       written.lock().unwrap().len(),
       1,
@@ -419,6 +467,57 @@ mod tests {
     );
   }
 
+  /// A save that fails is not taken as written: the next save or the flush
+  /// at quit writes that config again. The failure is emitted once until a
+  /// save succeeds.
+  #[gpui_kit::test]
+  fn a_failed_save_is_reported_once_and_tried_again(cx: &mut TestAppContext) {
+    let failing = Arc::new(std::sync::atomic::AtomicBool::new(true));
+    let written = Arc::new(Mutex::new(Vec::<Config>::new()));
+    let (fails, sink) = (failing.clone(), written.clone());
+    let persistence = Persistence::fallible(move |config| {
+      if fails.load(std::sync::atomic::Ordering::SeqCst) {
+        anyhow::bail!("No space left on device");
+      }
+      sink.lock().unwrap().push(config);
+      Ok(())
+    });
+    let store = cx.new(|cx| ConfigStore::new(Config::default(), persistence, cx));
+    let failures = Arc::new(Mutex::new(Vec::<String>::new()));
+    let seen = failures.clone();
+    let _subscription = cx.update(|cx| {
+      cx.subscribe(&store, move |_, event: &ConfigEvent, _| {
+        if let ConfigEvent::SaveFailed(error) = event {
+          seen.lock().unwrap().push(error.clone());
+        }
+      })
+    });
+    let edit = |cx: &mut TestAppContext, mode: DisplayMode| {
+      store.update(cx, |store, cx| store.update(cx, |config| config.display_mode = mode));
+      cx.run_until_parked();
+    };
+    edit(cx, DisplayMode::Dark);
+    edit(cx, DisplayMode::Light);
+    assert_eq!(*failures.lock().unwrap(), ["No space left on device"], "once");
+    assert!(written.lock().unwrap().is_empty());
+    failing.store(false, std::sync::atomic::Ordering::SeqCst);
+    // The flush at quit writes the revision whose save failed.
+    assert_eq!(store.read_with(cx, |store, _| store.flush()), Ok(()));
+    assert_eq!(written.lock().unwrap().len(), 1);
+    assert_eq!(written.lock().unwrap()[0].display_mode, DisplayMode::Light);
+    assert_eq!(
+      store.read_with(cx, |store, _| store.flush()),
+      Ok(()),
+      "nothing to write"
+    );
+    assert_eq!(written.lock().unwrap().len(), 1);
+    // After a success, a new failure is said again.
+    edit(cx, DisplayMode::Dark);
+    failing.store(true, std::sync::atomic::Ordering::SeqCst);
+    edit(cx, DisplayMode::Light);
+    assert_eq!(failures.lock().unwrap().len(), 2);
+  }
+
   #[gpui_kit::test]
   fn edits_go_to_the_first_profile_when_the_active_name_matches_none(cx: &mut TestAppContext) {
     let (store, _) = store(cx);
@@ -435,8 +534,9 @@ mod tests {
     let sink = seen.clone();
     let subscription = cx.update(|cx| {
       cx.subscribe(store, move |_, event: &ConfigEvent, _| {
-        let ConfigEvent::GroupMode(on) = event;
-        sink.lock().unwrap().push(*on);
+        if let ConfigEvent::GroupMode(on) = event {
+          sink.lock().unwrap().push(*on);
+        }
       })
     });
     (seen, subscription)

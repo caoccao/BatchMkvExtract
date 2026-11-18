@@ -531,6 +531,35 @@ fn topmost_completion_lets_the_user_keep_the_app_open_or_quit(cx: &mut TestAppCo
   assert!(cx.update_window(shell.handle, |_, _, _| ()).is_err());
 }
 
+/// A topmost window that cannot be opened does not stop Quit when
+/// complete: the notice goes to the main window, and the app quits.
+#[gpui_kit::test]
+fn quit_when_complete_still_quits_when_the_topmost_window_cannot_open(cx: &mut TestAppContext) {
+  let shell = queued(cx, &[A]);
+  click(&shell, cx, "toolbar-quit-when-complete");
+  click(&shell, cx, "toolbar-topmost-notification");
+  shell.view.update(cx, |view, _| view.topmost_mut().refuse_windows());
+  shell.send(cx, started(A));
+  shell.send(cx, finished(A, ExtractOutcome::Completed, None));
+  assert_eq!(topmost(&shell, cx), (0, None), "no topmost window");
+  assert!(cx.update_window(shell.handle, |_, _, _| ()).is_err(), "quit");
+}
+
+/// Without Quit when complete, the notice of a topmost window that cannot
+/// open shows in the main window.
+#[gpui_kit::test]
+fn a_topmost_window_that_cannot_open_leaves_its_notice_in_the_main_window(cx: &mut TestAppContext) {
+  let shell = queued(cx, &[A]);
+  click(&shell, cx, "toolbar-topmost-notification");
+  shell.view.update(cx, |view, _| view.topmost_mut().refuse_windows());
+  shell.send(cx, started(A));
+  let toasts = shell.toasts(cx);
+  shell.send(cx, finished(A, ExtractOutcome::Completed, None));
+  assert_eq!(topmost(&shell, cx), (0, None));
+  assert_eq!(shell.toasts(cx), toasts + 2, "the file's toast and the batch's notice");
+  assert!(cx.update_window(shell.handle, |_, _, _| ()).is_ok());
+}
+
 #[gpui_kit::test]
 fn closing_mid_extraction_sends_no_completion(cx: &mut TestAppContext) {
   let shell = queued(cx, &[A, B]);

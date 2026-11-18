@@ -112,6 +112,27 @@ pub fn with_centre_on(bounds: Bounds<Pixels>, display: &Bounds<Pixels>) -> Bound
   Bounds::new(origin, bounds.size)
 }
 
+/// `bounds` fitted to `area`, a display's visible bounds (without the menu
+/// bar, the Dock or a taskbar), when it does not fit there (a saved window
+/// from a larger display that is gone): each side as large as the area
+/// allows, not below the minimum size, and the window moved inside the
+/// area, its top-left corner (the title bar) first. A window that fits is
+/// left where it is, also one that straddles two displays.
+pub fn fit_to_area(bounds: Bounds<Pixels>, area: &Bounds<Pixels>) -> Bounds<Pixels> {
+  if bounds.size.width <= area.size.width && bounds.size.height <= area.size.height {
+    return bounds;
+  }
+  let width = bounds.size.width.min(area.size.width).max(px(MIN_WINDOW_SIZE.0 as f32));
+  let height = bounds
+    .size
+    .height
+    .min(area.size.height)
+    .max(px(MIN_WINDOW_SIZE.1 as f32));
+  let x = bounds.origin.x.min(area.right() - width).max(area.left());
+  let y = bounds.origin.y.min(area.bottom() - height).max(area.top());
+  Bounds::new(point(x, y), size(width, height))
+}
+
 /// Where the saved window reopens: its bounds and the display it opens on,
 /// as an index into `displays` (each with its UUID, if the platform names
 /// one). The display the config names wins when it is connected and holds
@@ -182,10 +203,23 @@ pub fn main_window_options(saved: &ConfigWindow, cx: &App) -> WindowOptions {
     .and_then(|primary| displays.iter().position(|display| display.id() == primary.id()));
   let placement = initial_placement(saved, &described, primary);
   let display_id = placement.map(|(_, index)| displays[index].id());
+  // The display the window opens on, else the primary one it is centred on;
+  // a saved size that does not fit there is fitted to it.
+  let area = placement
+    .map(|(_, index)| displays[index].visible_bounds())
+    .or_else(|| cx.primary_display().map(|display| display.visible_bounds()));
   let bounds = placement.map(|(bounds, _)| bounds).unwrap_or_else(|| {
     let (width, height) = sanitize_size(&saved.size);
-    Bounds::centered(None, size(px(width as f32), px(height as f32)), cx)
+    let (width, height) = match area {
+      Some(area) => (
+        px(width as f32).min(area.size.width.max(px(MIN_WINDOW_SIZE.0 as f32))),
+        px(height as f32).min(area.size.height.max(px(MIN_WINDOW_SIZE.1 as f32))),
+      ),
+      None => (px(width as f32), px(height as f32)),
+    };
+    Bounds::centered(None, size(width, height), cx)
   });
+  let bounds = area.map_or(bounds, |area| fit_to_area(bounds, &area));
   WindowOptions {
     window_bounds: Some(WindowBounds::Windowed(bounds)),
     display_id,
@@ -256,17 +290,29 @@ pub fn title(summary: &QueueSummary) -> String {
 /// A request to close the main window (title bar, Alt+F4, Quit): saves the
 /// geometry, then lets the close guard decide; its Yes cancels every active
 /// extraction, without the completion notifications their end would send,
-/// and waits up to [`SHUTDOWN_TIMEOUT`] for the `mkvextract` processes to
-/// end. `true` lets the window close.
+/// and waits on the background executor up to [`SHUTDOWN_TIMEOUT`] for the
+/// `mkvextract` processes to end, so none outlives the app. The window
+/// closes once they did; when one did not, the user chooses to wait or to
+/// quit anyway. A request while that wait runs is left to it. `true` lets
+/// the window close.
 pub fn close_requested(stores: &Stores, window: &mut Window, cx: &mut App) -> bool {
   save_geometry(stores, window, cx);
-  let cancel_stores = stores.clone();
-  close_guard::should_close(stores.has_active_extracts(cx), window, cx, move |_, cx| {
-    cancel_stores.ui.update(cx, |ui, _| ui.set_closing());
-    crate::actions::cancel_all(&cancel_stores, cx);
-    // Wait for the killed processes, so none outlives the app.
-    cancel_stores.extracts.shutdown(SHUTDOWN_TIMEOUT);
-  })
+  if stores.ui.read(cx).is_closing() {
+    return false;
+  }
+  let (cancel_stores, wait_ui) = (stores.clone(), stores.ui.clone());
+  close_guard::should_close(
+    stores.has_active_extracts(cx),
+    window,
+    cx,
+    move |_, cx| {
+      cancel_stores.ui.update(cx, |ui, _| ui.set_closing());
+      crate::actions::cancel_all(&cancel_stores, cx);
+      let extracts = cancel_stores.extracts.clone();
+      cx.background_spawn(async move { extracts.shutdown(SHUTDOWN_TIMEOUT) })
+    },
+    move |cx| wait_ui.update(cx, |ui, _| ui.cancel_closing()),
+  )
 }
 
 #[cfg(test)]
@@ -422,6 +468,33 @@ mod tests {
     // Never saved, or off every display: centred.
     assert_eq!(placed(&ConfigWindow::default()), None);
     assert_eq!(placed(&on("scaled", 9000, 100)), None);
+  }
+
+  /// A window saved on a large display that is gone does not fit the one it
+  /// reopens on: it is fitted to that display's visible area, its title bar
+  /// inside, not below the minimum size. One that fits stays as it was.
+  #[test]
+  fn a_window_too_large_for_its_display_is_fitted_to_it() {
+    let laptop = Bounds::new(point(px(0.0), px(25.0)), size(px(1440.0), px(875.0)));
+    let large = Bounds::new(point(px(-200.0), px(-40.0)), size(px(2400.0), px(1300.0)));
+    assert_eq!(
+      fit_to_area(large, &laptop),
+      Bounds::new(point(px(0.0), px(25.0)), size(px(1440.0), px(875.0)))
+    );
+    // Too tall only: the width stays, the window moves inside.
+    let tall = Bounds::new(point(px(100.0), px(0.0)), size(px(800.0), px(1200.0)));
+    assert_eq!(
+      fit_to_area(tall, &laptop),
+      Bounds::new(point(px(100.0), px(25.0)), size(px(800.0), px(875.0)))
+    );
+    // Never below the minimum size, the title bar still inside.
+    let tiny = Bounds::new(point(px(0.0), px(0.0)), size(px(500.0), px(400.0)));
+    let fitted = fit_to_area(large, &tiny);
+    assert_eq!(fitted.size, size(px(600.0), px(450.0)));
+    assert_eq!(fitted.origin, tiny.origin);
+    // A window that fits, also hanging off its display, stays.
+    let hanging = Bounds::new(point(px(1000.0), px(500.0)), size(px(800.0), px(600.0)));
+    assert_eq!(fit_to_area(hanging, &laptop), hanging);
   }
 
   #[test]

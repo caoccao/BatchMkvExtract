@@ -103,6 +103,28 @@ pub enum ExtractError {
   Other(String),
 }
 
+/// A cancel whose kill failed: the `mkvextract` of these files may still
+/// run, and a later cancel tries again. Returned by
+/// [`ExtractQueue::cancel_many`] inside its [`anyhow::Error`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KillFailed {
+  /// Each file with the OS error of its kill.
+  pub files: Vec<(String, String)>,
+}
+
+impl std::fmt::Display for KillFailed {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    let failures: Vec<String> = self
+      .files
+      .iter()
+      .map(|(file, error)| format!("{file}: {error}"))
+      .collect();
+    write!(f, "mkvextract could not be stopped ({})", failures.join("; "))
+  }
+}
+
+impl std::error::Error for KillFailed {}
+
 impl std::fmt::Display for ExtractError {
   /// An English description, for logs.
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -184,10 +206,11 @@ pub trait ExtractProcessControl: Send {
   fn try_wait(&mut self) -> std::io::Result<Option<Option<i32>>>;
 }
 
-/// Starts the extraction process for the source `file` with its
-/// `mkvextract` arguments (`tracks …`, `chapters …`, `attachments …`).
+/// Starts the extraction process for the source `file` with the MKVToolNix
+/// directory it was queued with and its `mkvextract` arguments (`tracks …`,
+/// `chapters …`, `attachments …`).
 pub type ExtractLauncher =
-  Box<dyn Fn(&str, &[String]) -> std::result::Result<ExtractProcess, ExtractError> + Send + Sync>;
+  Box<dyn Fn(&str, &str, &[String]) -> std::result::Result<ExtractProcess, ExtractError> + Send + Sync>;
 
 /// A launched process, and whether a cancel sent it a kill. Both are read
 /// and written under one lock, so the worker that sees the process end also
@@ -257,6 +280,8 @@ enum TaskStatus {
 struct TaskState {
   status: TaskStatus,
   progress: u32,
+  /// The MKVToolNix directory the file was queued with.
+  mkv_toolnix_path: String,
   /// Taken by the worker when it starts.
   args: Option<Vec<String>>,
   cancel_requested: bool,
@@ -294,10 +319,12 @@ impl ExtractQueue {
     })
   }
 
-  /// Queue `file` for extraction with its `mkvextract` arguments. It starts
-  /// at once when its drive is idle. A file that is already queued or
+  /// Queue `file` for extraction with its `mkvextract` arguments, run by the
+  /// `mkvextract` of the MKVToolNix directory `mkv_toolnix_path` (the one the
+  /// copyable command names, whatever the settings say when it starts). It
+  /// starts at once when its drive is idle. A file that is already queued or
   /// extracting is ignored.
-  pub fn enqueue(self: &Arc<Self>, file: String, args: Vec<String>) -> Result<()> {
+  pub fn enqueue(self: &Arc<Self>, file: String, mkv_toolnix_path: String, args: Vec<String>) -> Result<()> {
     let drive_key = get_drive_key(&file);
     let should_start;
     {
@@ -310,6 +337,7 @@ impl ExtractQueue {
         TaskState {
           status: TaskStatus::Queued,
           progress: 0,
+          mkv_toolnix_path,
           args: Some(args),
           cancel_requested: false,
         },
@@ -337,31 +365,57 @@ impl ExtractQueue {
   /// its worker reports `Cancelled`, unless `mkvextract` had exited by
   /// itself, whose outcome then stands. Unknown files are ignored.
   pub fn cancel(&self, file: &str) -> Result<()> {
-    let process = {
+    self.cancel_many(std::slice::from_ref(&file.to_owned()))
+  }
+
+  /// [`Self::cancel`] for each of `files` at once: every waiting one leaves
+  /// its drive queue under one lock, so a running extraction that ends
+  /// meanwhile cannot start one of them, and then the running ones are
+  /// killed. Each still gets its one `Finished`. A kill that fails is
+  /// returned as [`KillFailed`]; that extraction runs on, and a later cancel
+  /// tries again.
+  pub fn cancel_many(&self, files: &[String]) -> Result<()> {
+    let (waiting, processes) = {
       let mut st = self.lock_state();
-      let is_extracting = match st.tasks.get(file) {
-        Some(t) => matches!(t.status, TaskStatus::Extracting),
-        None => return Ok(()),
-      };
-      if !is_extracting {
-        st.tasks.remove(file);
-        if let Some(drive) = st.drives.get_mut(&get_drive_key(file)) {
-          drive.queued.retain(|f| f != file);
+      let mut waiting = Vec::new();
+      let mut processes = Vec::new();
+      for file in files {
+        let is_extracting = match st.tasks.get(file) {
+          Some(t) => matches!(t.status, TaskStatus::Extracting),
+          None => continue,
+        };
+        if is_extracting {
+          if let Some(t) = st.tasks.get_mut(file) {
+            t.cancel_requested = true;
+          }
+          if let Some(process) = st.children.get(file) {
+            processes.push((file.clone(), Arc::clone(process)));
+          }
+        } else {
+          st.tasks.remove(file);
+          if let Some(drive) = st.drives.get_mut(&get_drive_key(file)) {
+            drive.queued.retain(|f| f != file);
+          }
+          waiting.push(file.clone());
         }
-        drop(st);
-        self.task_removed.notify_all();
-        self.emit_finished(file, WorkerOutcome::Cancelled, Vec::new());
-        return Ok(());
       }
-      if let Some(t) = st.tasks.get_mut(file) {
-        t.cancel_requested = true;
-      }
-      st.children.get(file).cloned()
+      (waiting, processes)
     };
-    if let Some(process) = process {
-      kill(&process);
+    if !waiting.is_empty() {
+      self.task_removed.notify_all();
     }
-    Ok(())
+    for file in &waiting {
+      self.emit_finished(file, WorkerOutcome::Cancelled, Vec::new());
+    }
+    let failed: Vec<(String, String)> = processes
+      .iter()
+      .filter_map(|(file, process)| kill(process).err().map(|error| (file.clone(), error.to_string())))
+      .collect();
+    if failed.is_empty() {
+      Ok(())
+    } else {
+      Err(KillFailed { files: failed }.into())
+    }
   }
 
   /// Cancels every waiting and running extraction and waits up to `timeout`
@@ -369,9 +423,7 @@ impl ExtractQueue {
   /// app exits. Returns whether every extraction finished in time.
   pub fn shutdown(&self, timeout: Duration) -> bool {
     let files: Vec<String> = self.lock_state().tasks.keys().cloned().collect();
-    for file in &files {
-      let _ = self.cancel(file);
-    }
+    let _ = self.cancel_many(&files);
     let deadline = Instant::now() + timeout;
     let mut st = self.lock_state();
     while !st.tasks.is_empty() {
@@ -430,14 +482,24 @@ impl ExtractQueue {
   /// happens here, so [`Self::run_worker`] can turn a panic into `Failed`
   /// without losing the `Finished` event.
   fn execute(&self, file: &str) -> (WorkerOutcome, Vec<String>) {
-    let args = self.lock_state().tasks.get_mut(file).and_then(|t| t.args.take());
+    let (args, mkv_toolnix_path, cancelled) = {
+      let mut st = self.lock_state();
+      match st.tasks.get_mut(file) {
+        Some(task) => (task.args.take(), task.mkv_toolnix_path.clone(), task.cancel_requested),
+        None => (None, String::new(), false),
+      }
+    };
     let Some(args) = args else {
       return (
         WorkerOutcome::Failed(ExtractError::Other(ERROR_TASK_MISSING.to_owned())),
         Vec::new(),
       );
     };
-    let ExtractProcess { output, control } = match (self.launcher)(file, &args) {
+    if cancelled {
+      // Cancelled as it left the queue: nothing to launch.
+      return (WorkerOutcome::Cancelled, Vec::new());
+    }
+    let ExtractProcess { output, control } = match (self.launcher)(file, &mkv_toolnix_path, &args) {
       Ok(process) => process,
       Err(err) => {
         log::error!("Couldn't start the extraction of {}: {}", file, err);
@@ -452,7 +514,7 @@ impl ExtractQueue {
     };
     if cancelled_while_launching {
       // `cancel` ran before the process was registered, so nothing killed it.
-      kill(&process);
+      let _ = kill(&process);
     }
     let mut printed = PrintedMessages::default();
     if let Some(output) = output {
@@ -523,7 +585,7 @@ impl ExtractQueue {
   fn kill_child(&self, file: &str) {
     let process = self.lock_state().children.get(file).cloned();
     if let Some(process) = process {
-      kill(&process);
+      let _ = kill(&process);
     }
   }
 
@@ -578,15 +640,21 @@ impl ExtractQueue {
 }
 
 /// Kills the process unless it has exited by itself, and records that a kill
-/// was sent.
-fn kill(process: &SharedProcess) {
+/// was sent; the error of a kill that failed.
+fn kill(process: &SharedProcess) -> std::io::Result<()> {
   let mut process = process.lock().unwrap_or_else(PoisonError::into_inner);
   if process.killed || matches!(process.control.try_wait(), Ok(Some(_))) {
-    return;
+    return Ok(());
   }
   match process.control.kill() {
-    Ok(()) => process.killed = true,
-    Err(err) => log::warn!("Couldn't stop mkvextract: {}", err),
+    Ok(()) => {
+      process.killed = true;
+      Ok(())
+    }
+    Err(err) => {
+      log::warn!("Couldn't stop mkvextract: {}", err);
+      Err(err)
+    }
   }
 }
 
@@ -703,8 +771,12 @@ fn terminate(child: &mut std::process::Child) -> std::io::Result<()> {
   }
 }
 
-fn launch_mkvextract(file: &str, args: &[String]) -> std::result::Result<ExtractProcess, ExtractError> {
-  let (child, output) = mkvtoolnix::spawn_mkvextract(file, args)?;
+fn launch_mkvextract(
+  file: &str,
+  mkv_toolnix_path: &str,
+  args: &[String],
+) -> std::result::Result<ExtractProcess, ExtractError> {
+  let (child, output) = mkvtoolnix::spawn_mkvextract(file, mkv_toolnix_path, args)?;
   Ok(ExtractProcess {
     output: Some(Box::new(output)),
     control: Box::new(ChildControl(child)),
@@ -737,13 +809,18 @@ pub fn init(sink: ExtractEventSink) {
 
 /// [`ExtractQueue::enqueue`] on the process-wide queue, which runs
 /// `mkvextract`.
-pub fn enqueue(file: String, args: Vec<String>) -> Result<()> {
-  global().enqueue(file, args)
+pub fn enqueue(file: String, mkv_toolnix_path: String, args: Vec<String>) -> Result<()> {
+  global().enqueue(file, mkv_toolnix_path, args)
 }
 
 /// [`ExtractQueue::cancel`] on the process-wide queue.
 pub fn cancel(file: String) -> Result<()> {
   global().cancel(&file)
+}
+
+/// [`ExtractQueue::cancel_many`] on the process-wide queue.
+pub fn cancel_many(files: &[String]) -> Result<()> {
+  global().cancel_many(files)
 }
 
 /// [`ExtractQueue::shutdown`] on the process-wide queue.
@@ -761,6 +838,8 @@ mod tests {
   use std::time::{Duration, Instant};
 
   const TIMEOUT: Duration = Duration::from_secs(10);
+  /// The MKVToolNix directory the tests queue with.
+  const TOOLS: &str = "/opt/mkvtoolnix";
   const A: &str = "/media/a.mkv";
   const B: &str = "/media/b.mkv";
   const C: &str = "/media/c.mkv";
@@ -927,7 +1006,7 @@ mod tests {
       let (launch_tx, launched) = mpsc::channel();
       let (gate, gate_rx) = mpsc::channel::<()>();
       let gate_rx = Mutex::new(gate_rx);
-      let launcher: ExtractLauncher = Box::new(move |file, args| {
+      let launcher: ExtractLauncher = Box::new(move |file, _, args| {
         let mut ignores_kill = false;
         match plan(file) {
           Launch::Run => {}
@@ -969,7 +1048,10 @@ mod tests {
     }
 
     fn enqueue(&self, file: &str) {
-      self.queue.enqueue(file.to_owned(), args_for(file)).unwrap();
+      self
+        .queue
+        .enqueue(file.to_owned(), TOOLS.to_owned(), args_for(file))
+        .unwrap();
     }
 
     fn next(&self) -> Seen {
@@ -1080,7 +1162,9 @@ mod tests {
   fn enqueueing_a_queued_file_again_is_ignored() {
     let h = Harness::new(|_| Launch::Run);
     h.enqueue(A);
-    h.queue.enqueue(A.to_owned(), vec!["other".to_owned()]).unwrap();
+    h.queue
+      .enqueue(A.to_owned(), TOOLS.to_owned(), vec!["other".to_owned()])
+      .unwrap();
     assert_eq!(h.next(), started(A));
     let a = h.launch();
     assert_eq!(a.args, args_for(A));
@@ -1105,7 +1189,7 @@ mod tests {
     }
     let launches = Arc::new(Mutex::new(Vec::<Vec<String>>::new()));
     let recorder = Arc::clone(&launches);
-    let launcher: ExtractLauncher = Box::new(move |_, args| {
+    let launcher: ExtractLauncher = Box::new(move |_, _, args| {
       recorder.lock().unwrap().push(args.to_vec());
       Ok(ExtractProcess {
         output: None,
@@ -1119,13 +1203,15 @@ mod tests {
     let sink: ExtractEventSink = Box::new(move |event| {
       if matches!(event, ExtractEvent::Finished { .. }) && !retried.swap(true, Ordering::SeqCst) {
         let queue = retry_queue.get().and_then(std::sync::Weak::upgrade).expect("the queue");
-        queue.enqueue(A.to_owned(), vec!["retry".to_owned()]).unwrap();
+        queue
+          .enqueue(A.to_owned(), TOOLS.to_owned(), vec!["retry".to_owned()])
+          .unwrap();
       }
       let _ = event_tx.send(event);
     });
     let queue = ExtractQueue::new(launcher, sink);
     queue_cell.set(Arc::downgrade(&queue)).unwrap();
-    queue.enqueue(A.to_owned(), args_for(A)).unwrap();
+    queue.enqueue(A.to_owned(), TOOLS.to_owned(), args_for(A)).unwrap();
     let mut events_seen = Vec::new();
     for _ in 0..4 {
       let event = events.recv_timeout(TIMEOUT).expect("an extract event");
@@ -1185,6 +1271,94 @@ mod tests {
     assert_eq!(h.next(), finished(A, ExtractOutcome::Cancelled, None));
     assert!(a.was_killed());
     h.wait_until_idle();
+  }
+
+  /// Cancel All while the running extraction ends at once on its kill: the
+  /// waiting files leave the queue before the kill, so none of them is
+  /// launched.
+  #[test]
+  fn cancelling_many_files_starts_none_of_the_waiting_ones() {
+    for _ in 0..20 {
+      let h = Harness::new(|_| Launch::Run);
+      h.enqueue(A);
+      h.enqueue(B);
+      h.enqueue(C);
+      assert_eq!(h.next(), started(A));
+      let a = h.launch();
+      h.queue
+        .cancel_many(&[A.to_owned(), B.to_owned(), C.to_owned()])
+        .unwrap();
+      let mut ends = vec![h.next(), h.next(), h.next()];
+      ends.sort_by_key(|seen| format!("{seen:?}"));
+      assert_eq!(
+        ends,
+        [
+          finished(A, ExtractOutcome::Cancelled, None),
+          finished(B, ExtractOutcome::Cancelled, None),
+          finished(C, ExtractOutcome::Cancelled, None),
+        ]
+      );
+      assert!(a.was_killed());
+      h.wait_until_idle();
+      assert!(h.launched.try_recv().is_err(), "a waiting file was launched");
+      h.assert_quiet();
+    }
+  }
+
+  /// Each file runs with the MKVToolNix directory it was queued with.
+  #[test]
+  fn each_file_is_launched_with_the_tools_it_was_queued_with() {
+    let (tools_tx, tools) = mpsc::channel();
+    let tools_tx = Mutex::new(tools_tx);
+    let launcher: ExtractLauncher = Box::new(move |file, mkv_toolnix_path, _| {
+      tools_tx
+        .lock()
+        .unwrap()
+        .send((file.to_owned(), mkv_toolnix_path.to_owned()))
+        .unwrap();
+      Err(ExtractError::Other("not launched".to_owned()))
+    });
+    let queue = ExtractQueue::new(launcher, Box::new(|_| {}));
+    queue.enqueue(A.to_owned(), "/opt/old".to_owned(), args_for(A)).unwrap();
+    queue.enqueue(B.to_owned(), "/opt/new".to_owned(), args_for(B)).unwrap();
+    let mut launched = vec![
+      tools.recv_timeout(TIMEOUT).unwrap(),
+      tools.recv_timeout(TIMEOUT).unwrap(),
+    ];
+    launched.sort();
+    assert_eq!(
+      launched,
+      [
+        (A.to_owned(), "/opt/old".to_owned()),
+        (B.to_owned(), "/opt/new".to_owned())
+      ]
+    );
+  }
+
+  /// A file whose cancel comes as it leaves the queue for its worker is not
+  /// launched at all.
+  #[test]
+  fn a_file_cancelled_before_its_launch_is_not_launched() {
+    let h = Harness::new(|_| Launch::Run);
+    {
+      let mut st = h.queue.lock_state();
+      st.tasks.insert(
+        A.to_owned(),
+        TaskState {
+          status: TaskStatus::Extracting,
+          progress: 0,
+          mkv_toolnix_path: TOOLS.to_owned(),
+          args: Some(args_for(A)),
+          cancel_requested: true,
+        },
+      );
+      st.drives.entry(get_drive_key(A)).or_default().extracting = Some(A.to_owned());
+    }
+    h.queue.run_worker(A.to_owned());
+    assert_eq!(h.next(), started(A));
+    assert_eq!(h.next(), finished(A, ExtractOutcome::Cancelled, None));
+    assert!(h.launched.try_recv().is_err());
+    assert!(h.entries().is_empty());
   }
 
   #[test]
@@ -1251,7 +1425,7 @@ mod tests {
       ignores_kill: false,
     });
     let process = Arc::clone(&shared);
-    let launcher: ExtractLauncher = Box::new(move |_, _| {
+    let launcher: ExtractLauncher = Box::new(move |_, _, _| {
       Ok(ExtractProcess {
         output: Some(Box::new(Exploding)),
         control: Box::new(FakeControl(Arc::clone(&process))),
@@ -1264,7 +1438,7 @@ mod tests {
         let _ = event_tx.send(event);
       }),
     );
-    queue.enqueue(A.to_owned(), args_for(A)).unwrap();
+    queue.enqueue(A.to_owned(), TOOLS.to_owned(), args_for(A)).unwrap();
     assert_eq!(seen(events.recv_timeout(TIMEOUT).unwrap()), started(A));
     assert_eq!(
       seen(events.recv_timeout(TIMEOUT).unwrap()),
@@ -1286,7 +1460,7 @@ mod tests {
         Err(std::io::Error::other("no exit status"))
       }
     }
-    let launcher: ExtractLauncher = Box::new(|_, _| {
+    let launcher: ExtractLauncher = Box::new(|_, _, _| {
       Ok(ExtractProcess {
         output: None,
         control: Box::new(Unknown),
@@ -1299,7 +1473,7 @@ mod tests {
         let _ = event_tx.send(event);
       }),
     );
-    queue.enqueue(A.to_owned(), args_for(A)).unwrap();
+    queue.enqueue(A.to_owned(), TOOLS.to_owned(), args_for(A)).unwrap();
     assert_eq!(seen(events.recv_timeout(TIMEOUT).unwrap()), started(A));
     assert_eq!(
       seen(events.recv_timeout(TIMEOUT).unwrap()),
@@ -1322,7 +1496,7 @@ mod tests {
     }
     let exit = Arc::new(Mutex::new(None));
     let control_exit = Arc::clone(&exit);
-    let launcher: ExtractLauncher = Box::new(move |_, _| {
+    let launcher: ExtractLauncher = Box::new(move |_, _, _| {
       Ok(ExtractProcess {
         output: None,
         control: Box::new(Stubborn(Arc::clone(&control_exit))),
@@ -1335,7 +1509,7 @@ mod tests {
         let _ = event_tx.send(event);
       }),
     );
-    queue.enqueue(A.to_owned(), args_for(A)).unwrap();
+    queue.enqueue(A.to_owned(), TOOLS.to_owned(), args_for(A)).unwrap();
     assert_eq!(seen(events.recv_timeout(TIMEOUT).unwrap()), started(A));
     // Wait for the worker to register the process, then cancel.
     let deadline = Instant::now() + TIMEOUT;
@@ -1343,7 +1517,15 @@ mod tests {
       assert!(Instant::now() < deadline, "the process was never registered");
       std::thread::sleep(Duration::from_millis(1));
     }
-    queue.cancel(A).unwrap();
+    let error = queue.cancel(A).unwrap_err();
+    assert_eq!(
+      error.downcast_ref::<KillFailed>(),
+      Some(&KillFailed {
+        files: vec![(A.to_owned(), "access denied".to_owned())]
+      }),
+      "the failed kill is returned"
+    );
+    assert!(queue.cancel(A).is_err(), "a second cancel tries again");
     *exit.lock().unwrap() = Some(Some(0));
     assert_eq!(
       seen(events.recv_timeout(TIMEOUT).unwrap()),
@@ -1574,7 +1756,9 @@ mod tests {
     let folder = dir.0.join("new folder");
     let output = folder.join("Movie.2.eng.srt").to_string_lossy().into_owned();
     let h = Harness::new(|_| Launch::Run);
-    h.queue.enqueue(A.to_owned(), args_writing(&output)).unwrap();
+    h.queue
+      .enqueue(A.to_owned(), TOOLS.to_owned(), args_writing(&output))
+      .unwrap();
     assert_eq!(h.next(), started(A));
     let a = h.launch();
     assert_eq!(a.args, args_writing(&output));
@@ -1594,7 +1778,9 @@ mod tests {
     let dir = ScratchDir::new("leaves");
     let (cancelled, failed) = (dir.output("a.srt"), dir.output("b.srt"));
     let h = Harness::new(|_| Launch::Run);
-    h.queue.enqueue(A.to_owned(), args_writing(&cancelled)).unwrap();
+    h.queue
+      .enqueue(A.to_owned(), TOOLS.to_owned(), args_writing(&cancelled))
+      .unwrap();
     assert_eq!(h.next(), started(A));
     let a = h.launch();
     a.write_output("partial");
@@ -1602,7 +1788,9 @@ mod tests {
     assert_eq!(h.next(), finished(A, ExtractOutcome::Cancelled, None));
     assert!(a.was_killed());
     assert_eq!(read(&cancelled), "partial");
-    h.queue.enqueue(B.to_owned(), args_writing(&failed)).unwrap();
+    h.queue
+      .enqueue(B.to_owned(), TOOLS.to_owned(), args_writing(&failed))
+      .unwrap();
     assert_eq!(h.next(), started(B));
     let b = h.launch();
     b.write_output("partial");
@@ -1619,7 +1807,9 @@ mod tests {
     let dir = ScratchDir::new("late_cancel");
     let output = dir.output("a.srt");
     let h = Harness::new(|_| Launch::Run);
-    h.queue.enqueue(A.to_owned(), args_writing(&output)).unwrap();
+    h.queue
+      .enqueue(A.to_owned(), TOOLS.to_owned(), args_writing(&output))
+      .unwrap();
     assert_eq!(h.next(), started(A));
     let a = h.launch();
     a.write_output("extracted with warnings");
@@ -1678,7 +1868,7 @@ mod tests {
       ignores_kill: false,
     });
     let process = Arc::clone(&shared);
-    let launcher: ExtractLauncher = Box::new(move |_, _| {
+    let launcher: ExtractLauncher = Box::new(move |_, _, _| {
       Ok(ExtractProcess {
         output: None,
         control: Box::new(FakeControl(Arc::clone(&process))),
@@ -1691,7 +1881,7 @@ mod tests {
         let _ = event_tx.send(event);
       }),
     );
-    queue.enqueue(A.to_owned(), args_for(A)).unwrap();
+    queue.enqueue(A.to_owned(), TOOLS.to_owned(), args_for(A)).unwrap();
     assert!(matches!(events.recv_timeout(TIMEOUT), Ok(ExtractEvent::Started { .. })));
     std::thread::sleep(EXIT_POLL * 3);
     let (done_tx, done) = mpsc::channel();
@@ -1784,7 +1974,7 @@ mod tests {
     let missing = "/definitely/not/here/bme.mkv";
     cancel(missing.to_owned()).unwrap();
     assert!(shutdown(Duration::from_millis(10)), "nothing to wait for");
-    enqueue(missing.to_owned(), args_for(missing)).unwrap();
+    enqueue(missing.to_owned(), TOOLS.to_owned(), args_for(missing)).unwrap();
     assert_eq!(seen(events.recv_timeout(TIMEOUT).unwrap()), started(missing));
     assert_eq!(
       seen(events.recv_timeout(TIMEOUT).unwrap()),

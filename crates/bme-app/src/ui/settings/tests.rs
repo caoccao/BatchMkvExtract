@@ -34,7 +34,7 @@ use serde_json::{Value, json};
 
 use super::profiles::TrackKind;
 use super::*;
-use crate::tools::{Tool, ToolDetector, ToolStatus};
+use crate::tools::{Lookup, Tool, ToolDetector, ToolStatus};
 use crate::ui::tests::Shell;
 
 const SELECT_ALL: &str = if cfg!(target_os = "macos") { "cmd-a" } else { "ctrl-a" };
@@ -51,25 +51,27 @@ fn config() -> Config {
   }
 }
 
-type Calls = Arc<Mutex<Vec<(Tool, String, bool)>>>;
+type Calls = Arc<Mutex<Vec<(Tool, String, Lookup)>>>;
 
 /// Finds MKVToolNix only in `/opt/mkvtoolnix` (also from `/opt/apps`, as a
-/// path elsewhere, and for Detect as a running application) and
-/// BetterMediaInfo only in `/opt/bmi`; records every call.
+/// path the text leads to, and for Detect as a running application) and
+/// BetterMediaInfo in `/opt/bmi`, and beyond the path in an install place
+/// `/usr/local/bmi`; records every call.
 fn detector() -> (ToolDetector, Calls) {
   let calls = Calls::default();
   let seen = calls.clone();
-  let tools = ToolDetector::new(move |tool, path, check_running| {
-    seen.lock().unwrap().push((tool, path.to_string(), check_running));
+  let tools = ToolDetector::new(move |tool, path, lookup| {
+    seen.lock().unwrap().push((tool, path.to_string(), lookup));
     let found = |path: &str| ToolStatus {
       found: true,
       path: path.to_string(),
     };
-    match (tool, path, check_running) {
-      (Tool::MkvToolNix, _, true) => found("/run/mkvtoolnix"),
+    match (tool, path, lookup) {
+      (Tool::MkvToolNix, _, Lookup::Running) => found("/run/mkvtoolnix"),
       (Tool::MkvToolNix, "/opt/mkvtoolnix", _) => found("/opt/mkvtoolnix"),
       (Tool::MkvToolNix, "/opt/apps", _) => found("/opt/mkvtoolnix"),
       (Tool::BetterMediaInfo, "/opt/bmi", _) => found("/opt/bmi"),
+      (Tool::BetterMediaInfo, _, Lookup::Installed | Lookup::Running) => found("/usr/local/bmi"),
       _ => ToolStatus {
         found: false,
         path: path.to_string(),
@@ -761,7 +763,7 @@ fn tool_paths_are_detected_after_typing_stored_on_blur_and_found_elsewhere(cx: &
   draw(&shell, cx);
   assert_eq!(
     calls.lock().unwrap().as_slice(),
-    [(Tool::MkvToolNix, "/opt/mkvtoolnix".to_string(), false)]
+    [(Tool::MkvToolNix, "/opt/mkvtoolnix".to_string(), Lookup::Path)]
   );
   assert_eq!(row.read_with(cx, |row, _| row.found()), Some(true));
   assert!(
@@ -784,7 +786,7 @@ fn tool_paths_are_detected_after_typing_stored_on_blur_and_found_elsewhere(cx: &
     |shell, cx| focus(shell, cx, &other),
     &[("/integration/mkvToolNixPath", json!("/opt/mkvtoolnix"))],
   );
-  // A path where the tool is found elsewhere fills in that path.
+  // A path that leads to the tool elsewhere fills in that path.
   type_into(&shell, cx, &input, "/opt/apps");
   assert_writes(
     &shell,
@@ -808,7 +810,7 @@ fn tool_paths_are_detected_after_typing_stored_on_blur_and_found_elsewhere(cx: &
   );
   assert_eq!(
     calls.lock().unwrap().as_slice(),
-    [(Tool::MkvToolNix, "/opt/mkvtoolnix".to_string(), true)]
+    [(Tool::MkvToolNix, "/opt/mkvtoolnix".to_string(), Lookup::Running)]
   );
   assert_eq!(value(cx, &input), "/run/mkvtoolnix");
   // Browse stores the chosen folder.
@@ -828,6 +830,22 @@ fn tool_paths_are_detected_after_typing_stored_on_blur_and_found_elsewhere(cx: &
   let bmi = view.read_with(cx, |view, _| view.tool_row(Tool::BetterMediaInfo).clone());
   assert_eq!(bmi.read_with(cx, |row, _| row.found()), Some(true));
   assert!(texts(&shell, cx).iter().any(|text| text == "BetterMediaInfo found"));
+  // A pause while typing a path of its own keeps the text, although a
+  // BetterMediaInfo is installed elsewhere; only Detect puts that one in.
+  let bmi_input = bmi.read_with(cx, |row, _| row.input().clone());
+  type_into(&shell, cx, &bmi_input, "/opt/custom/Better");
+  cx.executor().advance_clock(Duration::from_millis(300));
+  draw(&shell, cx);
+  assert_eq!(value(cx, &bmi_input), "/opt/custom/Better");
+  assert_eq!(bmi.read_with(cx, |row, _| row.found()), Some(false));
+  assert_eq!(
+    json_of(&shell, cx)["integration"]["betterMediaInfoPath"],
+    json!("/opt/bmi")
+  );
+  click_id(&shell, cx, "settings-better-media-info-detect");
+  draw(&shell, cx);
+  assert_eq!(value(cx, &bmi_input), "/usr/local/bmi");
+  focus(&shell, cx, &input);
   // Reset All puts both paths back.
   assert_writes(
     &shell,
@@ -843,6 +861,22 @@ fn tool_paths_are_detected_after_typing_stored_on_blur_and_found_elsewhere(cx: &
       ("/integration/mkvToolNixPath", json!(Tool::MkvToolNix.default_path())),
     ],
   );
+}
+
+/// A folder dialog that could not open says so in the row's status line,
+/// until the next check.
+#[gpui_kit::test]
+fn a_folder_dialog_that_fails_is_said_in_the_row(cx: &mut TestAppContext) {
+  let (shell, view) = open(cx);
+  page(&shell, cx, "Integration");
+  let row = view.read_with(cx, |view, _| view.tool_row(Tool::MkvToolNix).clone());
+  row.update(cx, |row, cx| row.dialog_failed("no portal", cx));
+  let message = "The folder dialog could not be opened: no portal. The path can also be typed.";
+  assert!(texts(&shell, cx).iter().any(|text| text == message));
+  row.update(cx, |row, cx| row.detect_now(cx));
+  cx.run_until_parked();
+  assert_eq!(row.read_with(cx, |row, _| row.dialog_error().cloned()), None);
+  assert!(!texts(&shell, cx).iter().any(|text| text == message));
 }
 
 #[gpui_kit::test]

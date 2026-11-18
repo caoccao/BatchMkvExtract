@@ -17,7 +17,7 @@
 
 //! The File List tab (`FileList.tsx`): the Welcome page while it is empty,
 //! otherwise one card per entry: a [`FileCard`] per file, a [`GroupCard`]
-//! per group of files with the same folder and track counts.
+//! per group of files of one folder whose tracks line up.
 //!
 //! The cards are kept by their file or their group key, as 0.3.0's cards
 //! were, so a card keeps its state (a group's splitter) while files

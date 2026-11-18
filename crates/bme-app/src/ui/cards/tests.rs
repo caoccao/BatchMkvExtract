@@ -384,7 +384,9 @@ fn copy_command_copies_the_cards_command(cx: &mut TestAppContext) {
       config.integration.mkv_toolnix_path = "/opt/mkvtoolnix".into()
     })
   });
-  let expected = cx.read(|cx| crate::actions::requests(&shell.stores, &s(&[A]), cx)[0].command("/opt/mkvtoolnix"));
+  let request = cx.read(|cx| crate::actions::requests(&shell.stores, &s(&[A]), cx)[0].clone());
+  assert_eq!(request.mkv_toolnix_path, "/opt/mkvtoolnix", "the configured MKVToolNix");
+  let expected = request.command();
   let toasts = shell.toasts(cx);
   click_in(&shell, cx, 0, "card-copy");
   assert_eq!(clipboard(cx), Some(expected.clone()));
@@ -598,6 +600,34 @@ fn the_second_cards_table_takes_its_own_clicks(cx: &mut TestAppContext) {
   assert_eq!(selected_ids(&shell, cx, A), ["subtitles:3"]);
 }
 
+/// What assistive clients are given for the same control of two cards: GPUI
+/// names each accessibility node by its element's whole id path (the node id
+/// is that path's hash), and the snapshots here record the same path and the
+/// same node properties. The paths differ, through the card's view and its
+/// table, and each reports its own card's state and bounds.
+#[gpui_kit::test]
+fn the_same_control_of_two_cards_is_two_accessibility_nodes(cx: &mut TestAppContext) {
+  let shell = shell(cx, &[A, B]);
+  in_table(&shell, cx, B, |window, cx| window.click(("track-check", 0usize), cx));
+  let a = in_table(&shell, cx, A, |window, _| window.find(("track-check", 0usize)));
+  let b = in_table(&shell, cx, B, |window, _| window.find(("track-check", 0usize)));
+  assert_ne!(a.path(), b.path());
+  for snapshot in [&a, &b] {
+    assert!(
+      snapshot.path().iter().any(|id| matches!(id, ElementId::View(_))),
+      "{:?}",
+      snapshot.path()
+    );
+  }
+  assert_eq!((a.checked(), b.checked()), (Some(false), Some(true)));
+  assert_ne!(a.bounds(), b.bounds());
+  assert_eq!(
+    selected_ids(&shell, cx, A),
+    ["subtitles:3"],
+    "the first card's file is untouched"
+  );
+}
+
 #[gpui_kit::test]
 fn an_active_cards_table_takes_no_clicks(cx: &mut TestAppContext) {
   let shell = shell(cx, &[A]);
@@ -612,6 +642,38 @@ fn an_active_cards_table_takes_no_clicks(cx: &mut TestAppContext) {
   shell.send(cx, finished(A, ExtractOutcome::Completed, None));
   click_row(&shell, cx, A, 1);
   assert_eq!(selected_ids(&shell, cx, A), ["subtitles:3", "audio:1"], "finished");
+}
+
+/// A row `mkvextract` cannot extract has a disabled checkbox named by why,
+/// takes no click, and select-all checks the rest.
+#[gpui_kit::test]
+fn a_track_mkvextract_cannot_extract_is_disabled(cx: &mut TestAppContext) {
+  use crate::state::files::tests::track;
+  let fixtures = std::collections::HashMap::from([(
+    A.to_string(),
+    vec![track(0, "video", "V_FFV1", "und"), track(1, "audio", "A_FLAC", "eng")],
+  )]);
+  let shell = Shell::with_files(cx, fixtures);
+  shell.add_files(cx, &[A]);
+  shell.window(cx, |window, _| window.activate_window());
+  cx.run_until_parked();
+  in_table(&shell, cx, A, |window, _| {
+    assert_eq!(window.find(("track-check", 0usize)).disabled(), Some(true));
+    assert_ne!(window.find(("track-check", 1usize)).disabled(), Some(true));
+    assert!(
+      window
+        .try_find_by_label("mkvextract cannot extract V_FFV1 tracks.")
+        .is_some()
+    );
+  });
+  click_row(&shell, cx, A, 0);
+  assert!(selected_ids(&shell, cx, A).is_empty());
+  in_table(&shell, cx, A, |window, cx| window.click("track-check-all", cx));
+  assert_eq!(selected_ids(&shell, cx, A), ["audio:1"]);
+  in_table(&shell, cx, A, |window, _| {
+    let all = window.find("track-check-all");
+    assert_eq!((all.checked(), all.indeterminate()), (Some(true), Some(false)));
+  });
 }
 
 #[gpui_kit::test]
@@ -632,6 +694,13 @@ fn the_table_shows_loading_an_error_or_no_tracks(cx: &mut TestAppContext) {
     );
   });
   cx.run_until_parked();
+  let failed = table_texts(&shell, cx, bad);
+  assert!(
+    failed.iter().any(|text| text.starts_with("mkvmerge failed:")),
+    "{failed:?}"
+  );
+  // Retry lists it again (and it fails again).
+  in_table(&shell, cx, bad, |window, cx| window.click("track-retry", cx));
   let failed = table_texts(&shell, cx, bad);
   assert!(
     failed.iter().any(|text| text.starts_with("mkvmerge failed:")),
@@ -730,6 +799,18 @@ fn the_output_dialog_sets_and_clears_a_cards_output_directory(cx: &mut TestAppCo
       .iter()
       .any(|text| text.ends_with(&format!("To path {chosen}")))
   );
+  // A relative folder is stored as the full path it names.
+  click_in(&shell, cx, 0, "card-output");
+  let relative = format!("bme-relative-{}", std::process::id());
+  type_and_confirm(&shell, cx, &relative);
+  let absolute = std::path::absolute(&relative).unwrap().to_string_lossy().into_owned();
+  assert_eq!(output_dir(&shell, cx, A), Some(absolute));
+  assert!(
+    !std::path::Path::new(&relative).exists(),
+    "created only by an extraction"
+  );
+  click_in(&shell, cx, 0, "card-output");
+  type_and_confirm(&shell, cx, &chosen);
   // Reopened, it starts from the card's folder; empty clears it.
   click_in(&shell, cx, 0, "card-output");
   assert_eq!(dialog_value(&shell, cx).as_deref(), Some(chosen.as_str()));
@@ -745,6 +826,36 @@ fn the_output_dialog_sets_and_clears_a_cards_output_directory(cx: &mut TestAppCo
   shell.press(cx, "escape");
   assert!(!shell.has_dialog(cx), "Escape cancels");
   assert_eq!(output_dir(&shell, cx, A), None);
+}
+
+/// An edit while OK's writable check runs drops that check: the folder
+/// stored is the one the field shows when OK is pressed again.
+#[gpui_kit::test]
+fn the_output_dialog_never_stores_a_folder_the_field_no_longer_shows(cx: &mut TestAppContext) {
+  let dir = TempDir::new("cards-output-edited");
+  let (first, second) = (
+    dir.path().join("first").to_string_lossy().into_owned(),
+    dir.path().join("second").to_string_lossy().into_owned(),
+  );
+  let shell = shell(cx, &[A]);
+  click_in(&shell, cx, 0, "card-output");
+  shell.window(cx, |window, cx| {
+    window.press(SELECT_ALL, cx);
+    window.press("backspace", cx);
+    window.input(&first, cx);
+    // OK, then an edit before the check's result arrives.
+    window.press("enter", cx);
+    window.press(SELECT_ALL, cx);
+    window.press("backspace", cx);
+    window.input(&second, cx);
+  });
+  cx.run_until_parked();
+  assert!(shell.has_dialog(cx), "the check of the former text decided nothing");
+  assert_eq!(output_dir(&shell, cx, A), None);
+  shell.press(cx, "enter");
+  cx.run_until_parked();
+  assert!(!shell.has_dialog(cx));
+  assert_eq!(output_dir(&shell, cx, A), Some(second));
 }
 
 #[gpui_kit::test]

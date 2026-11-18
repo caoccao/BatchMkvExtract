@@ -47,26 +47,33 @@ pub fn is_mkv(path: &Path) -> bool {
 /// nearest existing ancestor (the path itself, if it exists) is a directory
 /// a file can be created in; the missing directories are created before the
 /// extraction ([`ensure_output_path`]). An existing file is not a directory.
-/// Nothing is changed.
+/// Nothing is changed: the probe is a new file of this call's own
+/// ([`unique_file::create`](crate::unique_file::create), which never opens
+/// a file or a link that is there), removed again.
 pub fn check_output_dir_writable(path: String) -> Result<bool> {
   let mut current = PathBuf::from(&path);
+  if current.as_os_str().is_empty() {
+    return Ok(false);
+  }
   loop {
     if current.exists() {
       break;
     }
-    let Some(parent) = current.parent() else {
-      return Ok(false);
+    current = match current.parent() {
+      // A relative path's ancestors end in the working directory, where
+      // creating it and `mkvextract` would write.
+      Some(parent) if parent.as_os_str().is_empty() => PathBuf::from("."),
+      Some(parent) => parent.to_path_buf(),
+      None => return Ok(false),
     };
-    current = parent.to_path_buf();
   }
   if !current.is_dir() {
     return Ok(false);
   }
-  let test_name = format!(".batchmkvextract_writecheck_{}", std::process::id());
-  let test_path = current.join(&test_name);
-  match std::fs::File::create(&test_path) {
-    Ok(_) => {
-      let _ = std::fs::remove_file(&test_path);
+  match crate::unique_file::create(|tag| current.join(format!(".batchmkvextract_writecheck_{tag}"))) {
+    Ok((probe, file)) => {
+      drop(file);
+      let _ = std::fs::remove_file(&probe);
       Ok(true)
     }
     Err(_) => Ok(false),
@@ -123,6 +130,27 @@ fn common_better_media_info_dirs() -> Vec<PathBuf> {
     dirs.push(PathBuf::from("/usr/local/bin"));
   }
   dirs
+}
+
+/// Whether BetterMediaInfo is at `user_path` (its directory or the
+/// executable itself), looking nowhere else: for a path being typed, which
+/// a BetterMediaInfo found elsewhere must not replace. An empty path is not
+/// found.
+pub fn find_better_media_info_at(user_path: &str) -> BetterMediaInfoStatus {
+  let trimmed = user_path.trim();
+  match (!trimmed.is_empty())
+    .then(|| find_better_media_info_dir(Path::new(trimmed)))
+    .flatten()
+  {
+    Some(found) => BetterMediaInfoStatus {
+      found: true,
+      path: found.to_string_lossy().to_string(),
+    },
+    None => BetterMediaInfoStatus {
+      found: false,
+      path: String::new(),
+    },
+  }
 }
 
 /// Finds BetterMediaInfo without touching the config: with `check_running`,
@@ -220,9 +248,61 @@ pub fn find_running_process_dir(exe_name: &str) -> Option<PathBuf> {
 }
 
 /// The paths the app was started with (an "Open with" or a drop on its
-/// icon), for intake as if they were dropped.
-pub fn get_launch_args() -> Vec<String> {
-  std::env::args().skip(1).collect()
+/// icon), for intake as if they were dropped. Read as the OS gives them, so
+/// a name that is not valid UTF-8 is skipped by [`get_mkv_files`] instead of
+/// stopping the app.
+pub fn get_launch_args() -> Vec<PathBuf> {
+  std::env::args_os().skip(1).map(PathBuf::from).collect()
+}
+
+/// The local path of a `file://` URL, as macOS hands files to an app
+/// ("Open With", a drop on its Dock icon): the host must be empty or
+/// `localhost`, and the path is percent-decoded byte by byte, so a name
+/// that is not valid UTF-8 survives on Linux and macOS. `None` for any
+/// other URL.
+pub fn path_from_file_url(url: &str) -> Option<PathBuf> {
+  let rest = url.strip_prefix("file://").or_else(|| url.strip_prefix("FILE://"))?;
+  let path = match rest.find('/') {
+    Some(0) => rest,
+    Some(slash) if rest[..slash].eq_ignore_ascii_case("localhost") => &rest[slash..],
+    _ => return None,
+  };
+  let path = path.split(['?', '#']).next().unwrap_or_default();
+  let bytes = path.as_bytes();
+  let mut decoded = Vec::with_capacity(bytes.len());
+  let mut i = 0;
+  while i < bytes.len() {
+    let hex = |b: u8| (b as char).to_digit(16).map(|digit| digit as u8);
+    match (
+      bytes[i],
+      bytes.get(i + 1).copied().and_then(hex),
+      bytes.get(i + 2).copied().and_then(hex),
+    ) {
+      (b'%', Some(high), Some(low)) => {
+        decoded.push(high * 16 + low);
+        i += 3;
+      }
+      (byte, _, _) => {
+        decoded.push(byte);
+        i += 1;
+      }
+    }
+  }
+  #[cfg(unix)]
+  {
+    use std::os::unix::ffi::OsStringExt;
+    Some(PathBuf::from(std::ffi::OsString::from_vec(decoded)))
+  }
+  #[cfg(not(unix))]
+  {
+    // `file:///C:/Media/a.mkv`: the drive follows the first slash.
+    let text = String::from_utf8(decoded).ok()?;
+    let text = text
+      .strip_prefix('/')
+      .filter(|rest| rest.as_bytes().get(1) == Some(&b':'))
+      .unwrap_or(&text);
+    Some(PathBuf::from(text.replace('/', "\\")))
+  }
 }
 
 /// What [`get_mkv_files`] found in the paths it was given.
@@ -231,21 +311,30 @@ pub struct MkvFiles {
   /// The `.mkv` files: a given file as it is, a folder's files sorted, in
   /// the order of the paths.
   pub files: Vec<String>,
-  /// What could not be used: a path that does not exist (also what a path
-  /// that is not valid UTF-8 becomes once converted), a folder that cannot
-  /// be listed, and a file in a folder whose name is not valid UTF-8 (shown
-  /// lossily). Files of other types are not counted; they are left out on
-  /// purpose.
+  /// What could not be used: a path that does not exist, a folder that
+  /// cannot be listed, and a path or a file in a folder whose name is not
+  /// valid UTF-8 (shown lossily). Files of other types are not counted; they
+  /// are left out on purpose.
   pub skipped: Vec<String>,
 }
 
 /// The `.mkv` files of dropped, chosen or launch-argument `paths`. A folder
 /// contributes the `.mkv` files directly inside it (one level, as 0.3.0
-/// did: a subfolder is a separate drop). One path that cannot be read never
-/// costs the others; it is listed in [`MkvFiles::skipped`].
-pub fn get_mkv_files(paths: Vec<String>) -> MkvFiles {
+/// did: a subfolder is a separate drop). A relative path (a launch argument)
+/// is taken from the working directory, as the shell meant it, so every
+/// listed file has a full path. One path that cannot be read never costs
+/// the others; it is listed in [`MkvFiles::skipped`].
+pub fn get_mkv_files(paths: impl IntoIterator<Item = impl Into<PathBuf>>) -> MkvFiles {
   let mut found = MkvFiles::default();
   for input in paths {
+    let input: PathBuf = input.into();
+    let input = std::path::absolute(&input).unwrap_or(input);
+    let Some(text) = input.to_str() else {
+      log::warn!("Skipped {}: its name is not valid UTF-8", input.display());
+      found.skipped.push(input.to_string_lossy().into_owned());
+      continue;
+    };
+    let input = text.to_owned();
     let path = Path::new(input.as_str());
     if !path.exists() {
       log::warn!("Skipped {input}: it does not exist");
@@ -504,6 +593,70 @@ mod tests {
 
   /// A file in a folder whose name is not valid UTF-8 is named in the
   /// skipped list (lossily) instead of being dropped silently.
+  /// A launch argument that is not valid UTF-8 is skipped and named, and the
+  /// others are taken.
+  #[cfg(target_os = "linux")]
+  #[test]
+  fn a_path_that_is_not_utf8_is_skipped_and_the_others_are_taken() {
+    use std::os::unix::ffi::OsStrExt;
+    let dir = Dir::new("args_not_utf8");
+    std::fs::write(dir.0.join("ok.mkv"), b"").unwrap();
+    let bad = dir.0.join(std::ffi::OsStr::from_bytes(b"caf\xe9.mkv"));
+    std::fs::write(&bad, b"").unwrap();
+    let found = get_mkv_files([dir.0.join("ok.mkv"), bad.clone()]);
+    assert_eq!(found.files, [dir.path("ok.mkv")]);
+    assert_eq!(found.skipped, [bad.to_string_lossy().into_owned()]);
+  }
+
+  #[test]
+  fn file_urls_become_local_paths() {
+    #[cfg(unix)]
+    {
+      assert_eq!(
+        path_from_file_url("file:///Users/me/My%20Movie%20%5B1080p%5D.mkv"),
+        Some(PathBuf::from("/Users/me/My Movie [1080p].mkv"))
+      );
+      assert_eq!(
+        path_from_file_url("file://localhost/media/%E6%98%A0%E7%94%BB/"),
+        Some(PathBuf::from("/media/映画/"))
+      );
+      assert_eq!(
+        path_from_file_url("file:///a%2"),
+        Some(PathBuf::from("/a%2")),
+        "a stray % stays"
+      );
+      #[cfg(target_os = "linux")]
+      {
+        use std::os::unix::ffi::OsStrExt;
+        assert_eq!(
+          path_from_file_url("file:///m/caf%E9.mkv")
+            .unwrap()
+            .as_os_str()
+            .as_bytes(),
+          b"/m/caf\xe9.mkv"
+        );
+      }
+    }
+    #[cfg(windows)]
+    assert_eq!(
+      path_from_file_url("file:///C:/Media/My%20Movie.mkv"),
+      Some(PathBuf::from(r"C:\Media\My Movie.mkv"))
+    );
+    assert_eq!(path_from_file_url("https://example.com/a.mkv"), None);
+    assert_eq!(path_from_file_url("file://server/share/a.mkv"), None);
+  }
+
+  #[test]
+  fn a_relative_path_is_taken_from_the_working_directory() {
+    let name = format!("bme_relative_intake_{}.mkv", std::process::id());
+    std::fs::write(&name, b"").unwrap();
+    let found = get_mkv_files([name.clone()]);
+    let _ = std::fs::remove_file(&name);
+    let full = std::env::current_dir().unwrap().join(&name);
+    assert_eq!(found.files, [full.to_string_lossy().into_owned()]);
+    assert!(Path::new(&found.files[0]).is_absolute());
+  }
+
   #[cfg(target_os = "linux")]
   #[test]
   fn a_file_name_that_is_not_utf8_is_skipped() {
@@ -536,6 +689,11 @@ mod tests {
       "under a file"
     );
     assert!(!check_output_dir_writable(String::new()).unwrap(), "no path at all");
+    // A new relative folder is created in the working directory, which is
+    // checked.
+    let relative = format!("bme_relative_check_{}/sub", std::process::id());
+    assert!(check_output_dir_writable(relative.clone()).unwrap(), "relative");
+    assert!(!Path::new(&relative).exists(), "nothing created");
     #[cfg(unix)]
     {
       use std::os::unix::fs::PermissionsExt;
@@ -551,6 +709,33 @@ mod tests {
       }
       std::fs::set_permissions(dir.0.join("read-only"), std::fs::Permissions::from_mode(0o755)).unwrap();
     }
+  }
+
+  /// The probe never opens a file that is there, also one with the name an
+  /// earlier version used, and checks running at once each use a name of
+  /// their own and leave nothing behind.
+  #[test]
+  fn the_writable_check_leaves_existing_files_alone() {
+    let dir = Dir::new("writable_probe");
+    let earlier = dir
+      .0
+      .join(format!(".batchmkvextract_writecheck_{}", std::process::id()));
+    std::fs::write(&earlier, b"kept").unwrap();
+    let checks: Vec<_> = (0..8)
+      .map(|_| {
+        let path = dir.path("");
+        std::thread::spawn(move || check_output_dir_writable(path).unwrap())
+      })
+      .collect();
+    for check in checks {
+      assert!(check.join().unwrap());
+    }
+    assert_eq!(std::fs::read(&earlier).unwrap(), b"kept");
+    let left: Vec<_> = std::fs::read_dir(&dir.0)
+      .unwrap()
+      .map(|entry| entry.unwrap().path())
+      .collect();
+    assert_eq!(left, [earlier], "only the file that was there");
   }
 
   #[test]
@@ -600,6 +785,16 @@ mod tests {
         path: path.clone()
       }
     );
+    // At the path only: the same, and nothing for a path without it, even
+    // when BetterMediaInfo is installed in a usual place.
+    assert_eq!(find_better_media_info_at(&exe.to_string_lossy()), status(&path));
+    let not_there = BetterMediaInfoStatus {
+      found: false,
+      path: String::new(),
+    };
+    assert_eq!(find_better_media_info_at(&dir.path("missing")), not_there);
+    assert_eq!(find_better_media_info_at(&format!("{path}/Better")), not_there);
+    assert_eq!(find_better_media_info_at(" "), not_there);
     std::fs::write(dir.0.join("Other.exe"), b"").unwrap();
     assert_eq!(find_better_media_info_dir(&dir.0.join("Other.exe")), None);
     assert_eq!(find_better_media_info_dir(&dir.0.join("missing")), None);

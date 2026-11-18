@@ -47,6 +47,8 @@ fn config(group_mode: bool) -> Config {
 #[derive(Default)]
 struct Calls {
   enqueued: Vec<(String, Vec<String>)>,
+  /// The MKVToolNix directory of each enqueued file.
+  tools: Vec<String>,
   cancelled: Vec<String>,
 }
 
@@ -62,8 +64,10 @@ fn recording_backend() -> (ExtractBackend, Arc<Mutex<Calls>>) {
   let calls = Arc::new(Mutex::new(Calls::default()));
   let (enqueued, cancelled) = (calls.clone(), calls.clone());
   let backend = ExtractBackend::new(
-    move |file, args| {
-      enqueued.lock().unwrap().enqueued.push((file, args));
+    move |file, tools, args| {
+      let mut calls = enqueued.lock().unwrap();
+      calls.enqueued.push((file, args));
+      calls.tools.push(tools);
       Ok(())
     },
     move |file| {
@@ -172,12 +176,12 @@ fn a_request_reads_the_selection_and_the_output_directory() {
   let mut files = crate::state::FileStore::with_profile(None, fixture_source(HashMap::new()).0);
   let profile = ConfigProfile::named(ConfigProfile::DEFAULT_NAME);
   assert!(
-    ExtractRequest::of(&files, &profile, "/m/a.mkv").is_none(),
+    ExtractRequest::of(&files, &profile, "/opt/mkvtoolnix", "/m/a.mkv").is_none(),
     "nothing selected"
   );
   let a = "/m/a.mkv";
   files.load_for_tests(a, movie(), &["audio:2", "video:0"]);
-  let request = ExtractRequest::of(&files, &profile, a).expect("a selection");
+  let request = ExtractRequest::of(&files, &profile, "/opt/mkvtoolnix", a).expect("a selection");
   assert_eq!(
     request.tracks,
     [movie()[0].clone(), movie()[2].clone()],
@@ -193,7 +197,7 @@ fn a_request_reads_the_selection_and_the_output_directory() {
       format!("2:{}", out("a.2.ger.ac3")),
     ]
   );
-  assert!(request.command("/opt/mkvtoolnix").contains("a.2.ger.ac3"));
+  assert!(request.command().contains("a.2.ger.ac3"));
 }
 
 /// Ends a fake `mkvextract` at once with exit code 0.
@@ -226,7 +230,7 @@ fn extract_all_runs_through_the_core_queue(cx: &mut TestAppContext) {
   let (relay, relayed) = std::sync::mpsc::channel();
   let relay = Mutex::new(relay);
   let queue = ExtractQueue::new(
-    Box::new(move |file, args| {
+    Box::new(move |file, _, args| {
       recorder.lock().unwrap().push((file.to_string(), args.to_vec()));
       Ok(ExtractProcess {
         output: Some(Box::new(Cursor::new(
@@ -358,10 +362,144 @@ fn an_output_directory_that_cannot_be_created_queues_nothing(cx: &mut TestAppCon
   );
 }
 
+/// Two files that would write one output: the first file asked for keeps
+/// it, in one request and against a file that is waiting already, and the
+/// other is not queued, with a toast. Once the first finished, its outputs
+/// are free.
+#[gpui_kit::test]
+fn a_file_whose_output_another_file_writes_is_not_queued(cx: &mut TestAppContext) {
+  let _locale = crate::i18n::tests::LOCALE_LOCK
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner());
+  crate::i18n::set_language(bme_core::config::Language::EnUS);
+  let out = TempDir::new("output-taken");
+  let dir = out.path().to_string_lossy().into_owned();
+  let (first, second, third) = ("/m/Episode.mkv", "/n/Episode.mkv", "/o/Episode.mkv");
+  let (stores, calls) = recording_stores(cx, config(false), all(&[first, second, third], movie));
+  let (messages, _subscription) = shown(cx, &stores.ui);
+  add(&stores, cx, &[first, second, third]);
+  // The same directory under another spelling still meets (on macOS the
+  // temporary directory is behind a link).
+  let other_spelling = std::fs::canonicalize(out.path())
+    .unwrap()
+    .to_string_lossy()
+    .into_owned();
+  stores.files.update(cx, |files, cx| {
+    files.set_global_output_dir(dir.clone(), cx);
+    files.set_output_dir(&s(&[second]), &other_spelling, cx);
+  });
+  run(cx, |cx| extract(&stores, &s(&[first, second]), cx));
+  assert_eq!(calls.lock().unwrap().files(), [first]);
+  assert_eq!(status(&stores, cx, second), None);
+  let output = bme_core::extract_args::join_output_path(&other_spelling, "Episode.3.eng.srt");
+  assert_eq!(
+    *messages.borrow(),
+    [format!(
+      "{second}: {output} is also written by {first}. Please change the output path or the file name templates and try again."
+    )]
+  );
+  // Against a file that waits already.
+  run(cx, |cx| extract(&stores, &s(&[third]), cx));
+  assert_eq!(calls.lock().unwrap().files(), [first]);
+  assert_eq!(messages.borrow().len(), 2);
+  // Once the first finished, the name is free.
+  report(&stores, cx, started(first));
+  report(&stores, cx, finished(first, ExtractOutcome::Completed));
+  run(cx, |cx| extract(&stores, &s(&[third]), cx));
+  assert_eq!(calls.lock().unwrap().files(), [first, third]);
+}
+
+/// A template that names two rows alike, or an output that is a listed
+/// source file, queues nothing.
+#[gpui_kit::test]
+fn an_extraction_that_would_write_a_file_twice_or_a_source_is_not_queued(cx: &mut TestAppContext) {
+  let _locale = crate::i18n::tests::LOCALE_LOCK
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner());
+  crate::i18n::set_language(bme_core::config::Language::EnUS);
+  let dir = TempDir::new("output-repeated");
+  let root = std::fs::canonicalize(dir.path()).unwrap();
+  let source = root.join("Movie.mkv").to_string_lossy().into_owned();
+  let other = root.join("Other.mkv").to_string_lossy().into_owned();
+  let mut tracks = movie();
+  tracks.push(crate::state::files::tests::track(5, "subtitles", "S_TEXT/UTF8", "eng"));
+  tracks.push(crate::state::files::tests::track(1, "attachment", "mkv", ""));
+  let fixtures = HashMap::from([(source.clone(), tracks.clone()), (other.clone(), tracks)]);
+  let mut config = config(false);
+  config.profiles[0].subtitle_template = "{file_name}.{language}".into();
+  config.profiles[0].attachments_template = "Movie".into();
+  let (stores, calls) = recording_stores(cx, config, fixtures);
+  let (messages, _subscription) = shown(cx, &stores.ui);
+  stores
+    .files
+    .update(cx, |files, cx| files.add_files(s(&[&source, &other]), cx));
+  cx.run_until_parked();
+  // The profile selects both English subtitles of `source`, which would both
+  // be `Movie.eng.srt`; `other` extracts only its attachment, `Movie.mkv`.
+  stores.files.update(cx, |files, cx| {
+    let scope = TableScope::File(other.clone());
+    files.set_checked(&scope, "subtitles:3", false, cx);
+    files.set_checked(&scope, "subtitles:5", false, cx);
+    files.set_checked(&scope, "attachment:1", true, cx);
+  });
+  run(cx, |cx| extract(&stores, &s(&[&source, &other]), cx));
+  assert!(calls.lock().unwrap().enqueued.is_empty());
+  let srt = bme_core::extract_args::join_output_path(&root.to_string_lossy(), "Movie.eng.srt");
+  assert_eq!(
+    *messages.borrow(),
+    [
+      format!("{source}: Two tracks would be written to {srt}. Please change the file name templates and try again."),
+      format!(
+        "{other}: {source} is a listed source file. Please change the output path or the file name templates and try again."
+      ),
+    ]
+  );
+  assert!(!cx.update(|cx| stores.has_active_extracts(cx)));
+}
+
+/// An extraction is listed as waiting while it is prepared. Cancel, Delete
+/// and Cancel All end it at once, Clear waits for it, and its preparation
+/// then hands nothing to the extract queue.
+#[gpui_kit::test]
+fn an_extraction_cancelled_or_removed_while_it_is_prepared_is_not_queued(cx: &mut TestAppContext) {
+  let (a, b, c) = ("/m/a.mkv", "/m/b.mkv", "/m/c.mkv");
+  let (stores, calls) = recording_stores(cx, config(false), all(&[a, b, c], movie));
+  add(&stores, cx, &[a, b, c]);
+  cx.update(|cx| {
+    // The preparation runs once the test lets the executors run.
+    extract(&stores, &s(&[a, b, c]), cx).detach();
+    let queue = stores.queue.read(cx);
+    assert!(
+      [a, b, c]
+        .iter()
+        .all(|file| queue.item(file).unwrap().status == QueueItemStatus::Waiting)
+    );
+    assert!(!can_clear(&stores, cx), "Clear waits for it");
+    clear_files(&stores, cx);
+    cancel_extract(&stores, a, cx);
+    assert!(remove_file(&stores, b, cx));
+    cancel_all(&stores, cx);
+  });
+  cx.run_until_parked();
+  {
+    let calls = calls.lock().unwrap();
+    assert!(calls.enqueued.is_empty(), "{:?}", calls.files());
+    assert!(calls.cancelled.is_empty(), "the extract queue never had them");
+  }
+  assert_eq!(status(&stores, cx, a), Some(QueueItemStatus::Cancelled));
+  assert_eq!(status(&stores, cx, b), None);
+  assert_eq!(status(&stores, cx, c), Some(QueueItemStatus::Cancelled));
+  stores.files.read_with(cx, |files, _| assert_eq!(files.files(), [a, c]));
+  assert!(!cx.update(|cx| stores.has_active_extracts(cx)));
+  // A new request is a reservation of its own.
+  run(cx, |cx| resume_all(&stores, cx));
+  assert_eq!(calls.lock().unwrap().files(), [a, c]);
+}
+
 #[gpui_kit::test]
 fn a_failing_enqueue_takes_the_item_off_the_queue(cx: &mut TestAppContext) {
   let a = "/m/a.mkv";
-  let backend = ExtractBackend::new(|_, _| Err(anyhow::anyhow!("no queue")), |_| Ok(()));
+  let backend = ExtractBackend::new(|_, _, _| Err(anyhow::anyhow!("no queue")), |_| Ok(()));
   let stores = stores_with(cx, config(false), all(&[a], movie), backend, ToolDetector::system());
   add(&stores, cx, &[a]);
   run(cx, |cx| extract_all(&stores, cx));
@@ -395,6 +533,73 @@ fn cancel_requests_reach_the_queue_and_clear_waits_for_the_extractions(cx: &mut 
     assert!(!stores.files.read(cx).has_files());
     assert_eq!(stores.queue.read(cx).items().count(), 0, "Clear empties the queue too");
   });
+}
+
+/// Cancel All hands every waiting and extracting file to the extract queue in
+/// one request, so it can drop the waiting ones before a running one ends.
+#[gpui_kit::test]
+fn cancel_all_cancels_the_queued_files_in_one_request(cx: &mut TestAppContext) {
+  let (a, b, c) = ("/m/a.mkv", "/m/b.mkv", "/m/c.mkv");
+  let requests = Arc::new(Mutex::new(Vec::<Vec<String>>::new()));
+  let recorder = requests.clone();
+  let backend = ExtractBackend::new(|_, _, _| Ok(()), |_| panic!("one by one")).with_cancel_many(move |files| {
+    recorder.lock().unwrap().push(files.to_vec());
+    Ok(())
+  });
+  let stores = stores_with(
+    cx,
+    config(false),
+    all(&[a, b, c], movie),
+    backend,
+    ToolDetector::system(),
+  );
+  add(&stores, cx, &[a, b, c]);
+  run(cx, |cx| extract_all(&stores, cx));
+  report(&stores, cx, started(a));
+  cx.update(|cx| cancel_all(&stores, cx));
+  assert_eq!(*requests.lock().unwrap(), [s(&[a, b, c])]);
+  stores.queue.read_with(cx, |queue, _| {
+    assert!(queue.items().all(|item| item.cancel_requested));
+  });
+}
+
+/// A cancel whose kill fails withdraws the request, so Cancel can be tried
+/// again, and names the error in a toast.
+#[gpui_kit::test]
+fn a_cancel_that_cannot_stop_mkvextract_can_be_tried_again(cx: &mut TestAppContext) {
+  let _locale = crate::i18n::tests::LOCALE_LOCK
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner());
+  crate::i18n::set_language(bme_core::config::Language::EnUS);
+  let a = "/m/a.mkv";
+  let refuse = |file: &str| -> anyhow::Result<()> {
+    Err(
+      bme_core::extract::KillFailed {
+        files: vec![(file.to_string(), "access denied".to_string())],
+      }
+      .into(),
+    )
+  };
+  let backend = ExtractBackend::new(|_, _, _| Ok(()), refuse);
+  let stores = stores_with(cx, config(false), all(&[a], movie), backend, ToolDetector::system());
+  let (messages, _subscription) = shown(cx, &stores.ui);
+  add(&stores, cx, &[a]);
+  run(cx, |cx| extract_all(&stores, cx));
+  report(&stores, cx, started(a));
+  cx.update(|cx| cancel_extract(&stores, a, cx));
+  assert!(
+    !stores
+      .queue
+      .read_with(cx, |queue, _| queue.item(a).unwrap().cancel_requested)
+  );
+  cx.update(|cx| cancel_all(&stores, cx));
+  assert!(
+    !stores
+      .queue
+      .read_with(cx, |queue, _| queue.item(a).unwrap().cancel_requested)
+  );
+  let expected = format!("{a}: mkvextract could not be stopped: access denied");
+  assert_eq!(*messages.borrow(), [expected.clone(), expected]);
 }
 
 /// Delete on a waiting file cancels it; the extract queue's late `Cancelled`
@@ -479,6 +684,31 @@ fn clear_completed_removes_only_finished_rows(cx: &mut TestAppContext) {
   );
 }
 
+/// An extraction runs with the MKVToolNix directory of the settings when it
+/// was asked for, the one its copyable command names; a later change of the
+/// setting is for later requests.
+#[gpui_kit::test]
+fn an_extraction_runs_with_the_tools_it_was_asked_with(cx: &mut TestAppContext) {
+  let (a, b) = ("/m/a.mkv", "/m/b.mkv");
+  let (stores, calls) = recording_stores(cx, config(false), all(&[a, b], movie));
+  add(&stores, cx, &[a, b]);
+  let set_tools = |cx: &mut TestAppContext, path: &str| {
+    stores.config.update(cx, |config, cx| {
+      config.update(cx, |config| config.integration.mkv_toolnix_path = path.to_string())
+    })
+  };
+  set_tools(cx, " /opt/one ");
+  let request = cx.read(|cx| requests(&stores, &s(&[a]), cx).remove(0));
+  assert_eq!(request.mkv_toolnix_path, "/opt/one");
+  cx.update(|cx| enqueue(&stores, vec![request.clone()], cx).detach());
+  set_tools(cx, "/opt/two");
+  cx.run_until_parked();
+  run(cx, |cx| extract(&stores, &s(&[b]), cx));
+  assert_eq!(calls.lock().unwrap().tools, ["/opt/one", "/opt/two"]);
+  let mkvextract = bme_core::mkvtoolnix::mkvextract_executable("/opt/one");
+  assert!(request.command().contains(&*mkvextract.to_string_lossy()));
+}
+
 #[gpui_kit::test]
 fn copy_commands_copies_one_line_per_file(cx: &mut TestAppContext) {
   let _locale = crate::i18n::tests::LOCALE_LOCK
@@ -501,10 +731,58 @@ fn copy_commands_copies_one_line_per_file(cx: &mut TestAppContext) {
   assert!(lines[0].contains("a.mkv") && lines[0].contains("a.3.eng.srt"));
   assert!(lines[1].contains("b.3.eng.srt"));
   assert!(!copied.contains("--gui-mode"));
-  assert_eq!(*messages.borrow(), ["Command copied to clipboard."]);
+  let copied = if cfg!(windows) {
+    "Command for the Command Prompt copied to clipboard."
+  } else {
+    "Command copied to clipboard."
+  };
+  assert_eq!(*messages.borrow(), [copied]);
   // Nothing to copy, nothing said.
   run(cx, |cx| copy_commands(&stores, Vec::new(), cx));
   assert_eq!(messages.borrow().len(), 1);
+}
+
+/// Files the OS asks the app to open as URLs (macOS "Open With", a drop on
+/// the Dock icon) are added like dropped ones; other URLs are left out.
+#[cfg(unix)]
+#[gpui_kit::test]
+fn files_opened_through_the_os_are_added(cx: &mut TestAppContext) {
+  let dir = TempDir::new("open-urls");
+  let movie = dir.file("My Movie.mkv");
+  let (stores, _) = recording_stores(cx, config(false), HashMap::new());
+  let url = format!("file://{}", movie.replace(' ', "%20"));
+  cx.update(|cx| crate::platform::ingest_open_urls(&stores, vec![url, "https://example.com/a.mkv".to_string()], cx));
+  cx.run_until_parked();
+  stores
+    .files
+    .read_with(cx, |files, _| assert_eq!(files.files(), [movie]));
+}
+
+/// A file dialog that could not open is said in a snackbar, a cancel says
+/// nothing, and chosen paths are added.
+#[gpui_kit::test]
+fn a_file_dialog_that_fails_is_not_taken_for_a_cancel(cx: &mut TestAppContext) {
+  let _locale = crate::i18n::tests::LOCALE_LOCK
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner());
+  crate::i18n::set_language(bme_core::config::Language::EnUS);
+  let dir = TempDir::new("dialog-chosen");
+  let movie = dir.file("a.mkv");
+  let (stores, _) = recording_stores(cx, config(false), HashMap::new());
+  let (messages, _subscription) = shown(cx, &stores.ui);
+  cx.update(|cx| {
+    crate::platform::dialogs::take_chosen(&stores, Ok(None), cx);
+    crate::platform::dialogs::take_chosen(&stores, Err(anyhow::anyhow!("no portal")), cx);
+    crate::platform::dialogs::take_chosen(&stores, Ok(Some(vec![movie.clone().into()])), cx);
+  });
+  cx.run_until_parked();
+  assert_eq!(
+    *messages.borrow(),
+    ["The file dialog could not be opened: no portal. Files and folders can also be dropped onto the window."]
+  );
+  stores
+    .files
+    .read_with(cx, |files, _| assert_eq!(files.files(), [movie]));
 }
 
 /// BetterMediaInfo is looked for at start and whenever its configured path

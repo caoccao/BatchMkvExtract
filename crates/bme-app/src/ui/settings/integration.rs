@@ -18,9 +18,11 @@
 //! The Integration page: one group per tool with its path row. The text is
 //! checked 250 ms after the last edit and stored when the field loses the
 //! focus; Browse picks a folder and stores it; Detect also looks for a running
-//! application. A detection that finds the tool somewhere else (a running
-//! application, a versioned macOS bundle, the folder of an executable) puts
-//! that path into the field and the config.
+//! application and in the usual install places. A check of the text looks at
+//! that path only ([`Lookup::Path`]); what it finds there instead (the folder
+//! of an executable, a versioned macOS bundle) puts that path into the field
+//! and the config. Only Detect puts in a tool found somewhere else, so a
+//! pause while typing never replaces the text with an installed copy.
 
 use std::time::Duration;
 
@@ -29,11 +31,12 @@ use gpui_kit::base::{TestSupportExt, TestTextExt};
 use gpui_kit::component::input::{Input, InputEvent, InputState};
 use gpui_kit::component::setting::{SettingField, SettingGroup, SettingItem, SettingPage};
 use gpui_kit::component::{ActiveTheme, Icon, Sizable, h_flex, v_flex};
+use gpui_kit::prelude::FluentBuilder as _;
 use gpui_kit::*;
 
 use super::{BUTTON_GROUP_GAP, FIELD_MIN_WIDTH};
 use crate::state::Stores;
-use crate::tools::{Tool, ToolStatus};
+use crate::tools::{Lookup, Tool, ToolStatus};
 use crate::ui::text_button;
 use crate::ui::word_navigation::PATH_CONTEXT;
 
@@ -48,6 +51,9 @@ pub struct ToolPathRow {
   input: Entity<InputState>,
   /// The last detection's outcome; `None` before the first one.
   found: Option<bool>,
+  /// Why the folder dialog failed, shown instead of the outcome until the
+  /// next check.
+  dialog_error: Option<SharedString>,
   /// The path the config held when the field was last synced from it.
   synced: String,
   /// Each detection's number; a slower, older one is ignored.
@@ -62,7 +68,7 @@ impl ToolPathRow {
     let input = cx.new(|cx| InputState::new(window, cx).default_value(path.clone()));
     let subscriptions = vec![
       cx.subscribe(&input, |this, _, event: &InputEvent, cx| match event {
-        InputEvent::Change => this.schedule(DETECT_DELAY, false, cx),
+        InputEvent::Change => this.schedule(DETECT_DELAY, Lookup::Path, cx),
         InputEvent::Blur => this.persist_text(cx),
         _ => {}
       }),
@@ -74,13 +80,14 @@ impl ToolPathRow {
       window: window.window_handle(),
       input,
       found: None,
+      dialog_error: None,
       synced: path,
       generation: 0,
       pending: None,
       _subscriptions: subscriptions,
     };
     // The stored path is checked once it is shown.
-    row.schedule(DETECT_DELAY, false, cx);
+    row.schedule(DETECT_DELAY, Lookup::Path, cx);
     row
   }
 
@@ -132,12 +139,12 @@ impl ToolPathRow {
     self
       .input
       .update(cx, |input, cx| input.set_value(configured, window, cx));
-    self.schedule(DETECT_DELAY, false, cx);
+    self.schedule(DETECT_DELAY, Lookup::Path, cx);
   }
 
-  /// Checks the field's text after `delay` (none for Detect), replacing a
-  /// check still waiting.
-  fn schedule(&mut self, delay: Duration, check_running: bool, cx: &mut Context<Self>) {
+  /// Checks the field's text after `delay` (none for Detect) as `lookup`
+  /// says, replacing a check still waiting.
+  fn schedule(&mut self, delay: Duration, lookup: Lookup, cx: &mut Context<Self>) {
     self.generation += 1;
     let (generation, tool, tools) = (self.generation, self.tool, self.stores.tools.clone());
     self.pending = Some(cx.spawn(async move |this, cx| {
@@ -150,7 +157,7 @@ impl ToolPathRow {
       let source = path.clone();
       let status = cx
         .background_executor()
-        .spawn(async move { tools.detect(tool, &source, check_running) })
+        .spawn(async move { tools.detect(tool, &source, lookup) })
         .await;
       let _ = this.update(cx, |this, cx| {
         if this.generation == generation {
@@ -164,6 +171,7 @@ impl ToolPathRow {
   /// field and the config.
   fn apply(&mut self, status: ToolStatus, source: &str, cx: &mut Context<Self>) {
     self.found = Some(status.found);
+    self.dialog_error = None;
     self.pending = None;
     if status.found && !status.path.is_empty() && status.path != source {
       self.set_text(status.path.clone(), cx);
@@ -180,9 +188,9 @@ impl ToolPathRow {
     });
   }
 
-  /// Detect: now, a running application first.
+  /// Detect: now, a running application first, then the usual places.
   pub fn detect_now(&mut self, cx: &mut Context<Self>) {
-    self.schedule(Duration::ZERO, true, cx);
+    self.schedule(Duration::ZERO, Lookup::Running, cx);
   }
 
   /// A folder picked by Browse: into the field and the config, then checked.
@@ -191,7 +199,7 @@ impl ToolPathRow {
       .input
       .update(cx, |input, cx| input.set_value(path.clone(), window, cx));
     self.persist(path, cx);
-    self.schedule(DETECT_DELAY, false, cx);
+    self.schedule(DETECT_DELAY, Lookup::Path, cx);
   }
 
   fn browse(&mut self, cx: &mut Context<Self>) {
@@ -206,6 +214,7 @@ impl ToolPathRow {
         Ok(Ok(Some(paths))) => paths.into_iter().next(),
         Ok(Err(error)) => {
           log::error!("The folder dialog failed: {error}");
+          let _ = this.update(cx, |this, cx| this.dialog_failed(&error.to_string(), cx));
           None
         }
         _ => None,
@@ -224,6 +233,19 @@ impl ToolPathRow {
     .detach();
   }
 
+  /// The folder dialog could not be opened (no XDG desktop portal, say):
+  /// the row says so in its status line, with the way around it.
+  pub(crate) fn dialog_failed(&mut self, detail: &str, cx: &mut Context<Self>) {
+    self.dialog_error = Some(tr!("settings.folderDialogFailed", detail = detail));
+    cx.notify();
+  }
+
+  /// The folder dialog's failure the row shows (tests).
+  #[cfg(test)]
+  pub(crate) fn dialog_error(&self) -> Option<&SharedString> {
+    self.dialog_error.as_ref()
+  }
+
   /// Reset All: the platform's default path.
   pub fn reset(&mut self, window: &mut Window, cx: &mut Context<Self>) {
     self.choose(self.tool.default_path(), window, cx);
@@ -239,14 +261,21 @@ impl Render for ToolPathRow {
     };
     let theme = cx.theme();
     let (success, danger) = (theme.success, theme.danger);
-    let caption = self.found.map(|found| {
-      let text = if found { tr!(found_key) } else { tr!(missing_key) };
+    let status = match &self.dialog_error {
+      Some(error) => Some((error.clone(), false)),
+      None => self
+        .found
+        .map(|found| (if found { tr!(found_key) } else { tr!(missing_key) }, found)),
+    };
+    let alert = self.dialog_error.is_some();
+    let caption = status.map(|(text, good)| {
       div()
         .id(SharedString::from(format!("settings-{name}-status")))
+        .when(alert, |caption| caption.role(Role::Alert))
         .test_support()
         .test_text(text.clone())
         .text_xs()
-        .text_color(if found { success } else { danger })
+        .text_color(if good { success } else { danger })
         .child(text)
     });
     v_flex()

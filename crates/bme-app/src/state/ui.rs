@@ -330,6 +330,17 @@ impl UiState {
     self.closing = true;
   }
 
+  /// The window stays open after all: an extraction did not stop, and the
+  /// user chose to wait.
+  pub fn cancel_closing(&mut self) {
+    self.closing = false;
+  }
+
+  /// Whether the main window is closing.
+  pub fn is_closing(&self) -> bool {
+    self.closing
+  }
+
   /// Delivers the enabled completion actions for a drained queue.
   pub fn show_completion(&mut self, notice: CompletionNotice, cx: &mut Context<Self>) {
     if self.closing || !(self.system_notification || self.topmost_notification || self.quit_when_complete) {

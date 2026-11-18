@@ -9,8 +9,8 @@
       "font.size": 14,
       "colors": {
         "primary.background": "#bcaaa4",
-        "primary.hover.background": "#847773",
-        "primary.active.background": "#847773",
+        "primary.hover.background": "#d0c4bf",
+        "primary.active.background": "#d0c4bf",
         "primary.foreground": "#000000de",
         "ring": "#bcaaa4",
         "link": "#bcaaa4",
@@ -24,8 +24,8 @@
       "font.size": 14,
       "colors": {
         "primary.background": "#bcaaa4",
-        "primary.hover.background": "#847773",
-        "primary.active.background": "#847773",
+        "primary.hover.background": "#d0c4bf",
+        "primary.active.background": "#d0c4bf",
         "primary.foreground": "#000000de",
         "ring": "#bcaaa4",
         "link": "#bcaaa4",

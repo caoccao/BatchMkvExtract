@@ -171,6 +171,9 @@ pub struct TopmostWindow {
   view: Option<Entity<TopmostNotification>>,
   /// Windows opened so far; a reused window does not count.
   opened: usize,
+  /// Opening a window fails, as on a desktop that refuses it (tests).
+  #[cfg(test)]
+  refuse: bool,
 }
 
 impl TopmostWindow {
@@ -183,9 +186,23 @@ impl TopmostWindow {
     self.opened
   }
 
+  /// Makes every window this opens fail to open (tests).
+  #[cfg(test)]
+  pub(crate) fn refuse_windows(&mut self) {
+    self.refuse = true;
+  }
+
   /// Shows `notice`: in the open window, brought to the front, or in a new
-  /// one centred on the display of `main`.
-  pub fn show(&mut self, notice: CompletionNotice, quit: Option<WeakEntity<UiState>>, main: &Window, cx: &mut App) {
+  /// one centred on the display of `main`. `false` when no window could be
+  /// opened (also after the Wayland fallback): the caller delivers the
+  /// notice, and the quit it would offer, itself.
+  pub fn show(
+    &mut self,
+    notice: CompletionNotice,
+    quit: Option<WeakEntity<UiState>>,
+    main: &Window,
+    cx: &mut App,
+  ) -> bool {
     if let (Some(handle), Some(view)) = (self.window, self.view.clone()) {
       let reused = handle.update(cx, |_, window, cx| {
         view.update(cx, |view, cx| {
@@ -197,8 +214,13 @@ impl TopmostWindow {
         view.read(cx).focus.clone().focus(window, cx);
       });
       if reused.is_ok() {
-        return;
+        return true;
       }
+    }
+    #[cfg(test)]
+    if self.refuse {
+      log::error!("Failed to open the topmost notification: refused by the test");
+      return false;
     }
     let display = main.display(cx);
     let center = display
@@ -238,8 +260,12 @@ impl TopmostWindow {
         self.window = Some(handle);
         self.view = Some(view);
         self.opened += 1;
+        true
       }
-      Err(error) => log::error!("Failed to open the topmost notification: {error}"),
+      Err(error) => {
+        log::error!("Failed to open the topmost notification: {error}");
+        false
+      }
     }
   }
 }

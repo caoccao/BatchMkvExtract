@@ -64,6 +64,9 @@ pub(super) struct Shell {
   /// Every config the store wrote, in order.
   pub(super) written: Arc<Mutex<Vec<Config>>>,
   pub(super) extracts: Arc<Mutex<ExtractCalls>>,
+  /// What the extract queue's shutdown answers: whether every `mkvextract`
+  /// stopped in time.
+  pub(super) stops: Arc<std::sync::atomic::AtomicBool>,
   /// Every value the window's taskbar progress was set to.
   pub(super) taskbar: Rc<RefCell<Vec<Option<u8>>>>,
   events: ExtractEventSink,
@@ -105,7 +108,7 @@ impl Shell {
     let extracts = Arc::new(Mutex::new(ExtractCalls::default()));
     let (enqueue_calls, cancel_calls) = (extracts.clone(), extracts.clone());
     let backend = ExtractBackend::new(
-      move |file, args| {
+      move |file, _, args| {
         enqueue_calls.lock().unwrap().enqueued.push((file, args));
         Ok(())
       },
@@ -114,6 +117,9 @@ impl Shell {
         Ok(())
       },
     );
+    let stops = Arc::new(std::sync::atomic::AtomicBool::new(true));
+    let answer = stops.clone();
+    let backend = backend.with_shutdown(move |_| answer.load(std::sync::atomic::Ordering::SeqCst));
     let (events, receiver) = extract_events::channel();
     let (tracks, _) = fixture_source(fixtures);
     let taskbar: Rc<RefCell<Vec<Option<u8>>>> = Rc::default();
@@ -163,6 +169,7 @@ impl Shell {
       stores,
       written,
       extracts,
+      stops,
       taskbar,
       events,
       _locale: locale,
@@ -371,6 +378,67 @@ fn the_toolbar_opens_about_as_a_tab(cx: &mut TestAppContext) {
   );
 }
 
+/// Presses Tab until the element `id` has the keyboard focus. gpui-kit
+/// binds Tab where an element has the focus, so the first tab stop is
+/// focused as a first Tab would.
+fn tab_to(shell: &Shell, cx: &mut TestAppContext, id: &'static str) {
+  shell.window(cx, |window, cx| {
+    if window.focused(cx).is_none() {
+      window.focus_next(cx);
+    }
+  });
+  for _ in 0..80 {
+    shell.press(cx, "tab");
+    let focused = shell.window(cx, |window, cx| {
+      window.render_frame(cx);
+      window.find(id).focused()
+    });
+    if focused == Some(true) {
+      return;
+    }
+  }
+  panic!("Tab never reached {id}");
+}
+
+/// The About cards and the Welcome page's links are links for the keyboard
+/// and assistive clients: Tab reaches them, and Enter or Space opens them.
+#[gpui_kit::test]
+fn the_about_and_welcome_links_open_from_the_keyboard(cx: &mut TestAppContext) {
+  let shell = Shell::open(cx);
+  shell.window(cx, |window, _| window.activate_window());
+  for (id, label) in [
+    ("welcome-author", "Sam Cao"),
+    ("welcome-github", "github.com/caoccao/BatchMkvExtract"),
+  ] {
+    let link = shell.window(cx, |window, cx| {
+      window.render_frame(cx);
+      window.find(id)
+    });
+    assert_eq!((link.role(), link.label()), (Some(Role::Link), Some(label)));
+  }
+  tab_to(&shell, cx, "welcome-author");
+  shell.press(cx, "enter");
+  assert_eq!(cx.opened_url().as_deref(), Some("https://github.com/caoccao/"));
+  tab_to(&shell, cx, "welcome-github");
+  shell.press(cx, "space");
+  assert_eq!(
+    cx.opened_url().as_deref(),
+    Some("https://github.com/caoccao/BatchMkvExtract")
+  );
+  shell.click(cx, "toolbar-about");
+  let card = shell.window(cx, |window, cx| {
+    window.render_frame(cx);
+    window.find("about-author")
+  });
+  assert_eq!((card.role(), card.label()), (Some(Role::Link), Some("Author: Sam Cao")));
+  tab_to(&shell, cx, "about-github");
+  shell.press(cx, "enter");
+  assert_eq!(
+    cx.opened_url().as_deref(),
+    Some("https://github.com/caoccao/BatchMkvExtract")
+  );
+}
+
 #[gpui_kit::test]
 fn the_toolbar_enables_what_the_stores_allow(cx: &mut TestAppContext) {
   let shell = Shell::open(cx);
@@ -493,10 +561,12 @@ fn switching_the_theme_and_mode_restyles_the_window_at_once(cx: &mut TestAppCont
       ..Config::default()
     },
   );
+  // The ring is the theme's main colour (a button's may be deeper, for its
+  // text's contrast).
   let primary = |shell: &Shell, cx: &mut TestAppContext| {
     shell.window(cx, |window, cx| {
       window.render_frame(cx);
-      (cx.theme().primary, cx.theme().is_dark())
+      (cx.theme().ring, cx.theme().is_dark())
     })
   };
   let ocean: Hsla = rgb(crate::theme::spec(ThemeName::Ocean).main).into();
@@ -539,19 +609,33 @@ fn a_toast_appears_in_the_window(cx: &mut TestAppContext) {
 fn the_close_guard_asks_only_while_extractions_are_active(cx: &mut TestAppContext) {
   let shell = Shell::open(cx);
   let confirmed = std::rc::Rc::new(std::cell::Cell::new(false));
-  let closes = shell.window(cx, |window, cx| close_guard::should_close(false, window, cx, |_, _| {}));
+  let stopped = |_: &mut Window, _: &mut App| Task::ready(true);
+  let closes = shell.window(cx, |window, cx| {
+    close_guard::should_close(false, window, cx, stopped, |_| {})
+  });
   assert!(closes);
   assert!(!shell.has_dialog(cx));
 
   let flag = confirmed.clone();
   let closes = shell.window(cx, |window, cx| {
-    close_guard::should_close(true, window, cx, move |_, _| flag.set(true))
+    close_guard::should_close(
+      true,
+      window,
+      cx,
+      move |_, _| {
+        flag.set(true);
+        Task::ready(true)
+      },
+      |_| {},
+    )
   });
   assert!(!closes);
   cx.run_until_parked();
   assert!(shell.has_dialog(cx));
   // A second request while the dialog is open does not stack another one.
-  shell.window(cx, |window, cx| close_guard::should_close(true, window, cx, |_, _| {}));
+  shell.window(cx, |window, cx| {
+    close_guard::should_close(true, window, cx, stopped, |_| {})
+  });
   shell.window(cx, |window, cx| window.render_frame(cx));
   shell.click(cx, "exit-no");
   assert!(!confirmed.get());
@@ -559,11 +643,21 @@ fn the_close_guard_asks_only_while_extractions_are_active(cx: &mut TestAppContex
 
   let flag = confirmed.clone();
   shell.window(cx, |window, cx| {
-    close_guard::should_close(true, window, cx, move |_, _| flag.set(true))
+    close_guard::should_close(
+      true,
+      window,
+      cx,
+      move |_, _| {
+        flag.set(true);
+        Task::ready(true)
+      },
+      |_| {},
+    )
   });
   cx.run_until_parked();
   shell.window(cx, |window, cx| window.render_frame(cx));
   shell.click(cx, "exit-yes");
+  cx.run_until_parked();
   assert!(confirmed.get());
   assert!(
     cx.update_window(shell.handle, |_, _, _| ()).is_err(),
@@ -615,13 +709,46 @@ fn enter_and_escape_answer_no_in_the_exit_dialog(cx: &mut TestAppContext) {
   for key in ["enter", "escape"] {
     let flag = confirmed.clone();
     shell.window(cx, |window, cx| {
-      close_guard::should_close(true, window, cx, move |_, _| flag.set(true))
+      close_guard::should_close(
+        true,
+        window,
+        cx,
+        move |_, _| {
+          flag.set(true);
+          Task::ready(true)
+        },
+        |_| {},
+      )
     });
     cx.run_until_parked();
     shell.window(cx, |window, cx| window.render_frame(cx));
     shell.press(cx, key);
     assert!(!confirmed.get(), "{key} does not confirm");
     assert!(!shell.has_dialog(cx), "{key} closes the dialog");
+  }
+}
+
+/// Enter and Escape in the dialog after an `mkvextract` did not stop wait:
+/// the window stays.
+#[gpui_kit::test]
+fn enter_and_escape_wait_when_an_extraction_did_not_stop(cx: &mut TestAppContext) {
+  let shell = Shell::open(cx);
+  for key in ["enter", "escape"] {
+    let waited = std::rc::Rc::new(std::cell::Cell::new(false));
+    let flag = waited.clone();
+    shell.window(cx, |window, cx| {
+      close_guard::should_close(true, window, cx, |_, _| Task::ready(false), move |_| flag.set(true))
+    });
+    cx.run_until_parked();
+    shell.window(cx, |window, cx| window.render_frame(cx));
+    shell.click(cx, "exit-yes");
+    cx.run_until_parked();
+    shell.window(cx, |window, cx| window.render_frame(cx));
+    assert!(shell.has_dialog(cx), "the choice is open");
+    shell.press(cx, key);
+    assert!(waited.get(), "{key} waits");
+    assert!(!shell.has_dialog(cx));
+    assert!(cx.update_window(shell.handle, |_, _, _| ()).is_ok());
   }
 }
 
@@ -1189,7 +1316,51 @@ fn closing_while_an_extraction_runs_asks_and_yes_cancels_it(cx: &mut TestAppCont
   cx.run_until_parked();
   shell.window(cx, |window, cx| window.render_frame(cx));
   shell.click(cx, "exit-yes");
+  cx.run_until_parked();
   assert_eq!(shell.cancelled(), [a]);
+  assert!(
+    cx.update_window(shell.handle, |_, _, _| ()).is_err(),
+    "the window closed"
+  );
+}
+
+/// An `mkvextract` that does not stop after Yes keeps the window open with
+/// a choice: Wait keeps it and the app again, and Quit anyway closes it.
+#[gpui_kit::test]
+fn an_extraction_that_does_not_stop_asks_to_wait_or_quit_anyway(cx: &mut TestAppContext) {
+  let a = "/media/a.mkv";
+  let shell = Shell::with_files(cx, movies(&[a]));
+  shell.stops.store(false, std::sync::atomic::Ordering::SeqCst);
+  shell.add_files(cx, &[a]);
+  shell.press(cx, "f3");
+  shell.send(cx, started(a));
+  let stores = shell.stores.clone();
+  let close = |cx: &mut TestAppContext| {
+    let stores = stores.clone();
+    let closes = shell.window(cx, |window, cx| {
+      crate::platform::window::close_requested(&stores, window, cx)
+    });
+    assert!(!closes);
+    cx.run_until_parked();
+    shell.window(cx, |window, cx| window.render_frame(cx));
+  };
+  close(cx);
+  shell.click(cx, "exit-yes");
+  cx.run_until_parked();
+  shell.window(cx, |window, cx| window.render_frame(cx));
+  assert!(shell.has_dialog(cx), "the choice is open");
+  shell.click(cx, "exit-wait");
+  assert!(!shell.has_dialog(cx));
+  assert!(!shell.stores.ui.read_with(cx, |ui, _| ui.is_closing()));
+  assert!(
+    cx.update_window(shell.handle, |_, _, _| ()).is_ok(),
+    "Wait keeps the window"
+  );
+  close(cx);
+  shell.click(cx, "exit-yes");
+  cx.run_until_parked();
+  shell.window(cx, |window, cx| window.render_frame(cx));
+  shell.click(cx, "exit-quit-anyway");
   assert!(
     cx.update_window(shell.handle, |_, _, _| ()).is_err(),
     "the window closed"

@@ -95,6 +95,10 @@ pub enum TrackListError {
   Failed { messages: Vec<String> },
   /// `mkvmerge`'s output was not the JSON it documents.
   Parse { detail: String },
+  /// `mkvmerge` was still running after `seconds` and was stopped.
+  TimedOut { seconds: u64 },
+  /// The listing was cancelled (the file was removed); never shown.
+  Cancelled,
   /// Any other failure (the file is missing, …), shown as it is.
   Other(String),
 }
@@ -107,6 +111,8 @@ impl std::fmt::Display for TrackListError {
       Self::Failed { messages } if messages.is_empty() => write!(f, "mkvmerge failed"),
       Self::Failed { messages } => write!(f, "mkvmerge failed: {}", messages.join(" ")),
       Self::Parse { detail } => write!(f, "the output of mkvmerge could not be parsed: {detail}"),
+      Self::TimedOut { seconds } => write!(f, "mkvmerge did not finish within {seconds} seconds"),
+      Self::Cancelled => f.write_str("the listing was cancelled"),
       Self::Other(message) => f.write_str(message),
     }
   }
@@ -206,5 +212,10 @@ mod tests {
       "the output of mkvmerge could not be parsed: EOF"
     );
     assert_eq!(TrackListError::Other("gone".into()).to_string(), "gone");
+    assert_eq!(
+      TrackListError::TimedOut { seconds: 60 }.to_string(),
+      "mkvmerge did not finish within 60 seconds"
+    );
+    assert_eq!(TrackListError::Cancelled.to_string(), "the listing was cancelled");
   }
 }

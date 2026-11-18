@@ -21,6 +21,7 @@
 
 use gpui_kit::{App, PathPromptOptions};
 
+use crate::state::ui::NotificationKind;
 use crate::state::{Stores, files};
 
 /// Lets the user pick `.mkv` files and adds them.
@@ -53,21 +54,31 @@ pub fn add_folder(stores: &Stores, cx: &mut App) {
 
 fn prompt(stores: &Stores, options: PathPromptOptions, cx: &mut App) {
   let chosen = cx.prompt_for_paths(options);
-  let (file_store, ui) = (stores.files.clone(), stores.ui.clone());
+  let stores = stores.clone();
   cx.spawn(async move |cx| {
-    let paths = match chosen.await {
-      Ok(Ok(Some(paths))) => paths,
-      Ok(Ok(None)) | Err(_) => return,
-      Ok(Err(error)) => {
-        log::error!("The file dialog failed: {error}");
-        return;
-      }
+    // The dialog went away unanswered.
+    let Ok(chosen) = chosen.await else {
+      return;
     };
-    let paths = paths
-      .into_iter()
-      .map(|path| path.to_string_lossy().into_owned())
-      .collect();
-    cx.update(|cx| files::add_paths(&file_store, Some(&ui), paths, cx));
+    cx.update(|cx| take_chosen(&stores, chosen, cx));
   })
   .detach();
+}
+
+/// What a file dialog gave: the chosen paths are added; a cancel does
+/// nothing; a dialog that could not open (no XDG desktop portal on Linux,
+/// say) is named in a snackbar with the way around it, so it is not taken
+/// for a cancel.
+pub(crate) fn take_chosen(stores: &Stores, chosen: anyhow::Result<Option<Vec<std::path::PathBuf>>>, cx: &mut App) {
+  match chosen {
+    Ok(Some(paths)) => files::add_paths(&stores.files, Some(&stores.ui), paths, cx),
+    Ok(None) => {}
+    Err(error) => {
+      log::error!("The file dialog failed: {error}");
+      let message = rust_i18n::t!("notification.fileDialogFailed", detail = error.to_string()).into_owned();
+      stores
+        .ui
+        .update(cx, |ui, cx| ui.show_snackbar(NotificationKind::Error, message, cx));
+    }
+  }
 }

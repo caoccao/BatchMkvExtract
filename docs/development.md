@@ -136,9 +136,9 @@ Install, upgrade and uninstall:
 
 In the app, on each OS:
 
-- [ ] Files and folders dropped onto the window, chosen with Add Files or Add Folder, or given on the command line become cards; a missing path is named in a snackbar; the same file added again is listed once.
+- [ ] Files and folders dropped onto the window, chosen with Add Files or Add Folder, or given on the command line become cards; a missing path is named in a snackbar; the same file added again is listed once. On macOS, an `.mkv` opened with the app from Finder (Open With) or dropped on its Dock icon becomes a card, with the app closed and while it runs.
 - [ ] Track table: a click on a row toggles it, select-all shows the mixed state, the chapters and attachment rows, the profile's auto-selection when the tracks arrive.
-- [ ] Group Mode (toolbar, F8): files of a folder with the same track counts form a group card; its table selects for every file; the splitter resizes the file list.
+- [ ] Group Mode (toolbar, F8): files of a folder whose tracks line up (same ids, types, languages and codecs) form a group card, and a file whose audio languages swap ids gets a card of its own; its table selects for every file; the splitter resizes the file list.
 - [ ] Set Output Path on a card and a group card, and the toolbar's global output path: the warning for a missing folder, an unwritable folder refused; Extract creates the folder.
 - [ ] Copy Command and Copy All Commands: the copied command runs in the platform's shell and writes what Extract writes; Open in BetterMediaInfo when it is installed.
 - [ ] Extract, Extract All (F3), Cancel on the card and in the queue, Cancel All (F4), Resume, Resume All, Clear Completed, Delete, Clear (Ctrl+Q); on Windows, files on two drives extract in parallel, one at a time per drive.

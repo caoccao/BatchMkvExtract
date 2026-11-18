@@ -174,24 +174,41 @@ impl AppView {
   /// A drained queue's notice: an OS notification (`.system()`: the OS
   /// notification centre only, the title, and the two lines as its body)
   /// and/or the topmost window. If the topmost window is shown, it owns
-  /// the decision to quit.
+  /// the decision to quit. When it cannot be opened, the notice goes to this
+  /// window (unless the OS notification has it) and Quit when complete quits
+  /// as without the topmost window.
   fn complete(&mut self, completion: &Completion, window: &mut Window, cx: &mut Context<Self>) {
     let notice = &completion.notice;
-    if completion.system {
+    let notification = |notice: &crate::state::ui::CompletionNotice| {
       let body = format!("{}\n{}", notice.line, notice.detail);
       let notification = if notice.failed {
         Notification::error(body)
       } else {
         Notification::success(body)
       };
-      window.push_notification(notification.title(notice.title.clone()).system(), cx);
+      notification.title(notice.title.clone())
+    };
+    if completion.system {
+      window.push_notification(notification(notice).system(), cx);
     }
     if completion.topmost {
       let quit = completion.quit.then(|| self.stores.ui.downgrade());
-      self.topmost.show(notice.clone(), quit, window, cx);
-    } else if completion.quit {
+      if self.topmost.show(notice.clone(), quit, window, cx) {
+        return;
+      }
+      if !completion.system {
+        window.push_notification(notification(notice), cx);
+      }
+    }
+    if completion.quit {
       self.quit_after_completion(window, cx);
     }
+  }
+
+  /// The topmost window, mutably (tests).
+  #[cfg(test)]
+  pub(crate) fn topmost_mut(&mut self) -> &mut TopmostWindow {
+    &mut self.topmost
   }
 
   fn quit_after_completion(&self, window: &mut Window, cx: &mut Context<Self>) {
@@ -241,11 +258,7 @@ impl Render for AppView {
       .bg(cx.theme().background)
       .text_color(cx.theme().foreground)
       .on_drop(cx.listener(|this, paths: &ExternalPaths, _, cx| {
-        let paths = paths
-          .paths()
-          .iter()
-          .map(|path| path.to_string_lossy().into_owned())
-          .collect();
+        let paths = paths.paths().to_vec();
         files::add_paths(&this.stores.files, Some(&this.stores.ui), paths, cx);
       }))
       .child(

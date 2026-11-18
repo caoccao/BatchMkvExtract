@@ -166,12 +166,22 @@ fn output_file_names_match_the_recorded_ones() {
   }
 }
 
+/// 0.3.0 split every path at `/` and `\`; 1.0.0 does that on Windows, while
+/// on Linux and macOS a `\` is part of a name, so a path with one splits at
+/// its last `/` there, on purpose.
 #[test]
 fn paths_split_as_recorded() {
   for case in items(&golden("paths.json")["cases"]) {
     let path = text(&case["path"]);
-    assert_eq!(parent_dir(path), text(&case["parentDir"]), "parent of {path:?}");
-    assert_eq!(file_name(path), text(&case["fileName"]), "file name of {path:?}");
+    let (parent, name) = if cfg!(windows) || !path.contains('\\') {
+      (text(&case["parentDir"]), text(&case["fileName"]))
+    } else {
+      path
+        .rsplit_once('/')
+        .map_or(("", path), |(parent, name)| (parent, name))
+    };
+    assert_eq!(parent_dir(path), parent, "parent of {path:?}");
+    assert_eq!(file_name(path), name, "file name of {path:?}");
   }
 }
 

@@ -28,7 +28,7 @@ pub mod row;
 #[cfg(test)]
 mod tests;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use gpui_kit::base::{TestSupportExt as _, TestTextExt as _};
 use gpui_kit::component::scroll::ScrollableElement as _;
@@ -89,7 +89,8 @@ impl QueueView {
   fn sync_rows(&mut self, cx: &mut Context<Self>) {
     let queue = self.stores.queue.read(cx);
     let files: Vec<String> = queue.items().map(|item| item.file.clone()).collect();
-    self.rows.retain(|file, _| files.contains(file));
+    let listed: HashSet<&String> = files.iter().collect();
+    self.rows.retain(|file, _| listed.contains(file));
     for file in files {
       if !self.rows.contains_key(&file) {
         let stores = self.stores.clone();

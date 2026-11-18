@@ -805,7 +805,11 @@ fn keep_valid_values(document: &mut Value, path: &mut Vec<String>, value: &Value
 }
 
 /// Replaces the array at `path` with the items of `items` that keep the
-/// document valid; an empty array when none does.
+/// document valid; an empty array when none does. An object item that does
+/// not keep it valid as it is, such as a profile with one mistyped value, is
+/// salvaged member by member: it starts empty (every value its default) and
+/// takes each of its members that keeps the document valid, so one bad value
+/// costs only that value.
 fn keep_valid_items(document: &mut Value, path: &[String], items: &[Value]) {
   let Some((key, parent)) = path.split_last() else {
     return;
@@ -832,10 +836,42 @@ fn keep_valid_items(document: &mut Value, path: &[String], items: &[Value]) {
       }
     };
     push(document, Some(item));
-    if serde_json::from_value::<Config>(document.clone()).is_err() {
-      push(document, None);
+    if serde_json::from_value::<Config>(document.clone()).is_ok() {
+      continue;
+    }
+    push(document, None);
+    if let Value::Object(members) = item {
+      push(document, Some(&Value::Object(serde_json::Map::new())));
+      if serde_json::from_value::<Config>(document.clone()).is_err() {
+        push(document, None);
+        continue;
+      }
+      for (member, value) in members {
+        if let Some(salvaged) = last_item(document, parent, key) {
+          salvaged.insert(member.clone(), value.clone());
+        }
+        if serde_json::from_value::<Config>(document.clone()).is_err()
+          && let Some(salvaged) = last_item(document, parent, key)
+        {
+          salvaged.remove(member);
+        }
+      }
     }
   }
+}
+
+/// The last item of the array `key` of the object at `parent`, when it is an
+/// object.
+fn last_item<'a>(
+  document: &'a mut Value,
+  parent: &[String],
+  key: &str,
+) -> Option<&'a mut serde_json::Map<String, Value>> {
+  object_at(document, parent)?
+    .get_mut(key)?
+    .as_array_mut()?
+    .last_mut()?
+    .as_object_mut()
 }
 
 /// The object at `path` (object keys from the root) inside `document`.
@@ -880,17 +916,97 @@ pub fn get_config() -> Config {
     .clone()
 }
 
-/// Saves `config` and makes it the config [`get_config`] returns. The lock is
-/// held across both, so concurrent calls leave the file and the in-memory
-/// config with the same value.
+/// Saves `config` and makes it the config [`get_config`] returns. The save
+/// keeps what another instance of the app saved meanwhile
+/// ([`save_merged`]): only the values `config` changed since this process's
+/// last save, or its load, replace those in the file. The lock is held
+/// across the save and the update, so concurrent calls leave the in-memory
+/// config with the value last saved; a failed save leaves it as it was, so
+/// the next save carries its changes too.
 pub fn set_config(config: Config) -> Result<()> {
   let mut current = CONFIG
     .get_or_init(|| RwLock::new(Config::new()))
     .write()
     .unwrap_or_else(PoisonError::into_inner);
-  let result = config.save(&Config::get_path_buf());
+  save_merged(&Config::get_path_buf(), &current, &config)?;
   *current = config;
-  result
+  Ok(())
+}
+
+/// Saves `ours` over the config file at `path`, which other instances of the
+/// app may have saved since this one last saved `base` (or loaded it). Under
+/// an interprocess lock on `<path>.lock`, the file is read again and each
+/// value `ours` changed from `base` replaces the file's: an object member by
+/// member, anything else whole (the profile list is one value). Every other
+/// value stays as the file has it, so a window size saved here does not put
+/// back a profile list another instance changed. A file that cannot be read
+/// as a config is replaced by `ours`. Returns what was written.
+fn save_merged(path: &Path, base: &Config, ours: &Config) -> Result<Config> {
+  let _lock = lock_config_file(path);
+  let theirs = std::fs::read(path).ok().and_then(|bytes| match Config::parse(&bytes) {
+    Parsed::Loaded(theirs, _) => Some(theirs),
+    Parsed::Salvaged(..) => None,
+  });
+  let merged = match theirs {
+    Some(theirs) => merge_configs(base, ours, &theirs),
+    None => ours.clone(),
+  };
+  merged.save(path)?;
+  Ok(merged)
+}
+
+/// Takes the interprocess lock of the config file at `path`; released when
+/// the returned file is dropped. `None` (a save without the lock) when the
+/// lock file cannot be opened or locked.
+fn lock_config_file(path: &Path) -> Option<std::fs::File> {
+  let name = path.file_name().unwrap_or_default().to_string_lossy();
+  let lock = std::fs::File::options()
+    .read(true)
+    .write(true)
+    .create(true)
+    .truncate(false)
+    .open(path.with_file_name(format!("{name}.lock")))
+    .inspect_err(|error| log::warn!("Couldn't open the config lock file: {error}"))
+    .ok()?;
+  match lock.lock() {
+    Ok(()) => Some(lock),
+    Err(error) => {
+      log::warn!("Couldn't lock the config file: {error}");
+      None
+    }
+  }
+}
+
+/// `theirs` with what `ours` changed from `base` ([`merge_values`]), its
+/// profile list made valid again.
+fn merge_configs(base: &Config, ours: &Config, theirs: &Config) -> Config {
+  let as_value = |config: &Config| serde_json::to_value(config).unwrap_or(Value::Null);
+  let (base_value, ours_value, mut merged) = (as_value(base), as_value(ours), as_value(theirs));
+  merge_values(&base_value, &ours_value, &mut merged);
+  let mut merged: Config = serde_json::from_value(merged).unwrap_or_else(|_| ours.clone());
+  merged.normalize_profiles();
+  merged
+}
+
+/// Applies onto `theirs` what `ours` changed from `base`: objects member by
+/// member, any other value whole.
+fn merge_values(base: &Value, ours: &Value, theirs: &mut Value) {
+  if ours == base {
+    return;
+  }
+  match (base, ours, theirs) {
+    (Value::Object(base), Value::Object(ours), Value::Object(theirs)) => {
+      for (key, value) in ours {
+        match (base.get(key), theirs.get_mut(key)) {
+          (Some(base), Some(theirs)) => merge_values(base, value, theirs),
+          _ => {
+            theirs.insert(key.clone(), value.clone());
+          }
+        }
+      }
+    }
+    (_, ours, theirs) => *theirs = ours.clone(),
+  }
 }
 
 #[cfg(test)]
@@ -1370,12 +1486,33 @@ mod tests {
   #[test]
   fn a_broken_profile_is_dropped_and_the_others_are_kept() {
     let config = salvaged(
-      r#"{"profiles": [{"name": "Default"}, {"name": "Broken", "selectVideo": "yes"}, {"name": "Anime"}],
+      r#"{"profiles": [{"name": "Default"}, "not a profile", {"name": "Anime"}],
           "activeProfile": "Anime"}"#,
     );
     let names: Vec<&str> = config.profiles.iter().map(|profile| profile.name.as_str()).collect();
     assert_eq!(names, ["Default", "Anime"]);
     assert_eq!(config.active_profile, "Anime");
+  }
+
+  /// One invalid value in a profile costs only that value: the profile keeps
+  /// its name, its other values and its place as the active profile.
+  #[test]
+  fn an_invalid_profile_value_costs_only_that_value() {
+    let config = salvaged(
+      r#"{"profiles": [{"name": "Default"},
+            {"name": "Anime", "selectVideo": "yes", "audioTemplate": "{file_name}.a",
+             "audioLanguages": "jpn", "selectAudio": true, "defaultGroupMode": false}],
+          "activeProfile": "Anime"}"#,
+    );
+    let names: Vec<&str> = config.profiles.iter().map(|profile| profile.name.as_str()).collect();
+    assert_eq!(names, ["Default", "Anime"]);
+    assert_eq!(config.active_profile, "Anime");
+    let anime = &config.profiles[1];
+    assert!(!anime.select_video, "the invalid value went back to its default");
+    assert_eq!(anime.audio_template, "{file_name}.a");
+    assert_eq!(anime.audio_languages, "jpn");
+    assert!(anime.select_audio);
+    assert!(!anime.default_group_mode);
   }
 
   #[test]
@@ -1451,6 +1588,65 @@ mod tests {
       .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
       .collect();
     assert_eq!(names, ["BatchMkvExtract.json"]);
+  }
+
+  /// Two instances that loaded one file and save their own changes keep
+  /// each other's: a profile edited in one survives the window size the
+  /// other saves later. The same value changed in both is the later save's.
+  #[test]
+  fn two_instances_keep_each_others_settings() {
+    let dir = ScratchDir::new("merged");
+    let path = dir.file();
+    let loaded = Config::default();
+    loaded.save(&path).unwrap();
+    let mut first = loaded.clone();
+    first.profiles[0].audio_template = "{file_name}.first".into();
+    first.window.size.width = 700;
+    save_merged(&path, &loaded, &first).unwrap();
+    let mut second = loaded.clone();
+    second.window.size.width = 800;
+    second.update.last_checked = 42;
+    let written = save_merged(&path, &loaded, &second).unwrap();
+    let on_disk = Config::load(path.clone()).0;
+    for config in [&written, &on_disk] {
+      assert_eq!(
+        config.profiles[0].audio_template, "{file_name}.first",
+        "the first's profile"
+      );
+      assert_eq!(config.window.size.width, 800, "the later window size");
+      assert_eq!(config.update.last_checked, 42);
+    }
+    // The second saves again from what it saved: the profile stays.
+    let mut again = second.clone();
+    again.window.size.height = 600;
+    save_merged(&path, &second, &again).unwrap();
+    let on_disk = Config::load(path.clone()).0;
+    assert_eq!(on_disk.profiles[0].audio_template, "{file_name}.first");
+    assert_eq!((on_disk.window.size.width, on_disk.window.size.height), (800, 600));
+    // A file that is no config is replaced by what this instance has.
+    std::fs::write(&path, b"{ broken").unwrap();
+    let written = save_merged(&path, &again, &again).unwrap();
+    assert_eq!(
+      written.profiles[0].audio_template,
+      ConfigProfile::default().audio_template
+    );
+    assert!(path.with_file_name("BatchMkvExtract.json.lock").exists());
+  }
+
+  #[test]
+  fn merging_applies_only_what_changed() {
+    let base = serde_json::json!({"a": 1, "b": {"c": 1, "d": [1]}, "e": "x"});
+    let ours = serde_json::json!({"a": 1, "b": {"c": 2, "d": [1]}, "e": "x", "f": true});
+    let mut theirs = serde_json::json!({"a": 5, "b": {"c": 1, "d": [7]}, "e": "y"});
+    merge_values(&base, &ours, &mut theirs);
+    assert_eq!(
+      theirs,
+      serde_json::json!({"a": 5, "b": {"c": 2, "d": [7]}, "e": "y", "f": true})
+    );
+    // A list changed here replaces theirs whole.
+    let mut theirs = serde_json::json!([3]);
+    merge_values(&serde_json::json!([1]), &serde_json::json!([2]), &mut theirs);
+    assert_eq!(theirs, serde_json::json!([2]));
   }
 
   #[test]

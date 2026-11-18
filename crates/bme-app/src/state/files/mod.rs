@@ -62,6 +62,9 @@ pub struct FileStore {
   /// The table rows of each loaded file.
   file_tracks: HashMap<String, Vec<MkvTrack>>,
   file_track_counts: HashMap<String, TrackCounts>,
+  /// The Group Mode key of each loaded file
+  /// ([`grouping_key`](crate::domain::grouping::grouping_key)).
+  file_group_keys: HashMap<String, String>,
   /// Selected row keys (`"{type}:{id}"`) per file; absent until the profile's
   /// selection ran.
   file_selected_ids: HashMap<String, Vec<String>>,
@@ -77,8 +80,12 @@ pub struct FileStore {
   /// Why a file's tracks could not be listed; it is not tried again until
   /// removed.
   load_errors: HashMap<String, TrackListError>,
-  /// Files whose tracks are being listed on the background executor.
-  in_flight: HashSet<String>,
+  /// The listings running on the background executor, by file.
+  in_flight: HashMap<String, load::Listing>,
+  /// The last listing's generation.
+  last_listing: u64,
+  /// The MKVToolNix directory of the settings, which listings run with.
+  mkv_toolnix_path: String,
   /// Listed files whose refresh is still to come: results that arrive
   /// together are refreshed once (see `finish_load`).
   loaded: Vec<String>,
@@ -97,14 +104,18 @@ impl FileStore {
   /// events) and lists tracks with `source`.
   pub fn new(config: &Entity<ConfigStore>, source: TrackSource, cx: &mut Context<Self>) -> Self {
     let mut store = Self::with_profile(active_profile(config.read(cx).config()), source);
+    store.mkv_toolnix_path = mkv_toolnix_path(config.read(cx).config());
     store._config = vec![
       cx.observe(config, |store, config, cx| {
-        let selector = active_profile(config.read(cx).config()).map(TrackSelector::new);
+        let config = config.read(cx).config();
+        let (selector, path) = (active_profile(config).map(TrackSelector::new), mkv_toolnix_path(config));
         store.set_selector(selector, cx);
+        store.set_mkv_toolnix_path(path, cx);
       }),
       cx.subscribe(config, |store, _, event: &ConfigEvent, cx| {
-        let ConfigEvent::GroupMode(on) = event;
-        store.set_group_mode(*on, cx);
+        if let ConfigEvent::GroupMode(on) = event {
+          store.set_group_mode(*on, cx);
+        }
       }),
     ];
     store
@@ -118,13 +129,16 @@ impl FileStore {
       file_identities: HashMap::new(),
       file_tracks: HashMap::new(),
       file_track_counts: HashMap::new(),
+      file_group_keys: HashMap::new(),
       file_selected_ids: HashMap::new(),
       file_output_dirs: HashMap::new(),
       global_output_dir: None,
       group_mode: profile.is_some_and(|profile| profile.default_group_mode),
       better_media_info: None,
       load_errors: HashMap::new(),
-      in_flight: HashSet::new(),
+      in_flight: HashMap::new(),
+      last_listing: 0,
+      mkv_toolnix_path: String::new(),
       loaded: Vec::new(),
       entries: Vec::new(),
       has_selection: false,
@@ -154,7 +168,8 @@ impl FileStore {
     self.file_selected_ids.get(file).map(Vec::as_slice)
   }
 
-  /// The selected rows of `file` in table order.
+  /// The selected rows of `file` in table order; never one `mkvextract`
+  /// cannot extract ([`is_extractable`](bme_core::extract_args::is_extractable)).
   pub fn selected_tracks(&self, file: &str) -> Vec<MkvTrack> {
     let (Some(tracks), Some(selected)) = (self.file_tracks.get(file), self.file_selected_ids.get(file)) else {
       return Vec::new();
@@ -162,7 +177,7 @@ impl FileStore {
     let selected: HashSet<&str> = selected.iter().map(String::as_str).collect();
     tracks
       .iter()
-      .filter(|track| selected.contains(track.key().as_str()))
+      .filter(|track| selected.contains(track.key().as_str()) && bme_core::extract_args::is_extractable(track))
       .cloned()
       .collect()
   }
@@ -214,15 +229,24 @@ impl FileStore {
       .collect()
   }
 
+  /// The [`output_key`](bme_core::extract_args::output_key)s of the listed
+  /// source files, by their path and by their identity: no extraction may
+  /// write one of them.
+  pub fn source_keys(&self) -> HashSet<String> {
+    self
+      .files
+      .iter()
+      .flat_map(|file| std::iter::once(file).chain(self.file_identities.get(file)))
+      .map(|path| bme_core::extract_args::output_key(path))
+      .collect()
+  }
+
   /// Lists `file` as loaded with `tracks` and the `selected` keys, without
   /// a context (tests).
   #[cfg(test)]
   pub(crate) fn load_for_tests(&mut self, file: &str, tracks: Vec<MkvTrack>, selected: &[&str]) {
     self.files.push(file.to_string());
-    self
-      .file_track_counts
-      .insert(file.to_string(), TrackCounts::of(&tracks));
-    self.file_tracks.insert(file.to_string(), tracks);
+    self.store_tracks(file, tracks);
     let selected = selected.iter().map(|key| (*key).to_string()).collect();
     self.file_selected_ids.insert(file.to_string(), selected);
   }
@@ -283,12 +307,15 @@ impl FileStore {
     self.refresh(removed, true, cx);
   }
 
-  /// Drops what is known about `file`. A listing in flight runs on: its
-  /// result is kept if the file is listed again before it arrives.
+  /// Drops what is known about `file`; a listing in flight is cancelled, so
+  /// its place is free and its result dropped, also when the file is listed
+  /// again before it arrives.
   fn forget(&mut self, file: &str) {
+    self.cancel_listings(Some(std::slice::from_ref(&file.to_string())));
     self.file_identities.remove(file);
     self.file_tracks.remove(file);
     self.file_track_counts.remove(file);
+    self.file_group_keys.remove(file);
     self.file_selected_ids.remove(file);
     self.file_output_dirs.remove(file);
     self.load_errors.remove(file);
@@ -352,7 +379,7 @@ impl FileStore {
   /// a derived value changed) and emits the changed files.
   fn refresh(&mut self, mut changed: Vec<String>, structural: bool, cx: &mut Context<Self>) {
     let before = (std::mem::take(&mut self.entries), self.has_selection);
-    self.entries = build_render_entries(&self.files, self.group_mode, &self.file_track_counts);
+    self.entries = build_render_entries(&self.files, self.group_mode, &self.file_group_keys);
     changed.extend(self.auto_select());
     self.has_selection = self
       .files
@@ -371,6 +398,11 @@ impl FileStore {
   }
 }
 
+/// The MKVToolNix directory listings run with.
+fn mkv_toolnix_path(config: &bme_core::config::Config) -> String {
+  crate::tools::Tool::MkvToolNix.path(config).trim().to_string()
+}
+
 /// What makes two paths the same file: the path as the file system resolves
 /// it (`.` and `..`, links, and on macOS and Windows the letter case stored
 /// on disk), or the path itself when that fails. Reads the file system.
@@ -384,7 +416,12 @@ pub fn file_identity(path: &str) -> String {
 /// background executor (a folder lists the `.mkv` files directly inside it,
 /// sorted) and adds them. What could not be read is skipped, and `ui`, when
 /// given, says so in a snackbar.
-pub fn add_paths(files: &Entity<FileStore>, ui: Option<&Entity<UiState>>, paths: Vec<String>, cx: &mut App) {
+pub fn add_paths(
+  files: &Entity<FileStore>,
+  ui: Option<&Entity<UiState>>,
+  paths: Vec<std::path::PathBuf>,
+  cx: &mut App,
+) {
   if paths.is_empty() {
     return;
   }

@@ -144,14 +144,19 @@ pub fn is_newer_version(latest: &str, current: &str) -> bool {
   !latest.parts.is_empty() && latest.cmp(&Version::parse(current)) == Ordering::Greater
 }
 
-/// Records a finished check in `update` (`lastChecked` = `now`, and
-/// `lastVersion` when a newer release was found) and returns what to show:
-/// the update, unless it is the version the user skipped.
+/// Records a check that got an answer in `update` (`lastChecked` = `now`,
+/// and `lastVersion` = the newer release it found, cleared when it found
+/// none, so a release withdrawn since is not announced from the cache on the
+/// next start) and returns what to show: the update, unless it is the
+/// version the user skipped. A check that failed is not recorded; the
+/// version cached before it stays.
 pub fn record_check(update: &mut ConfigUpdate, result: UpdateCheckResult, now: i64) -> UpdateCheckResult {
   update.last_checked = now;
-  if let Some(ref version) = result.latest_version {
-    update.last_version = version.clone();
-  }
+  update.last_version = result
+    .latest_version
+    .clone()
+    .filter(|_| result.has_update)
+    .unwrap_or_default();
   without_ignored_version(result, &update.ignore_version)
 }
 
@@ -384,7 +389,17 @@ mod tests {
     update.ignore_version = "0.3.1".to_owned();
     assert_eq!(record_check(&mut update, found("0.3.1"), NOW + 1), no_update());
     assert_eq!((update.last_checked, update.last_version.as_str()), (NOW + 1, "0.3.1"));
+    // No newer release now (the one found before was withdrawn): the cache
+    // forgets it, and the next start within the interval announces nothing.
     assert_eq!(record_check(&mut update, no_update(), NOW + 2), no_update());
-    assert_eq!((update.last_checked, update.last_version.as_str()), (NOW + 2, "0.3.1"));
+    assert_eq!((update.last_checked, update.last_version.as_str()), (NOW + 2, ""));
+    let config = Config {
+      update: update.clone(),
+      ..Config::default()
+    };
+    assert_eq!(
+      startup_check(&config, NOW + 3, "0.3.0"),
+      StartupUpdateCheck::Cached(no_update())
+    );
   }
 }

@@ -77,7 +77,14 @@ pub fn run() {
   );
   // Read before the event loop starts; creates the default file on first run.
   let config = bme_core::config::get_config();
-  gpui_kit::application().with_assets(assets::AppAssets).run(move |cx| {
+  // Files the OS asks the app to open (macOS sends them as URLs, at launch
+  // before the stores exist and later while the app runs) wait in a channel.
+  let (opened_sender, opened_urls) = async_channel::unbounded::<Vec<String>>();
+  let application = gpui_kit::application().with_assets(assets::AppAssets);
+  application.on_open_urls(move |urls| {
+    let _ = opened_sender.try_send(urls);
+  });
+  application.run(move |cx| {
     // gpui-kit's own strings (dialog buttons, input menus) look up the
     // application's locale files first; registered before `init`.
     i18n::install_component_strings();
@@ -109,6 +116,13 @@ pub fn run() {
     platform::install_quit(handle, &stores, cx);
     notifications::report_unreadable_config(&stores, cx);
     platform::ingest_launch_args(&stores, cx);
+    let opened = stores.clone();
+    cx.spawn(async move |cx| {
+      while let Ok(urls) = opened_urls.recv().await {
+        cx.update(|cx| platform::ingest_open_urls(&opened, urls, cx));
+      }
+    })
+    .detach();
     actions::watch_better_media_info(&stores, cx);
     updates::start(&stores, updates::UpdateSource::github(), cx);
     // Bring the app to the front also when started from a terminal; GPUI

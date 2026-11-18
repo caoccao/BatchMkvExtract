@@ -20,11 +20,18 @@
 //! Each of the twenty configured themes is a gpui-kit theme set under
 //! `themes/` with a light and a dark variant. They set the primary, ring and
 //! link tokens from the theme's main colour and keep every other token at
-//! gpui-kit's defaults. The files are derived from [`THEMES`] by fixed rules
-//! (hover and active = the main colour darkened by 30 %, the dark-mode link
-//! hover lightened; text on the main colour white or 87 % black by contrast
-//! ratio); the test `every_theme_file_is_derived_from_its_main_colour` checks
-//! them and rewrites them when `BME_WRITE_THEMES=1` is set.
+//! gpui-kit's defaults. The files are derived from [`THEMES`] by fixed rules:
+//! the ring and the link are the main colour, the dark-mode link hover is it
+//! lightened by 20 %; a primary button's text is white or 87 % black, as
+//! 0.3.0 chose by the contrast ratio 3, and the button's colours are fitted
+//! to it so the text reaches 4.5:1 (WCAG's level for normal text) at rest,
+//! on hover and while pressed: under white text the main colour darkened as
+//! far as needed, then by 30 % on hover; under dark text the main colour
+//! (lightened as far as needed), then lightened by 30 % on hover. The test
+//! `every_theme_file_is_derived_from_its_main_colour` checks the files and
+//! rewrites them when `BME_WRITE_THEMES=1` is set, and
+//! `every_button_label_reaches_the_normal_text_contrast` reads the contrast
+//! from the files themselves.
 
 use bme_core::config::{Config, DisplayMode, Theme as ThemeName};
 use gpui_kit::component::{Theme, ThemeMode, ThemeRegistry, scroll::ScrollbarMode};
@@ -194,19 +201,81 @@ mod tests {
   }
 
   /// The text colour on `color`: white when its contrast ratio against the
-  /// colour is at least 3, else 87 % black.
+  /// colour is at least 3, else 87 % black (0.3.0's choice).
   fn contrast_text(color: Rgb) -> &'static str {
     let ratio = (1.0 + 0.05) / (luminance(color) + 0.05);
     if ratio >= 3.0 { "#ffffff" } else { "#000000de" }
+  }
+
+  /// The contrast WCAG asks of normal-sized text, as on a button.
+  const TEXT_CONTRAST: f64 = 4.5;
+
+  /// The exact WCAG relative luminance (no rounding).
+  fn exact_luminance(color: Rgb) -> f64 {
+    let [red, green, blue] = color.map(|channel| {
+      let value = channel / 255.0;
+      if value <= 0.03928 {
+        value / 12.92
+      } else {
+        ((value + 0.055) / 1.055).powf(2.4)
+      }
+    });
+    0.2126 * red + 0.7152 * green + 0.0722 * blue
+  }
+
+  /// The contrast ratio of two opaque colours.
+  fn contrast(first: Rgb, second: Rgb) -> f64 {
+    let (a, b) = (exact_luminance(first), exact_luminance(second));
+    (a.max(b) + 0.05) / (a.min(b) + 0.05)
+  }
+
+  /// Text of `color` (with its alpha, 0-1) drawn over `background`, as the
+  /// window composites it.
+  fn over(color: Rgb, alpha: f64, background: Rgb) -> Rgb {
+    [0, 1, 2].map(|index| color[index] * alpha + background[index] * (1.0 - alpha))
+  }
+
+  /// The contrast of `foreground` (`#ffffff` or `#000000de`) on the colour
+  /// `background` as a theme file spells it.
+  fn text_contrast(foreground: &str, background: Rgb) -> f64 {
+    let text = if foreground == "#ffffff" {
+      [255.0; 3]
+    } else {
+      over([0.0; 3], 222.0 / 255.0, background)
+    };
+    contrast(text, background)
+  }
+
+  /// A primary button's colours: rest, hover (and active), and its text.
+  /// The text is 0.3.0's choice; the colours are moved as little as needed
+  /// for it to reach [`TEXT_CONTRAST`] in every state.
+  fn button_colours(main: Rgb) -> (String, String, &'static str) {
+    let foreground = contrast_text(main);
+    let white = foreground == "#ffffff";
+    let shift = |color: Rgb, coefficient: f64| {
+      if white {
+        darken(color, coefficient)
+      } else {
+        lighten(color, coefficient)
+      }
+    };
+    // Rounded to a file's colour before it is measured.
+    let file_colour = |color: Rgb| channels(u32::from_str_radix(&hex(color)[1..], 16).unwrap());
+    let rest = (0..=100)
+      .map(|step| file_colour(shift(main, f64::from(step) / 100.0)))
+      .find(|rest| text_contrast(foreground, *rest) >= TEXT_CONTRAST)
+      .expect("black and white reach any contrast");
+    let hover = file_colour(shift(rest, 0.3));
+    (hex(rest), hex(hover), foreground)
   }
 
   /// The theme-set file of a table entry, byte for byte.
   fn derive(spec: &ThemeSpec) -> String {
     let main = channels(spec.main);
     let primary = hex(main);
+    let (button, pressed, foreground) = button_colours(main);
     let dark = hex(darken(main, 0.3));
     let light = hex(lighten(main, 0.2));
-    let foreground = contrast_text(main);
     let variant = |name: &str, mode: &str, link_hover: &str| {
       format!(
         r#"    {{
@@ -214,9 +283,9 @@ mod tests {
       "mode": "{mode}",
       "font.size": 14,
       "colors": {{
-        "primary.background": "{primary}",
-        "primary.hover.background": "{dark}",
-        "primary.active.background": "{dark}",
+        "primary.background": "{button}",
+        "primary.hover.background": "{pressed}",
+        "primary.active.background": "{pressed}",
         "primary.foreground": "{foreground}",
         "ring": "{primary}",
         "link": "{primary}",
@@ -265,6 +334,55 @@ mod tests {
     }
     assert_eq!(contrast_text(channels(0xef6c00)), "#ffffff");
     assert_eq!(luminance(channels(0xffffff)), 1.0);
+  }
+
+  /// Read from the files: a primary button's text reaches 4.5:1 on its
+  /// background, its hover and its active colour, in both modes of every
+  /// theme, with the text's alpha composited.
+  #[test]
+  fn every_button_label_reaches_the_normal_text_contrast() {
+    for spec in &THEMES {
+      let set: serde_json::Value = serde_json::from_str(spec.set).unwrap();
+      for variant in set["themes"].as_array().unwrap() {
+        let colors = &variant["colors"];
+        let foreground = colors["primary.foreground"].as_str().unwrap();
+        for state in [
+          "primary.background",
+          "primary.hover.background",
+          "primary.active.background",
+        ] {
+          let background = colors[state].as_str().unwrap();
+          let background = channels(u32::from_str_radix(&background[1..], 16).unwrap());
+          let ratio = text_contrast(foreground, background);
+          assert!(
+            ratio >= TEXT_CONTRAST,
+            "{}: {foreground} on {state} {} is {ratio:.2}:1",
+            variant["name"],
+            hex(background)
+          );
+        }
+      }
+    }
+  }
+
+  #[test]
+  fn button_colours_keep_the_text_and_move_the_colour_as_little_as_needed() {
+    let parse = |color: &str| channels(u32::from_str_radix(&color[1..], 16).unwrap());
+    // Ocean keeps white text on a slightly deeper blue (3.86:1 before); its
+    // hover is darker still.
+    let (rest, hover, text) = button_colours(channels(0x0288d1));
+    assert_eq!((rest.as_str(), hover.as_str(), text), ("#027cbe", "#015785", "#ffffff"));
+    assert!(text_contrast(text, parse(&rest)) >= TEXT_CONTRAST);
+    assert!(text_contrast(text, channels(0x0288d1)) < TEXT_CONTRAST);
+    assert!(exact_luminance(parse(&hover)) < exact_luminance(parse(&rest)));
+    // A colour that passes stays as it is.
+    assert_eq!(button_colours(channels(0x1a237e)).0, "#1a237e");
+    // Amber keeps dark text; its hover is lighter, not darker, where the
+    // darker one gave 4.44:1.
+    let (rest, hover, text) = button_colours(channels(0xff8f00));
+    assert_eq!((rest.as_str(), text), ("#ff8f00", "#000000de"));
+    assert!(exact_luminance(parse(&hover)) > exact_luminance(parse(&rest)));
+    assert!(text_contrast(text, parse(&hover)) >= TEXT_CONTRAST);
   }
 
   /// Checks every file under `themes/` against its derivation; with
@@ -343,7 +461,9 @@ mod tests {
       gpui_kit::init(cx);
       install(cx);
       for spec in &THEMES {
-        let primary: gpui_kit::Hsla = rgb(spec.main).into();
+        let main: gpui_kit::Hsla = rgb(spec.main).into();
+        let button = button_colours(channels(spec.main)).0;
+        let primary: gpui_kit::Hsla = rgb(u32::from_str_radix(&button[1..], 16).unwrap()).into();
         for (display_mode, name, dark) in [
           (DisplayMode::Light, spec.light, false),
           (DisplayMode::Dark, spec.dark, true),
@@ -355,7 +475,7 @@ mod tests {
           assert_eq!(cx.theme().theme_name().as_ref(), name);
           assert_eq!(cx.theme().is_dark(), dark, "{name}");
           assert_eq!(cx.theme().primary, primary, "{name}");
-          assert_eq!(cx.theme().ring, primary, "{name}");
+          assert_eq!(cx.theme().ring, main, "{name}");
           assert_eq!(cx.theme().font_size, px(14.0), "{name}");
         }
       }
@@ -367,7 +487,8 @@ mod tests {
     cx.update(|cx| {
       gpui_kit::init(cx);
       install(cx);
-      let primary: gpui_kit::Hsla = rgb(0x0288d1).into();
+      let button = button_colours(channels(0x0288d1)).0;
+      let primary: gpui_kit::Hsla = rgb(u32::from_str_radix(&button[1..], 16).unwrap()).into();
 
       apply(
         &config(ThemeName::Ocean, DisplayMode::Light),

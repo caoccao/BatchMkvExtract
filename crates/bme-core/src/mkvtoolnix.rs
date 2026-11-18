@@ -26,8 +26,9 @@ use std::io::{BufReader, PipeReader, Read};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Stdio};
 use std::sync::OnceLock;
+use std::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
+use std::time::{Duration, Instant};
 
-use crate::config;
 use crate::extract::ExtractError;
 use crate::protocol::{MkvToolNixStatus, MkvTrack, TrackListError};
 
@@ -38,11 +39,32 @@ const MKVEXTRACT: &str = "mkvextract";
 /// MKVToolNix is found where both tools the app runs are.
 const MKVTOOLNIX_TOOLS: [&str; 2] = [MKVMERGE, MKVEXTRACT];
 
-/// Receives the MKVToolNix directory a track listing or an extraction found
-/// by itself (on macOS, the newest `MKVToolNix-<version>.app` when the
-/// default path has no MKVToolNix). Called from a worker thread; it must not
-/// panic and should return quickly, e.g. by sending into a channel.
-pub type AutoDetectedSink = Box<dyn Fn(String) + Send + Sync>;
+/// How long `mkvmerge -J` may run for one file. Reading a file's headers
+/// takes well under a second; a listing still running after this (a stalled
+/// network or removable drive) is stopped and fails as
+/// [`TrackListError::TimedOut`].
+pub const LIST_TRACKS_TIMEOUT: Duration = Duration::from_secs(60);
+/// How often a listing checks whether `mkvmerge` has exited, was cancelled
+/// or ran out of time.
+const LIST_POLL: Duration = Duration::from_millis(20);
+/// How long a stopped `mkvmerge` is waited for before it is left to exit by
+/// itself (a process blocked in the kernel ends only when its I/O does).
+const KILL_WAIT: Duration = Duration::from_secs(1);
+
+/// An MKVToolNix directory a track listing or an extraction found by itself
+/// (on macOS, the newest `MKVToolNix-<version>.app` when the default path has
+/// no MKVToolNix), with the configured path it looked from.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AutoDetected {
+  /// The MKVToolNix path the listing or the extraction was given.
+  pub configured: String,
+  /// The directory it found instead.
+  pub detected: String,
+}
+
+/// Receives each [`AutoDetected`] directory. Called from a worker thread; it
+/// must not panic and should return quickly, e.g. by sending into a channel.
+pub type AutoDetectedSink = Box<dyn Fn(AutoDetected) + Send + Sync>;
 
 static AUTO_DETECTED_SINK: OnceLock<AutoDetectedSink> = OnceLock::new();
 
@@ -148,15 +170,17 @@ fn get_tool_path(path: &Path, tool: &str) -> PathBuf {
   path.join(tool)
 }
 
-/// The tool to run, from the configured MKVToolNix directory; an
-/// auto-detected directory goes to the sink of [`init_auto_detected`].
-fn resolve_mkvtoolnix_tool_path(tool: &str) -> PathBuf {
-  let cfg = config::get_config();
-  let configured = &cfg.integration.mkv_toolnix_path;
+/// The tool to run from the MKVToolNix directory `configured`, the path the
+/// caller read from its settings; an auto-detected directory goes to the
+/// sink of [`init_auto_detected`].
+fn resolve_mkvtoolnix_tool_path(configured: &str, tool: &str) -> PathBuf {
   let resolution = resolve_mkvtoolnix(configured, tool);
-  report_auto_detected(&resolution, configured, |path| {
+  report_auto_detected(&resolution, configured, |detected| {
     if let Some(sink) = AUTO_DETECTED_SINK.get() {
-      sink(path);
+      sink(AutoDetected {
+        configured: configured.to_owned(),
+        detected,
+      });
     }
   });
   get_tool_path(&resolution.path, tool)
@@ -323,24 +347,90 @@ fn source_problem(file: &str) -> Option<String> {
 
 /// The tracks of `file` from `mkvmerge -J`, as 0.3.0 listed them: its
 /// tracks, then one `chapters` row when its first chapter edition has
-/// entries, then one row per attachment. Blocking; the caller moves it off
-/// its UI thread.
-pub fn list_tracks(file: &str) -> Result<Vec<MkvTrack>, TrackListError> {
+/// entries, then one row per attachment. `mkv_toolnix_path` is the
+/// MKVToolNix directory from the caller's settings. `mkvmerge` is stopped
+/// when `cancelled` is set ([`TrackListError::Cancelled`]) or after
+/// [`LIST_TRACKS_TIMEOUT`] ([`TrackListError::TimedOut`]). Blocking; the
+/// caller moves it off its UI thread.
+pub fn list_tracks(
+  file: &str,
+  mkv_toolnix_path: &str,
+  cancelled: &AtomicBool,
+) -> Result<Vec<MkvTrack>, TrackListError> {
   if let Some(problem) = source_problem(file) {
     return Err(TrackListError::Other(problem));
   }
-  identify(&resolve_mkvtoolnix_tool_path(MKVMERGE), file)
+  let mkvmerge = resolve_mkvtoolnix_tool_path(mkv_toolnix_path, MKVMERGE);
+  identify(&mkvmerge, file, cancelled, LIST_TRACKS_TIMEOUT)
 }
 
-/// Runs `mkvmerge -J file` with the `mkvmerge` at `mkvmerge_path`.
-fn identify(mkvmerge_path: &Path, file: &str) -> Result<Vec<MkvTrack>, TrackListError> {
+/// Runs `mkvmerge -J file` with the `mkvmerge` at `mkvmerge_path`, until it
+/// exits, `cancelled` is set or `timeout` passed.
+fn identify(
+  mkvmerge_path: &Path,
+  file: &str,
+  cancelled: &AtomicBool,
+  timeout: Duration,
+) -> Result<Vec<MkvTrack>, TrackListError> {
   let mut cmd = create_tool_command(mkvmerge_path);
-  cmd.arg("-J").arg(file).stdin(Stdio::null());
-  let output = cmd.output().map_err(|error| TrackListError::NotAvailable {
+  cmd
+    .arg("-J")
+    .arg(file)
+    .stdin(Stdio::null())
+    .stdout(Stdio::piped())
+    .stderr(Stdio::piped());
+  let mut child = cmd.spawn().map_err(|error| TrackListError::NotAvailable {
     path: mkvmerge_path.display().to_string(),
     detail: error.to_string(),
   })?;
-  identify_output(output.status.code(), &output.stdout, &output.stderr)
+  // Both pipes are read at once, so neither fills up while the other waits.
+  let read_all = |pipe: Option<Box<dyn Read + Send>>| {
+    std::thread::spawn(move || {
+      let mut bytes = Vec::new();
+      if let Some(mut pipe) = pipe {
+        let _ = pipe.read_to_end(&mut bytes);
+      }
+      bytes
+    })
+  };
+  let stdout = read_all(child.stdout.take().map(|pipe| Box::new(pipe) as Box<dyn Read + Send>));
+  let stderr = read_all(child.stderr.take().map(|pipe| Box::new(pipe) as Box<dyn Read + Send>));
+  let deadline = Instant::now() + timeout;
+  let status = loop {
+    match child.try_wait() {
+      Ok(Some(status)) => break status,
+      Ok(None) => {}
+      Err(error) => return Err(TrackListError::Other(error.to_string())),
+    }
+    if cancelled.load(AtomicOrdering::Relaxed) {
+      stop(&mut child);
+      return Err(TrackListError::Cancelled);
+    }
+    if Instant::now() >= deadline {
+      stop(&mut child);
+      return Err(TrackListError::TimedOut {
+        seconds: timeout.as_secs(),
+      });
+    }
+    std::thread::sleep(LIST_POLL);
+  };
+  let stdout = stdout.join().unwrap_or_default();
+  let stderr = stderr.join().unwrap_or_default();
+  identify_output(status.code(), &stdout, &stderr)
+}
+
+/// Kills a listing's `mkvmerge` and waits for it a moment; one that does not
+/// end (blocked in the kernel) is left to exit by itself, with its pipe
+/// readers.
+fn stop(child: &mut Child) {
+  let _ = child.kill();
+  let deadline = Instant::now() + KILL_WAIT;
+  while Instant::now() < deadline {
+    if !matches!(child.try_wait(), Ok(None)) {
+      return;
+    }
+    std::thread::sleep(LIST_POLL);
+  }
 }
 
 /// The tracks from `mkvmerge -J`'s exit code and output. It exits with 0,
@@ -459,17 +549,22 @@ fn derive_attachment_subtype(file_name: &str, content_type: &str) -> String {
 }
 
 /// Starts `mkvextract` for the source `file` with the extraction arguments
-/// `args` (`tracks <id>:<path>… chapters <path> attachments <id>:<path>…`).
-/// Returns the process and one pipe that carries both its stdout and its
+/// `args` (`tracks <id>:<path>… chapters <path> attachments <id>:<path>…`),
+/// from the MKVToolNix directory `mkv_toolnix_path` the extraction was
+/// queued with. Returns the process and one pipe that carries both its stdout and its
 /// stderr, so neither can fill up unread and whatever it prints can be
 /// shown. `--gui-mode` keeps its progress, warning and error lines
 /// recognisable in every interface language ([`parse_mkvextract_line`]);
 /// the copyable command does not need it.
-pub fn spawn_mkvextract(file: &str, args: &[String]) -> Result<(Child, PipeReader), ExtractError> {
+pub fn spawn_mkvextract(
+  file: &str,
+  mkv_toolnix_path: &str,
+  args: &[String],
+) -> Result<(Child, PipeReader), ExtractError> {
   if !Path::new(file).is_file() {
     return Err(ExtractError::SourceMissing { path: file.to_owned() });
   }
-  spawn_extract_tool(&resolve_mkvtoolnix_tool_path(MKVEXTRACT), file, args)
+  spawn_extract_tool(&resolve_mkvtoolnix_tool_path(mkv_toolnix_path, MKVEXTRACT), file, args)
 }
 
 /// Starts the `mkvextract` at `mkvextract_path` as `mkvextract --gui-mode
@@ -540,6 +635,9 @@ pub fn detect_mkvtoolnix(path: &str, check_running: bool) -> MkvToolNixStatus {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  /// Long enough for any listing of a test that should finish.
+  const TIMEOUT: Duration = Duration::from_secs(10);
 
   /// A fresh directory under the system temp dir, removed when dropped.
   struct Dir(PathBuf);
@@ -696,7 +794,7 @@ mod tests {
 
   #[test]
   fn a_missing_source_is_reported_before_mkvextract_is_looked_for() {
-    match spawn_mkvextract("/definitely/not/here.mkv", &[]) {
+    match spawn_mkvextract("/definitely/not/here.mkv", "/opt/mkvtoolnix", &[]) {
       Err(ExtractError::SourceMissing { path }) => assert_eq!(path, "/definitely/not/here.mkv"),
       other => panic!("expected SourceMissing, got {:?}", other.map(|_| ())),
     }
@@ -704,12 +802,13 @@ mod tests {
 
   #[test]
   fn listing_a_missing_or_non_file_source_fails_before_mkvmerge_runs() {
-    match list_tracks("/definitely/not/here.mkv") {
+    let running = AtomicBool::new(false);
+    match list_tracks("/definitely/not/here.mkv", "/opt/mkvtoolnix", &running) {
       Err(TrackListError::Other(message)) => assert!(message.contains("does not exist"), "{message}"),
       other => panic!("expected Other, got {other:?}"),
     }
     let dir = Dir::new("not_a_file");
-    match list_tracks(&dir.0.to_string_lossy()) {
+    match list_tracks(&dir.0.to_string_lossy(), "/opt/mkvtoolnix", &running) {
       Err(TrackListError::Other(message)) => assert!(message.contains("is not a file"), "{message}"),
       other => panic!("expected Other, got {other:?}"),
     }
@@ -831,6 +930,8 @@ mod tests {
         fixture.display()
       ),
     );
+    let running = AtomicBool::new(false);
+    let identify = |mkvmerge: &Path, source: &str| identify(mkvmerge, source, &running, TIMEOUT);
     let tracks = identify(&mkvmerge, &source.to_string_lossy()).unwrap();
     assert_eq!(tracks.len(), 7);
     assert_eq!(
@@ -851,6 +952,40 @@ mod tests {
       }
       other => panic!("expected NotAvailable, got {other:?}"),
     }
+  }
+
+  /// A listing that does not end is stopped when it is cancelled or runs
+  /// out of time, and a listing with much output on both pipes still ends.
+  #[cfg(unix)]
+  #[test]
+  fn a_listing_is_stopped_when_cancelled_or_out_of_time() {
+    let dir = Dir::new("identify_stops");
+    let source = dir.0.join("a.mkv");
+    std::fs::write(&source, b"").unwrap();
+    let source = source.to_string_lossy().into_owned();
+    let stalled = script(&dir.0, "stalled", "exec sleep 30");
+    let running = AtomicBool::new(false);
+    let started = Instant::now();
+    assert_eq!(
+      identify(&stalled, &source, &running, Duration::from_millis(200)),
+      Err(TrackListError::TimedOut { seconds: 0 })
+    );
+    assert!(started.elapsed() < Duration::from_secs(5), "stopped, not waited for");
+    let cancelled = AtomicBool::new(true);
+    let started = Instant::now();
+    assert_eq!(
+      identify(&stalled, &source, &cancelled, TIMEOUT),
+      Err(TrackListError::Cancelled)
+    );
+    assert!(started.elapsed() < Duration::from_secs(5));
+    let fixture = dir.0.join("identify.json");
+    std::fs::write(&fixture, IDENTIFY).unwrap();
+    let chatty = script(
+      &dir.0,
+      "chatty",
+      &format!("yes warning | head -c 200000 >&2\ncat '{}'", fixture.display()),
+    );
+    assert_eq!(identify(&chatty, &source, &running, TIMEOUT).unwrap().len(), 7);
   }
 
   #[cfg(unix)]

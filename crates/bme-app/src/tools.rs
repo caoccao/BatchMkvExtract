@@ -25,7 +25,7 @@ use std::sync::Arc;
 
 use async_channel::Receiver;
 use bme_core::config::{Config, ConfigIntegration};
-use bme_core::mkvtoolnix::AutoDetectedSink;
+use bme_core::mkvtoolnix::{AutoDetected, AutoDetectedSink};
 use gpui_kit::{App, Entity};
 
 use crate::state::ConfigStore;
@@ -81,7 +81,22 @@ pub struct ToolStatus {
   pub path: String,
 }
 
-type Detect = dyn Fn(Tool, &str, bool) -> ToolStatus + Send + Sync;
+/// Where a detection looks.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Lookup {
+  /// The path only: its directory, the folder of a given executable, and on
+  /// macOS the newest versioned MKVToolNix bundle for MKVToolNix's default
+  /// path. What a path being typed is checked with: whatever it finds comes
+  /// from the text itself.
+  Path,
+  /// The path, then the usual install places (BetterMediaInfo; MKVToolNix
+  /// has none). What the cards' Open in BetterMediaInfo follows.
+  Installed,
+  /// A running application first, then as [`Self::Installed`]: Detect.
+  Running,
+}
+
+type Detect = dyn Fn(Tool, &str, Lookup) -> ToolStatus + Send + Sync;
 
 /// Finds the tools: the core's detection in the app, a stand-in in tests.
 /// Runs on the background executor.
@@ -89,47 +104,55 @@ type Detect = dyn Fn(Tool, &str, bool) -> ToolStatus + Send + Sync;
 pub struct ToolDetector(Arc<Detect>);
 
 impl ToolDetector {
-  pub fn new(detect: impl Fn(Tool, &str, bool) -> ToolStatus + Send + Sync + 'static) -> Self {
+  pub fn new(detect: impl Fn(Tool, &str, Lookup) -> ToolStatus + Send + Sync + 'static) -> Self {
     Self(Arc::new(detect))
   }
 
-  /// The core's detection, which looks at the file system and, with
-  /// `check_running`, at the running processes first.
+  /// The core's detection, which looks at the file system and, for
+  /// [`Lookup::Running`], at the running processes first.
   pub fn system() -> Self {
-    Self::new(|tool, path, check_running| match tool {
+    Self::new(|tool, path, lookup| match tool {
       Tool::MkvToolNix => {
-        let status = bme_core::mkvtoolnix::detect_mkvtoolnix(path, check_running);
+        let status = bme_core::mkvtoolnix::detect_mkvtoolnix(path, lookup == Lookup::Running);
         ToolStatus {
           found: status.found,
           path: status.mkv_toolnix_path,
         }
       }
-      Tool::BetterMediaInfo => match bme_core::services::detect_better_media_info(path.to_string(), check_running) {
-        Ok(status) => ToolStatus {
-          found: status.found,
-          path: status.path,
-        },
-        Err(error) => {
-          log::warn!("BetterMediaInfo detection failed: {error}");
-          ToolStatus {
-            found: false,
-            path: String::new(),
+      Tool::BetterMediaInfo => {
+        let detected = match lookup {
+          Lookup::Path => Ok(bme_core::services::find_better_media_info_at(path)),
+          Lookup::Installed | Lookup::Running => {
+            bme_core::services::detect_better_media_info(path.to_string(), lookup == Lookup::Running)
+          }
+        };
+        match detected {
+          Ok(status) => ToolStatus {
+            found: status.found,
+            path: status.path,
+          },
+          Err(error) => {
+            log::warn!("BetterMediaInfo detection failed: {error}");
+            ToolStatus {
+              found: false,
+              path: String::new(),
+            }
           }
         }
-      },
+      }
     })
   }
 
-  /// Looks for `tool` at `path` (trimmed by the caller).
-  pub fn detect(&self, tool: Tool, path: &str, check_running: bool) -> ToolStatus {
-    (self.0)(tool, path, check_running)
+  /// Looks for `tool` at `path` (trimmed by the caller) as `lookup` says.
+  pub fn detect(&self, tool: Tool, path: &str, lookup: Lookup) -> ToolStatus {
+    (self.0)(tool, path, lookup)
   }
 }
 
 /// A sink for the MKVToolNix directories track listings and extractions find
 /// by themselves (`bme_core::mkvtoolnix::init_auto_detected` in the app) and
 /// the receiver [`store_auto_detected`] reads them from.
-pub fn auto_detected_channel() -> (AutoDetectedSink, Receiver<String>) {
+pub fn auto_detected_channel() -> (AutoDetectedSink, Receiver<AutoDetected>) {
   let (sender, receiver) = async_channel::unbounded();
   let sink: AutoDetectedSink = Box::new(move |path| {
     // Fails only once the receiver is gone, when the app is quitting.
@@ -140,14 +163,17 @@ pub fn auto_detected_channel() -> (AutoDetectedSink, Receiver<String>) {
 
 /// Stores every directory from `paths` as the MKVToolNix path through the
 /// config store, on the foreground, so the Integration settings show it and no
-/// other write drops it; the core never writes the config file itself.
-pub fn store_auto_detected(config: &Entity<ConfigStore>, paths: Receiver<String>, cx: &mut App) {
+/// other write drops it; the core never writes the config file itself. A
+/// directory found from a path the settings no longer hold (the user chose
+/// another meanwhile) is dropped.
+pub fn store_auto_detected(config: &Entity<ConfigStore>, paths: Receiver<AutoDetected>, cx: &mut App) {
   let config = config.clone();
   cx.spawn(async move |cx| {
-    while let Ok(path) = paths.recv().await {
+    while let Ok(AutoDetected { configured, detected }) = paths.recv().await {
       config.update(cx, |store, cx| {
-        if Tool::MkvToolNix.path(store.config()) != path {
-          store.update(cx, |config| Tool::MkvToolNix.set_path(config, path));
+        let current = Tool::MkvToolNix.path(store.config());
+        if current.trim() == configured.trim() && current != detected {
+          store.update(cx, |config| Tool::MkvToolNix.set_path(config, detected));
         }
       });
     }
@@ -182,7 +208,7 @@ mod tests {
     let dir = std::env::temp_dir().join(format!("bme_tools_empty_{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let path = dir.to_string_lossy().to_string();
-    let status = ToolDetector::system().detect(Tool::MkvToolNix, &path, false);
+    let status = ToolDetector::system().detect(Tool::MkvToolNix, &path, Lookup::Path);
     assert!(!status.found);
     std::fs::remove_dir_all(&dir).unwrap();
   }
@@ -196,9 +222,18 @@ mod tests {
     let (sink, paths) = auto_detected_channel();
     cx.update(|cx| store_auto_detected(&store, paths, cx));
     let detected = "/Applications/MKVToolNix-98.0.app/Contents/MacOS";
+    let found = |configured: &str| AutoDetected {
+      configured: configured.to_string(),
+      detected: detected.to_string(),
+    };
+    let default = ConfigIntegration::default().mkv_toolnix_path;
+    // A directory found from a path the settings no longer hold is dropped.
+    sink(found("/opt/earlier"));
+    cx.run_until_parked();
+    assert!(written.lock().unwrap().is_empty());
     // Sent on the test thread: GPUI's test scheduler panics when another
     // thread wakes a foreground task.
-    sink(detected.to_string());
+    sink(found(&default));
     cx.run_until_parked();
     let configured = store.read_with(cx, |store, _| Tool::MkvToolNix.path(store.config()).to_string());
     assert_eq!(configured, detected);
@@ -212,7 +247,7 @@ mod tests {
       Some(detected)
     );
     // The same directory again changes nothing.
-    sink(detected.to_string());
+    sink(found(detected));
     cx.run_until_parked();
     assert_eq!(written.lock().unwrap().len(), 1);
   }

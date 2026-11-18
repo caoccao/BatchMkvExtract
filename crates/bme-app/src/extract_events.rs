@@ -43,8 +43,9 @@ pub fn channel() -> (ExtractEventSink, Receiver<ExtractEvent>) {
   (sink, receiver)
 }
 
-type EnqueueFn = dyn Fn(String, Vec<String>) -> Result<()> + Send + Sync;
+type EnqueueFn = dyn Fn(String, String, Vec<String>) -> Result<()> + Send + Sync;
 type CancelFn = dyn Fn(&str) -> Result<()> + Send + Sync;
+type CancelManyFn = dyn Fn(&[String]) -> Result<()> + Send + Sync;
 type ShutdownFn = dyn Fn(Duration) -> bool + Send + Sync;
 
 /// How long quitting waits for the cancelled extractions to end, so no
@@ -57,20 +58,33 @@ pub const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(3);
 pub struct ExtractBackend {
   enqueue: Arc<EnqueueFn>,
   cancel: Arc<CancelFn>,
+  cancel_many: Arc<CancelManyFn>,
   shutdown: Arc<ShutdownFn>,
 }
 
 impl ExtractBackend {
-  /// A backend from its enqueue and cancel; its shutdown has nothing to wait
-  /// for (see [`Self::with_shutdown`]).
+  /// A backend from its enqueue and cancel; it cancels several files one by
+  /// one (see [`Self::with_cancel_many`]) and its shutdown has nothing to
+  /// wait for (see [`Self::with_shutdown`]).
   pub fn new(
-    enqueue: impl Fn(String, Vec<String>) -> Result<()> + Send + Sync + 'static,
+    enqueue: impl Fn(String, String, Vec<String>) -> Result<()> + Send + Sync + 'static,
     cancel: impl Fn(&str) -> Result<()> + Send + Sync + 'static,
   ) -> Self {
+    let cancel: Arc<CancelFn> = Arc::new(cancel);
+    let each = cancel.clone();
     Self {
       enqueue: Arc::new(enqueue),
-      cancel: Arc::new(cancel),
+      cancel,
+      cancel_many: Arc::new(move |files| files.iter().try_for_each(|file| each(file))),
       shutdown: Arc::new(|_| true),
+    }
+  }
+
+  /// The same backend with `cancel_many` behind [`Self::cancel_many`].
+  pub fn with_cancel_many(self, cancel_many: impl Fn(&[String]) -> Result<()> + Send + Sync + 'static) -> Self {
+    Self {
+      cancel_many: Arc::new(cancel_many),
+      ..self
     }
   }
 
@@ -89,28 +103,38 @@ impl ExtractBackend {
     Self::new(bme_core::extract::enqueue, |file| {
       bme_core::extract::cancel(file.to_string())
     })
+    .with_cancel_many(bme_core::extract::cancel_many)
     .with_shutdown(bme_core::extract::shutdown)
   }
 
   /// A queue of its own, e.g. with a fake launcher.
   pub fn queue(queue: Arc<ExtractQueue>) -> Self {
     let cancel_queue = queue.clone();
+    let cancel_many_queue = queue.clone();
     let shutdown_queue = queue.clone();
     Self::new(
-      move |file, args| queue.enqueue(file, args),
+      move |file, tools, args| queue.enqueue(file, tools, args),
       move |file| cancel_queue.cancel(file),
     )
+    .with_cancel_many(move |files| cancel_many_queue.cancel_many(files))
     .with_shutdown(move |timeout| shutdown_queue.shutdown(timeout))
   }
 
-  /// Queues `file` with its `mkvextract` arguments.
-  pub fn enqueue(&self, file: String, args: Vec<String>) -> Result<()> {
-    (self.enqueue)(file, args)
+  /// Queues `file` with its `mkvextract` arguments, to run with the
+  /// MKVToolNix directory `mkv_toolnix_path`.
+  pub fn enqueue(&self, file: String, mkv_toolnix_path: String, args: Vec<String>) -> Result<()> {
+    (self.enqueue)(file, mkv_toolnix_path, args)
   }
 
   /// Cancels `file`, waiting or running.
   pub fn cancel(&self, file: &str) -> Result<()> {
     (self.cancel)(file)
+  }
+
+  /// Cancels `files` at once, so a running one that ends meanwhile starts
+  /// none of the others.
+  pub fn cancel_many(&self, files: &[String]) -> Result<()> {
+    (self.cancel_many)(files)
   }
 
   /// Cancels every extraction and waits up to `timeout` for the running ones

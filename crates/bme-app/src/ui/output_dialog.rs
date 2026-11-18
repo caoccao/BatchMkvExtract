@@ -182,6 +182,8 @@ impl OutputPathDialog {
       InputEvent::Blur => cx.notify(),
       InputEvent::Change => {
         self.error = None;
+        // A writable check of the former text no longer decides.
+        self.confirming = None;
         self.schedule_check(cx);
         cx.notify();
       }
@@ -213,6 +215,8 @@ impl OutputPathDialog {
   fn set_value(&mut self, value: String, window: &mut Window, cx: &mut Context<Self>) {
     self.input.update(cx, |state, cx| state.set_value(value, window, cx));
     self.error = None;
+    // `set_value` emits no change: the check of the former text goes here.
+    self.confirming = None;
     self.schedule_check(cx);
     cx.notify();
   }
@@ -244,7 +248,12 @@ impl OutputPathDialog {
   }
 
   /// OK / Enter: an empty field clears the override; any other folder must
-  /// be writable (or creatable) first.
+  /// be writable (or creatable) first. A relative folder is stored as the
+  /// full path it names from the app's working directory, where it would be
+  /// created and written, so the card shows where the files go. An edit or a Browse while the check
+  /// runs drops it (the task goes with `confirming`), and a check whose text
+  /// is no longer the field's decides nothing, so OK never stores a folder the
+  /// field no longer shows.
   fn confirm(&mut self, window: &mut Window, cx: &mut Context<Self>) {
     if self.done || self.confirming.is_some() {
       return;
@@ -256,17 +265,23 @@ impl OutputPathDialog {
       window.close_dialog(cx);
       return;
     }
-    let checked = value.clone();
+    let checked = std::path::absolute(&value)
+      .map(|path| path.to_string_lossy().into_owned())
+      .unwrap_or_else(|_| value.clone());
+    let stored = checked.clone();
     self.confirming = Some(cx.spawn_in(window, async move |this, cx| {
       let writable = cx
         .background_spawn(async move { bme_core::services::check_output_dir_writable(checked) })
         .await;
       let _ = this.update_in(cx, |this, window, cx| {
+        if this.value(cx) != value {
+          return;
+        }
         this.confirming = None;
         match writable {
           Ok(true) => {
             this.done = true;
-            (this.request.on_confirm)(value, cx);
+            (this.request.on_confirm)(stored, cx);
             window.close_dialog(cx);
           }
           Ok(false) => this.error = Some(tr!("extract.outputPathNotWritable")),

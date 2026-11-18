@@ -23,6 +23,7 @@
 //! all of them, as 0.3.0's group card did. Rows are keyed by
 //! [`MkvTrack::key`], `"{type}:{id}"`.
 
+use bme_core::extract_args::is_extractable;
 use bme_core::protocol::MkvTrack;
 use gpui_kit::Context;
 
@@ -70,23 +71,32 @@ impl FileStore {
     self.selected_ids(scope.shown()).unwrap_or_default()
   }
 
-  /// The select-all checkbox: every row of the shown file, or none, for every
-  /// file of the scope. Nothing happens before the shown file is loaded.
+  /// The select-all checkbox: every row of the shown file that `mkvextract`
+  /// can extract ([`is_extractable`]), or none, for every file of the scope.
+  /// Nothing happens before the shown file is loaded.
   pub fn set_all_checked(&mut self, scope: &TableScope, checked: bool, cx: &mut Context<Self>) {
     let Some(tracks) = self.tracks(scope.shown()) else {
       return;
     };
     let ids = if checked {
-      tracks.iter().map(MkvTrack::key).collect()
+      tracks
+        .iter()
+        .filter(|track| is_extractable(track))
+        .map(MkvTrack::key)
+        .collect()
     } else {
       Vec::new()
     };
     self.write_selection(scope, ids, cx);
   }
 
-  /// Ticks or clears one row's checkbox (a click on the row flips it).
+  /// Ticks or clears one row's checkbox (a click on the row flips it). A row
+  /// `mkvextract` cannot extract is never ticked.
   pub fn set_checked(&mut self, scope: &TableScope, key: &str, checked: bool, cx: &mut Context<Self>) {
-    if self.tracks(scope.shown()).is_none() {
+    let Some(tracks) = self.tracks(scope.shown()) else {
+      return;
+    };
+    if checked && !tracks.iter().any(|track| track.key() == key && is_extractable(track)) {
       return;
     }
     let mut ids = self.checked_keys(scope).to_vec();

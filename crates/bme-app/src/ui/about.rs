@@ -32,19 +32,22 @@ use crate::assets::APP_ICON;
 const AUTHOR_NAME: &str = "Sam Cao";
 const AUTHOR_URL: &str = "https://github.com/caoccao/";
 
-/// One clickable information card.
+/// One information card that opens `url`: by a click, or by Enter or Space
+/// once Tab reached it; `name` is what an assistive client calls it.
+#[allow(clippy::too_many_arguments)]
 fn info_card(
   id: &'static str,
   url: &'static str,
   avatar: Div,
   label: SharedString,
+  name: SharedString,
   value: impl IntoElement,
-  cx: &App,
+  window: &mut Window,
+  cx: &mut App,
 ) -> impl IntoElement {
-  let (border, primary) = (cx.theme().border, cx.theme().primary);
-  h_flex()
-    .id(id)
-    .test_support()
+  let (border, primary, ring) = (cx.theme().border, cx.theme().primary, cx.theme().ring);
+  let card = h_flex().id(id).test_support();
+  super::keyboard_link(card, id, url, name, move |style| style.border_color(ring), window, cx)
     .w_full()
     .p(space(2.0))
     .gap(space(2.0))
@@ -90,7 +93,7 @@ fn info_card(
 pub struct About;
 
 impl RenderOnce for About {
-  fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
+  fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
     let muted = cx.theme().muted_foreground;
     let gradient = linear_gradient(
       135.0,
@@ -163,22 +166,26 @@ impl RenderOnce for About {
               .bg(gradient)
               .child(Icon::new(IconName::User).size(px(24.0)).text_color(hex(0xffffff))),
             tr!("about.author"),
+            format!("{}: {AUTHOR_NAME}", tr!("about.author")).into(),
             div().text_size(text::h6()).child(AUTHOR_NAME),
+            window,
             cx,
           ))
-          .child(info_card(
-            "about-github",
-            GITHUB_URL,
-            div()
-              .bg(hex(0x24292f))
-              .child(Icon::new(IconName::Github).size(px(24.0)).text_color(hex(0xffffff))),
-            tr!("about.github"),
-            div()
-              .text_size(text::body2())
-              .font_family(cx.theme().mono_font_family.clone())
-              .child(GITHUB_URL),
-            cx,
-          )),
+          .child({
+            let mono = cx.theme().mono_font_family.clone();
+            info_card(
+              "about-github",
+              GITHUB_URL,
+              div()
+                .bg(hex(0x24292f))
+                .child(Icon::new(IconName::Github).size(px(24.0)).text_color(hex(0xffffff))),
+              tr!("about.github"),
+              format!("{}: {GITHUB_URL}", tr!("about.github")).into(),
+              div().text_size(text::body2()).font_family(mono).child(GITHUB_URL),
+              window,
+              cx,
+            )
+          }),
       )
   }
 }

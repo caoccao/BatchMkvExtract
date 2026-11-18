@@ -24,20 +24,24 @@
 //!
 //! A group card's table shows its first file's tracks, and its checkboxes
 //! write the selection of every file of the group ([`TableScope`]). While a
-//! file of the card waits or is extracted, the table takes no clicks.
+//! file of the card waits or is extracted, the table takes no clicks. A row
+//! whose codec `mkvextract` cannot extract
+//! ([`is_extractable`]) has a disabled checkbox that says so in its tooltip,
+//! and select-all leaves it out.
 //!
 //! The table is drawn with gpui-base's table primitives, because the rows of
 //! gpui-kit's composable table take no click handler.
 
 use std::collections::HashSet;
 
+use bme_core::extract_args::is_extractable;
 use bme_core::protocol::MkvTrack;
 use gpui_kit::base::{self as kit_base, TestSupportExt as _, TestTextExt as _};
 use gpui_kit::component::checkbox::Checkbox;
 use gpui_kit::component::scroll::ScrollableElement as _;
 use gpui_kit::component::spinner::Spinner;
 use gpui_kit::component::tooltip::Tooltip;
-use gpui_kit::component::{ActiveTheme, Disableable, Sizable, v_flex};
+use gpui_kit::component::{ActiveTheme, Disableable, Sizable, h_flex, v_flex};
 use gpui_kit::prelude::FluentBuilder as _;
 use gpui_kit::*;
 
@@ -283,6 +287,16 @@ impl TrackTable {
     self.set_checked(key, !checked, cx);
   }
 
+  /// Lists the failed files of the card again.
+  fn retry(&mut self, cx: &mut Context<Self>) {
+    let files = self.scope.files().to_vec();
+    self.stores.files.update(cx, |store, cx| {
+      for file in &files {
+        store.retry_load(file, cx);
+      }
+    });
+  }
+
   fn set_all_checked(&mut self, checked: bool, cx: &mut Context<Self>) {
     if self.is_disabled(cx) {
       return;
@@ -353,28 +367,42 @@ impl TrackTable {
       )
     };
     let type_name = SharedString::from(texts.type_name);
+    // A row `mkvextract` refuses stays unchecked; its checkbox says why.
+    let refused = (!is_extractable(track)).then(|| tr!("extract.notExtractable", codec = track.codec_id));
+    let clickable = !disabled && refused.is_none();
     let (row_key, check_key) = (key.clone(), key);
+    let checkbox = Checkbox::new(("track-check", index))
+      .small()
+      .checked(checked)
+      .disabled(!clickable)
+      .when_some(refused.clone(), |checkbox, reason| checkbox.accessibility_label(reason))
+      .on_click(cx.listener(move |this, checked: &bool, _, cx| this.set_checked(&check_key, *checked, cx)));
     kit_base::TableRow::new(("track-row", index), index + 2)
       .flex()
       .min_h(px(ROW_HEIGHT))
       .border_t_1()
       .border_color(theme.table_row_border)
-      .when(!disabled, |row| {
+      .when(clickable, |row| {
         let hover = theme.table_hover;
-        row.cursor_pointer().hover(move |style| style.bg(hover))
+        row
+          .cursor_pointer()
+          .hover(move |style| style.bg(hover))
+          .on_click(cx.listener(move |this, _, _, cx| this.toggle(&row_key, cx)))
       })
-      .on_click(cx.listener(move |this, _, _, cx| this.toggle(&row_key, cx)))
+      .when(refused.is_some(), |row| row.text_color(theme.muted_foreground))
       .child(
         // The checkbox takes its own clicks: the row does not flip it back.
         cell(Column::Check)
           .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-          .child(
-            Checkbox::new(("track-check", index))
-              .small()
-              .checked(checked)
-              .disabled(disabled)
-              .on_click(cx.listener(move |this, checked: &bool, _, cx| this.set_checked(&check_key, *checked, cx))),
-          ),
+          .child(match refused {
+            Some(reason) => div()
+              .id(("track-refused", index))
+              .test_support()
+              .child(checkbox)
+              .tooltip(move |window, cx| Tooltip::new(reason.clone()).build(window, cx))
+              .into_any_element(),
+            None => checkbox.into_any_element(),
+          }),
       )
       .child(cell(Column::Id).child(cell_text(texts.id)))
       .child(cell(Column::Number).child(cell_text(texts.number)))
@@ -417,11 +445,19 @@ impl Render for TrackTable {
       }
     }
     if let Some(error) = load_error {
-      return div()
+      return h_flex()
         .id(id)
         .test_support()
-        .text_color(cx.theme().danger)
-        .child(cell_text(error))
+        .gap(super::space(1.0))
+        .items_center()
+        .child(div().flex_1().text_color(cx.theme().danger).child(cell_text(error)))
+        .child(
+          super::text_button("track-retry")
+            .outline()
+            .small()
+            .label(tr!("extract.retry"))
+            .on_click(cx.listener(|this, _, _, cx| this.retry(cx))),
+        )
         .into_any_element();
     }
     let rows = files.table_rows(&self.scope).to_vec();
@@ -440,7 +476,16 @@ impl Render for TrackTable {
       .map(|track| checked.contains(track.key().as_str()))
       .collect();
     let disabled = self.is_disabled(cx);
-    let all = select_all_state(checked.iter().filter(|checked| **checked).count(), rows.len());
+    let extractable: Vec<bool> = rows.iter().map(is_extractable).collect();
+    let checked_extractable = checked
+      .iter()
+      .zip(&extractable)
+      .filter(|(checked, extractable)| **checked && **extractable)
+      .count();
+    let all = select_all_state(
+      checked_extractable,
+      extractable.iter().filter(|extractable| **extractable).count(),
+    );
     let texts: Vec<RowTexts> = rows.iter().map(row_texts).collect();
     let columns = TrackColumns::measure(&texts, window);
     let row_elements: Vec<AnyElement> = rows
@@ -449,7 +494,7 @@ impl Render for TrackTable {
       .enumerate()
       .map(|(index, row)| self.render_row(index, row, checked[index], disabled, &columns, cx))
       .collect();
-    let header = self.render_header(&columns, all, disabled, cx);
+    let header = self.render_header(&columns, all, disabled || !extractable.contains(&true), cx);
     let theme = cx.theme();
     div()
       .id(id)

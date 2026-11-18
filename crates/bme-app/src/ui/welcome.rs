@@ -202,7 +202,7 @@ impl Welcome {
 }
 
 impl RenderOnce for Welcome {
-  fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
+  fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
     let palette = Palette::new(cx.theme().is_dark());
     let muted = cx.theme().muted_foreground;
     let add_files = ButtonCustomVariant::new(cx)
@@ -218,9 +218,10 @@ impl RenderOnce for Welcome {
       .active(palette.folder_hover_background)
       .shadow(false);
     let (files_stores, folder_stores) = (self.stores.clone(), self.stores);
-    let link = |id: &'static str, label: SharedString, url: &'static str| {
-      div()
-        .id(id)
+    // Opens its page by a click, or by Enter or Space once Tab reached it.
+    let mut link = |id: &'static str, label: SharedString, url: &'static str| {
+      let text = div().id(id).test_support();
+      super::keyboard_link(text, id, url, label.clone(), |style| style.underline(), window, cx)
         .cursor_pointer()
         .text_size(px(12.0))
         .font_weight(FontWeight::SEMIBOLD)
@@ -229,6 +230,12 @@ impl RenderOnce for Welcome {
         .on_click(move |_, _, cx| cx.open_url(url))
         .child(label)
     };
+    let author_link = link("welcome-author", AUTHOR_NAME.into(), AUTHOR_URL);
+    let github_link = link(
+      "welcome-github",
+      GITHUB_URL.trim_start_matches("https://").to_owned().into(),
+      GITHUB_URL,
+    );
 
     div()
       .id("welcome")
@@ -377,17 +384,13 @@ impl RenderOnce for Welcome {
                       .text_color(muted)
                       .child(format!("{}:", tr!("about.author"))),
                   )
-                  .child(link("welcome-author", AUTHOR_NAME.into(), AUTHOR_URL)),
+                  .child(author_link),
               )
               .child(
                 h_flex()
                   .gap(space(0.75))
                   .child(Icon::new(IconName::Github).small().text_color(muted))
-                  .child(link(
-                    "welcome-github",
-                    GITHUB_URL.trim_start_matches("https://").to_owned().into(),
-                    GITHUB_URL,
-                  )),
+                  .child(github_link),
               ),
           ),
       )

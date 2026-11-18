@@ -215,10 +215,10 @@ fn add_paths_lists_the_mkv_files_of_files_and_folders(cx: &mut TestAppContext) {
   let (source, _) = fixture_source(HashMap::new());
   let store = cx.new(|_| FileStore::with_profile(Some(&profile(false)), source));
   let paths = vec![
-    dir.path().to_string_lossy().into_owned(),
-    single.clone(),
-    ignored,
-    "/does/not/exist.mkv".to_owned(),
+    dir.path().to_path_buf(),
+    PathBuf::from(&single),
+    PathBuf::from(ignored),
+    PathBuf::from("/does/not/exist.mkv"),
   ];
   let ui = cx.new(|_| UiState::new());
   let snackbars = Rc::new(RefCell::new(Vec::new()));
@@ -300,16 +300,100 @@ fn a_file_removed_while_loading_drops_its_result(cx: &mut TestAppContext) {
   });
   cx.run_until_parked();
   harness.read(cx, |store| assert!(store.tracks(a).is_none()));
-  // Removed and added again while the listing runs: the result is kept, and
-  // the file is not listed twice.
+  // Removed and added again while the listing runs: that listing is
+  // cancelled and its result dropped (another file may be at the path now),
+  // and the file is listed anew.
   harness.update(cx, |store, cx| {
     store.add_files(s(&[a]), cx);
     store.remove_file(a, cx);
     store.add_files(s(&[a]), cx);
+    assert_eq!(store.listings_in_flight(), 1, "the cancelled listing's place is free");
   });
   cx.run_until_parked();
   harness.read(cx, |store| assert!(store.tracks(a).is_some()));
-  assert_eq!(listings.lock().unwrap()[a], 2);
+  assert_eq!(listings.lock().unwrap()[a], 3);
+}
+
+/// Four listings that never end hold no place once their files are removed:
+/// `mkvmerge` is told to stop, and the next files load.
+#[gpui_kit::test]
+fn removing_stalled_listings_frees_their_places(cx: &mut TestAppContext) {
+  let stalled: Vec<String> = (0..4).map(|index| format!("/stalled/{index}.mkv")).collect();
+  let fresh = "/m/fresh.mkv";
+  let stopped = Arc::new(Mutex::new(Vec::<String>::new()));
+  let recorder = stopped.clone();
+  let source = TrackSource::with_tools(move |file, _, cancelled| {
+    if file == fresh {
+      return Ok(movie());
+    }
+    // A stalled drive: only a cancel ends it.
+    while !cancelled.load(std::sync::atomic::Ordering::Relaxed) {
+      std::thread::sleep(std::time::Duration::from_millis(1));
+    }
+    recorder.lock().unwrap().push(file.to_string());
+    Err(TrackListError::Cancelled)
+  });
+  let harness = Harness::new(cx, Some(profile(false)), source);
+  harness.update(cx, |store, cx| {
+    store.add_files(stalled.clone(), cx);
+    store.add_files(s(&[fresh]), cx);
+    assert_eq!(store.listings_in_flight(), MAX_CONCURRENT_LOADS);
+  });
+  harness.update(cx, |store, cx| {
+    for file in &stalled {
+      store.remove_file(file, cx);
+    }
+  });
+  cx.run_until_parked();
+  harness.read(cx, |store| {
+    assert!(matches!(store.load_state(fresh), LoadState::Loaded));
+    assert_eq!(store.listings_in_flight(), 0);
+  });
+  let mut stopped = stopped.lock().unwrap().clone();
+  stopped.sort();
+  assert_eq!(stopped, stalled, "every stalled mkvmerge was told to stop");
+}
+
+/// A new MKVToolNix directory lists the failed files again with it, and
+/// Retry lists one failed file again.
+#[gpui_kit::test]
+fn failed_listings_are_tried_again_with_new_tools_or_on_retry(cx: &mut TestAppContext) {
+  let a = "/m/a.mkv";
+  let tools_seen = Arc::new(Mutex::new(Vec::<String>::new()));
+  let recorder = tools_seen.clone();
+  let source = TrackSource::with_tools(move |_, tools, _| {
+    recorder.lock().unwrap().push(tools.to_string());
+    if tools == "/opt/mkvtoolnix" {
+      Ok(movie())
+    } else {
+      Err(TrackListError::NotAvailable {
+        path: format!("{tools}/mkvmerge"),
+        detail: "No such file or directory".into(),
+      })
+    }
+  });
+  let mut config = Config::default();
+  config.integration.mkv_toolnix_path = "/missing".into();
+  let config = cx.new(|cx| crate::state::ConfigStore::new(config, Persistence::new(|_| {}), cx));
+  let files = cx.new(|cx| FileStore::new(&config, source, cx));
+  files.update(cx, |store, cx| store.add_files(s(&[a]), cx));
+  cx.run_until_parked();
+  files.read_with(cx, |store, _| {
+    assert!(matches!(store.load_state(a), LoadState::Failed(_)))
+  });
+  files.update(cx, |store, cx| store.retry_load(a, cx));
+  cx.run_until_parked();
+  files.read_with(cx, |store, _| {
+    assert!(matches!(store.load_state(a), LoadState::Failed(_)))
+  });
+  config.update(cx, |config, cx| {
+    config.update(cx, |config| {
+      config.integration.mkv_toolnix_path = " /opt/mkvtoolnix ".into()
+    })
+  });
+  cx.run_until_parked();
+  files.read_with(cx, |store, _| assert!(matches!(store.load_state(a), LoadState::Loaded)));
+  assert_eq!(*tools_seen.lock().unwrap(), ["/missing", "/missing", "/opt/mkvtoolnix"]);
 }
 
 /// Ten files are listed four at a time, each once, although loading is
@@ -414,7 +498,7 @@ fn a_group_card_shares_one_selection(cx: &mut TestAppContext) {
     assert_eq!(
       store.entries(),
       [RenderEntry::Group {
-        key: "/m|v=1|a=2|s=2|c=0|t=0".to_string(),
+        key: crate::domain::grouping::grouping_key(a, &movie()),
         files: s(&[a, b]),
       }]
     );
@@ -481,6 +565,40 @@ fn files_differing_in_track_counts_or_folder_are_not_grouped(cx: &mut TestAppCon
   });
 }
 
+/// Two files whose English and Japanese audio tracks swap ids get cards of
+/// their own, so checking English on one never extracts Japanese from the
+/// other.
+#[gpui_kit::test]
+fn files_whose_languages_swap_ids_are_not_grouped(cx: &mut TestAppContext) {
+  let (a, b) = ("/m/a.mkv", "/m/b.mkv");
+  let mut swapped = movie();
+  swapped[1].language = "ger".into();
+  swapped[2].language = "eng".into();
+  let fixtures = HashMap::from([(a.to_string(), movie()), (b.to_string(), swapped)]);
+  let harness = Harness::loaded(cx, profile(true), &[a, b], fixtures);
+  harness.update(cx, |store, cx| {
+    assert_eq!(
+      store.entries(),
+      [
+        RenderEntry::Single { file: a.into() },
+        RenderEntry::Single { file: b.into() }
+      ]
+    );
+    store.set_checked(&TableScope::File(a.to_string()), "audio:1", true, cx);
+  });
+  harness.read(cx, |store| {
+    let languages = |file: &str| -> Vec<String> {
+      store
+        .selected_tracks(file)
+        .iter()
+        .map(|track| format!("{}:{}", track.key(), track.language))
+        .collect()
+    };
+    assert_eq!(languages(a), ["audio:1:eng", "subtitles:3:eng"]);
+    assert_eq!(languages(b), ["subtitles:3:eng"]);
+  });
+}
+
 #[gpui_kit::test]
 fn the_table_waits_for_the_tracks(cx: &mut TestAppContext) {
   let a = "/m/a.mkv";
@@ -502,6 +620,40 @@ fn the_table_waits_for_the_tracks(cx: &mut TestAppContext) {
     store.set_all_checked(&scope, true, cx);
     assert_eq!(store.checked_keys(&scope).len(), 5);
     assert_eq!(store.selected_tracks(a), movie(), "in table order");
+  });
+}
+
+/// A track `mkvextract` refuses (here FFV1 video) is never selected: not by
+/// the profile, not by select-all, not by its checkbox, and not in a
+/// request, so the FLAC audio beside it is still extracted.
+#[gpui_kit::test]
+fn a_track_mkvextract_cannot_extract_is_never_selected(cx: &mut TestAppContext) {
+  let a = "/m/a.mkv";
+  let tracks = vec![track(0, "video", "V_FFV1", "und"), track(1, "audio", "A_FLAC", "eng")];
+  let everything = ConfigProfile {
+    select_video: true,
+    select_audio: true,
+    ..profile(false)
+  };
+  let harness = Harness::loaded(cx, everything, &[a], HashMap::from([(a.to_string(), tracks)]));
+  let scope = TableScope::File(a.to_string());
+  harness.update(cx, |store, cx| {
+    assert_eq!(selected(store, a).unwrap(), ["audio:1"], "the profile's selection");
+    store.set_all_checked(&scope, false, cx);
+    store.set_checked(&scope, "video:0", true, cx);
+    assert!(store.checked_keys(&scope).is_empty(), "its checkbox");
+    store.set_all_checked(&scope, true, cx);
+    assert_eq!(store.checked_keys(&scope), ["audio:1"], "select-all");
+  });
+  // Even a selection that names it extracts only the rest.
+  harness.update(cx, |store, _| {
+    store
+      .file_selected_ids
+      .insert(a.to_string(), s(&["video:0", "audio:1"]));
+  });
+  harness.read(cx, |store| {
+    let keys: Vec<String> = store.selected_tracks(a).iter().map(MkvTrack::key).collect();
+    assert_eq!(keys, ["audio:1"]);
   });
 }
 
@@ -534,7 +686,7 @@ fn group_mode_starts_from_the_profile_and_follows_its_operations(cx: &mut TestAp
     files
       .selector
       .as_ref()
-      .is_some_and(|selector| selector.selects(&track(0, "video", "V_X", "und")))
+      .is_some_and(|selector| selector.selects(&track(0, "video", "V_MPEG4/ISO/AVC", "und")))
   });
   assert!(selects_video);
 }
@@ -639,15 +791,21 @@ fn the_same_file_under_another_spelling_is_listed_once(cx: &mut TestAppContext) 
   }
   let (source, _) = fixture_source(HashMap::new());
   let store = cx.new(|_| FileStore::with_profile(Some(&profile(false)), source));
-  cx.update(|cx| add_paths(&store, None, vec![movie.clone()], cx));
+  let paths = |paths: Vec<String>| paths.into_iter().map(PathBuf::from).collect::<Vec<_>>();
+  cx.update(|cx| add_paths(&store, None, paths(vec![movie.clone()]), cx));
   cx.run_until_parked();
-  cx.update(|cx| add_paths(&store, None, [spellings, vec![other.clone()]].concat(), cx));
+  cx.update(|cx| add_paths(&store, None, paths([spellings, vec![other.clone()]].concat()), cx));
   cx.run_until_parked();
   store.read_with(cx, |store, _| assert_eq!(store.files(), [movie.clone(), other.clone()]));
-  // Removed, it can come back under any spelling.
+  // Removed, it can come back under any spelling (made a full path).
   store.update(cx, |store, cx| store.remove_file(&movie, cx));
-  let dotted = dir.path().join(".").join("Movie.mkv").to_string_lossy().into_owned();
-  cx.update(|cx| add_paths(&store, None, vec![dotted.clone()], cx));
+  let link = dir.path().join("Again.mkv");
+  #[cfg(unix)]
+  std::os::unix::fs::symlink(&movie, &link).unwrap();
+  #[cfg(not(unix))]
+  std::fs::copy(&movie, &link).unwrap();
+  let again = link.to_string_lossy().into_owned();
+  cx.update(|cx| add_paths(&store, None, paths(vec![again.clone()]), cx));
   cx.run_until_parked();
-  store.read_with(cx, |store, _| assert_eq!(store.files(), [other, dotted]));
+  store.read_with(cx, |store, _| assert_eq!(store.files(), [other, again]));
 }

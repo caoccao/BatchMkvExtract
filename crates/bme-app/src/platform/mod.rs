@@ -40,6 +40,23 @@ pub fn ingest_launch_args(stores: &Stores, cx: &mut App) {
   );
 }
 
+/// Adds the files and folders the OS asked the app to open as URLs (macOS:
+/// "Open With", a drop on the Dock icon, also while the app runs), as if they
+/// were dropped. A URL that is not a local file is left out.
+pub fn ingest_open_urls(stores: &Stores, urls: Vec<String>, cx: &mut App) {
+  let paths: Vec<std::path::PathBuf> = urls
+    .iter()
+    .filter_map(|url| {
+      let path = bme_core::services::path_from_file_url(url);
+      if path.is_none() {
+        log::warn!("Not a local file: {url}");
+      }
+      path
+    })
+    .collect();
+  files::add_paths(&stores.files, Some(&stores.ui), paths, cx);
+}
+
 /// Quit (Cmd+Q on macOS) asks like closing the main window does: the window
 /// geometry is saved and an active extraction needs a confirmation first.
 ///

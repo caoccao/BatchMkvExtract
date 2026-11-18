@@ -42,7 +42,10 @@ pub mod word_navigation;
 mod tests;
 
 use gpui_kit::component::button::{Button, ButtonVariants};
-use gpui_kit::{ElementId, Hsla, Pixels, Rgba, Styled, px};
+use gpui_kit::{
+  App, ElementId, Hsla, KeyDownEvent, Pixels, Rgba, Role, SharedString, StatefulInteractiveElement, StyleRefinement,
+  Styled, Window, px,
+};
 
 const SHELL_MARGIN: Pixels = px(2.0);
 /// The tab body's padding on every side. With each card's [`CARD_MARGIN`],
@@ -59,6 +62,38 @@ pub(crate) fn text_button(id: impl Into<ElementId>) -> Button {
 /// The wider primary action in a confirmation or dialog.
 pub(crate) fn confirm_button(id: impl Into<ElementId>) -> Button {
   text_button(id).primary().min_w(px(112.0))
+}
+
+/// Makes `element`, which opens `url` on a click, a link for the keyboard
+/// and assistive clients too: a tab stop with a focus handle of its own
+/// (kept under `key`), `Role::Link` named `label`, `focused` as its look
+/// while it has the keyboard focus, and Enter or Space to open it.
+pub(crate) fn keyboard_link<E: StatefulInteractiveElement>(
+  element: E,
+  key: &'static str,
+  url: &'static str,
+  label: SharedString,
+  focused: impl FnOnce(StyleRefinement) -> StyleRefinement,
+  window: &mut Window,
+  cx: &mut App,
+) -> E {
+  let focus = window
+    .use_keyed_state(SharedString::from(format!("{key}-focus")), cx, |_, cx| {
+      cx.focus_handle().tab_stop(true)
+    })
+    .read(cx)
+    .clone();
+  element
+    .track_focus(&focus)
+    .role(Role::Link)
+    .aria_label(label)
+    .focus_visible(focused)
+    .on_key_down(move |event: &KeyDownEvent, _, cx| {
+      if matches!(event.keystroke.key.as_str(), "enter" | "space") {
+        cx.stop_propagation();
+        cx.open_url(url);
+      }
+    })
 }
 
 /// `n` spacing units (8 px each).
