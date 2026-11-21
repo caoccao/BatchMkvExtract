@@ -17,8 +17,8 @@
 
 //! The track table of a card (`TrackSelectionTable.tsx`): a checkbox per row
 //! and a select-all box, mixed while only some rows are checked, then ID,
-//! Number, Type (the emoji, with the type as its tooltip), Codec, Track Name
-//! and Language. The table is read-only: a click on a row toggles its
+//! Type (the emoji, with the type as its tooltip), Codec, Language
+//! and Track Name. The table is read-only: a click on a row toggles its
 //! checkbox. While the tracks load it shows a spinner; a failed listing shows
 //! its error, and a file without rows "No tracks found.".
 //!
@@ -61,22 +61,20 @@ const TRACK_NAME_MIN_WIDTH: f32 = 140.0;
 enum Column {
   Check,
   Id,
-  Number,
   Type,
   Codec,
-  TrackName,
   Language,
+  TrackName,
 }
 
 impl Column {
-  const COUNT: usize = Self::Language as usize + 1;
-  const TEXT_HEADERS: [(Self, &'static str); 6] = [
+  const COUNT: usize = 1 + Self::TEXT_HEADERS.len();
+  const TEXT_HEADERS: [(Self, &'static str); 5] = [
     (Self::Id, "extract.header.id"),
-    (Self::Number, "extract.header.number"),
     (Self::Type, "extract.header.type"),
     (Self::Codec, "extract.header.codec"),
-    (Self::TrackName, "extract.header.trackName"),
     (Self::Language, "extract.header.language"),
+    (Self::TrackName, "extract.header.trackName"),
   ];
 
   /// One-based, for screen readers.
@@ -108,25 +106,23 @@ impl Column {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RowTexts {
   pub id: String,
-  pub number: String,
   pub emoji: &'static str,
   /// The type, the emoji's tooltip.
   pub type_name: String,
   pub codec: String,
-  pub track_name: String,
   pub language: String,
+  pub track_name: String,
 }
 
-/// A row's cell texts; the numbers as `mkvmerge` reports them, 0 included.
+/// A row's cell texts, with the ID as `mkvmerge` reports it, 0 included.
 pub fn row_texts(track: &MkvTrack) -> RowTexts {
   RowTexts {
     id: track.id.to_string(),
-    number: track.number.to_string(),
     emoji: track_type_emoji(&track.track_type),
     type_name: track.track_type.clone(),
     codec: track.codec.clone(),
-    track_name: track.track_name.clone(),
     language: track.language.clone(),
+    track_name: track.track_name.clone(),
   }
 }
 
@@ -175,11 +171,10 @@ impl TrackColumns {
     for row in rows {
       for (column, text) in [
         (Column::Id, row.id.as_str()),
-        (Column::Number, row.number.as_str()),
         (Column::Type, row.emoji),
         (Column::Codec, row.codec.as_str()),
-        (Column::TrackName, row.track_name.as_str()),
         (Column::Language, row.language.as_str()),
+        (Column::TrackName, row.track_name.as_str()),
       ] {
         widths[column as usize] = widths[column as usize].max(measure(text, &body));
       }
@@ -344,7 +339,7 @@ impl TrackTable {
           columns
             .headers
             .iter()
-            .map(|(column, label)| head(*column).child(label.clone())),
+            .map(|(column, label)| head(*column).child(label.clone()).test_text(label.clone())),
         ),
     )
   }
@@ -405,7 +400,6 @@ impl TrackTable {
           }),
       )
       .child(cell(Column::Id).child(cell_text(texts.id)))
-      .child(cell(Column::Number).child(cell_text(texts.number)))
       .child(
         cell(Column::Type).child(
           div()
@@ -416,8 +410,8 @@ impl TrackTable {
         ),
       )
       .child(cell(Column::Codec).child(cell_text(texts.codec)))
-      .child(cell(Column::TrackName).child(cell_text(texts.track_name)))
       .child(cell(Column::Language).child(cell_text(texts.language)))
+      .child(cell(Column::TrackName).child(cell_text(texts.track_name)))
       .into_any_element()
   }
 }
@@ -546,17 +540,12 @@ mod tests {
     };
     let texts = row_texts(&track);
     assert_eq!(
-      (
-        texts.id.as_str(),
-        texts.number.as_str(),
-        texts.emoji,
-        texts.type_name.as_str()
-      ),
-      ("2", "3", "💬", "subtitles")
+      (texts.id.as_str(), texts.emoji, texts.type_name.as_str()),
+      ("2", "💬", "subtitles")
     );
     assert_eq!(
-      (texts.codec.as_str(), texts.track_name.as_str(), texts.language.as_str()),
-      ("SubRip/SRT", "Signs", "eng")
+      (texts.codec.as_str(), texts.language.as_str(), texts.track_name.as_str()),
+      ("SubRip/SRT", "eng", "Signs")
     );
     let chapters = MkvTrack {
       id: 0,
@@ -568,9 +557,6 @@ mod tests {
       language: String::new(),
     };
     let texts = row_texts(&chapters);
-    assert_eq!(
-      (texts.id.as_str(), texts.number.as_str(), texts.emoji),
-      ("0", "0", "📑")
-    );
+    assert_eq!((texts.id.as_str(), texts.emoji), ("0", "📑"));
   }
 }

@@ -539,11 +539,11 @@ fn table_texts(shell: &Shell, cx: &mut TestAppContext, shown: &str) -> Vec<Strin
 #[gpui_kit::test]
 fn the_table_lists_every_track_with_its_cells(cx: &mut TestAppContext) {
   let shell = shell(cx, &[A]);
-  let shown = table_texts(&shell, cx, A);
-  // ID, Number, Codec, Track Name and Language of the German audio track.
-  for expected in ["2", "3", "A_AC3", "ger", "S_TEXT/ASS", "und"] {
-    assert!(shown.iter().any(|text| text == expected), "{expected} in {shown:?}");
-  }
+  assert_eq!(
+    texts_in(&shell, cx, "track-head"),
+    ["ID", "Type", "Codec", "Language", "Track Name"]
+  );
+  assert_eq!(texts_in(&shell, cx, ("track-row", 2usize)), ["2", "A_AC3", "ger", ""]);
   in_table(&shell, cx, A, |window, _| {
     for index in 0..5usize {
       window.find(("track-row", index));

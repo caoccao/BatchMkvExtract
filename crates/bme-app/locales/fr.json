@@ -22,7 +22,6 @@
     "notExtractable": "mkvextract ne peut pas extraire les pistes %{codec}.",
     "header": {
       "id": "ID",
-      "number": "Numéro",
       "type": "Type",
       "codec": "Codec",
       "trackName": "Nom de piste",

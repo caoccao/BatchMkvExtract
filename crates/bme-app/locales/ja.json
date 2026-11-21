@@ -22,7 +22,6 @@
     "notExtractable": "mkvextract は %{codec} トラックを抽出できません。",
     "header": {
       "id": "ID",
-      "number": "番号",
       "type": "種類",
       "codec": "コーデック",
       "trackName": "トラック名",

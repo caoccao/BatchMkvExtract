@@ -22,7 +22,6 @@
     "notExtractable": "mkvextract kann %{codec}-Spuren nicht extrahieren.",
     "header": {
       "id": "ID",
-      "number": "Nummer",
       "type": "Typ",
       "codec": "Codec",
       "trackName": "Spurname",

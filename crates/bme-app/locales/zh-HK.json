@@ -22,7 +22,6 @@
     "notExtractable": "mkvextract 無法擷取 %{codec} 軌道。",
     "header": {
       "id": "ID",
-      "number": "編號",
       "type": "類型",
       "codec": "編碼",
       "trackName": "軌道名稱",
